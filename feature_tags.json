@@ -1,0 +1,14 @@
+{
+  "is_funding_hour": [
+    "calendar",
+    "zero-param"
+  ],
+  "liquidity_z": [
+    "magnitude"
+  ],
+  "realized_volatility": [
+    "volatility",
+    "intraday",
+    "vol_cluster"
+  ]
+}
