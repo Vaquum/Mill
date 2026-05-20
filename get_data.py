@@ -1,22 +1,45 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 import polars as pl
 
+import huggingface
 from bars import (
     FIXED_DOLLAR_BAR_THRESHOLDS,
     dollar_bar_name,
     round_time_bars,
     time_bar_name,
     time_bar_seconds,
-    time_bars_from_1m,
 )
 from cache_store import cache_path, read_fresh, write_cache
 from dollar_bars import anchor_time_bar_name, dollar_bars_query, dollar_threshold
 from frames import read_parquet, write_parquet
 from remote_clickhouse import query_frame
-from sources import resolve_limit, source_query
+from sources import resolve_limit
+
+
+def _filter_by_date(
+    df: pl.DataFrame,
+    start_date_limit: str | None,
+    end_date_limit: str | None,
+) -> pl.DataFrame:
+    out = df
+    if start_date_limit:
+        start_dt = datetime.fromisoformat(start_date_limit).replace(tzinfo=timezone.utc)
+        out = out.filter(pl.col("datetime") >= start_dt)
+    if end_date_limit:
+        end_str = (
+            f"{end_date_limit} 23:59:59"
+            if len(end_date_limit) == 10
+            else end_date_limit
+        )
+        end_dt = datetime.fromisoformat(end_str.replace(" ", "T")).replace(
+            tzinfo=timezone.utc
+        )
+        out = out.filter(pl.col("datetime") <= end_dt)
+    return out
 
 
 class GetData:
@@ -78,7 +101,7 @@ class GetData:
             "row_count_limit": limit,
             "random_row_count_limit": None,
             "n_rows": None,
-            "aggregation": "time_bars_from_1m_v1",
+            "aggregation": "huggingface_klines_v1",
         }
 
         path = cache_path(name, criteria)
@@ -95,26 +118,6 @@ class GetData:
 
         write_cache(path, data, criteria)
         return self._store(data)
-
-    def get_spot_trades(
-        self,
-        row_count_limit: int | None = None,
-        random_row_count_limit: int | None = None,
-        kline_size: int = 60,
-        start_date_limit: str | None = None,
-        end_date_limit: str | None = None,
-        *,
-        n_rows: int | None = None,
-    ) -> pl.DataFrame:
-        return self._source(
-            "spot_trades",
-            row_count_limit,
-            random_row_count_limit,
-            kline_size,
-            start_date_limit,
-            end_date_limit,
-            n_rows,
-        )
 
     def get_dollar_bars(
         self,
@@ -183,85 +186,30 @@ class GetData:
         write_cache(path, data, criteria)
         return self._store(data)
 
-    def get_spot_klines(
-        self,
-        row_count_limit: int | None = None,
-        random_row_count_limit: int | None = None,
-        kline_size: int = 60,
-        start_date_limit: str | None = None,
-        end_date_limit: str | None = None,
-        *,
-        n_rows: int | None = None,
-    ) -> pl.DataFrame:
-        if kline_size == 60:
-            return round_time_bars(
-                self._source(
-                    "spot_klines",
-                    row_count_limit,
-                    random_row_count_limit,
-                    kline_size,
-                    start_date_limit,
-                    end_date_limit,
-                    n_rows,
-                )
-            )
-        return self.get_time_bars(
-            kline_size,
-            row_count_limit,
-            random_row_count_limit,
-            start_date_limit,
-            end_date_limit,
-            n_rows=n_rows,
-        )
-
-    def get_futures_trades(
-        self,
-        row_count_limit: int | None = None,
-        random_row_count_limit: int | None = None,
-        kline_size: int = 60,
-        start_date_limit: str | None = None,
-        end_date_limit: str | None = None,
-        *,
-        n_rows: int | None = None,
-    ) -> pl.DataFrame:
-        return self._source(
-            "futures_trades",
-            row_count_limit,
-            random_row_count_limit,
-            kline_size,
-            start_date_limit,
-            end_date_limit,
-            n_rows,
-        )
-
-    def get_spot_book(
-        self,
-        row_count_limit: int | None = None,
-        random_row_count_limit: int | None = None,
-        kline_size: int = 60,
-        start_date_limit: str | None = None,
-        end_date_limit: str | None = None,
-        *,
-        n_rows: int | None = None,
-    ) -> pl.DataFrame:
-        return self._source(
-            "spot_book",
-            row_count_limit,
-            random_row_count_limit,
-            kline_size,
-            start_date_limit,
-            end_date_limit,
-            n_rows,
-        )
-
     def _time_bars(
         self,
         seconds: int,
         start_date_limit: str | None,
         end_date_limit: str | None,
     ) -> pl.DataFrame:
-        base = self._one_minute_time_bars(start_date_limit, end_date_limit)
-        return time_bars_from_1m(base, seconds)
+        name = time_bar_name(seconds)
+        full = self._hf_klines(name)
+        return _filter_by_date(full, start_date_limit, end_date_limit)
+
+    def _hf_klines(self, name: str) -> pl.DataFrame:
+        criteria = {
+            "kind": "huggingface_klines",
+            "bar_name": name,
+            "source": "vaquum",
+            "version": "v1",
+        }
+        path = cache_path(name, criteria)
+        cached = read_fresh(path)
+        if cached is not None:
+            return cached
+        data = round_time_bars(huggingface.klines(name))
+        write_cache(path, data, criteria)
+        return data
 
     def _dollar_threshold(
         self,
@@ -293,65 +241,6 @@ class GetData:
             end_date_limit,
         )
         return round_time_bars(query_frame(self.ssh_target, query, parameters))
-
-    def _one_minute_time_bars(
-        self,
-        start_date_limit: str | None,
-        end_date_limit: str | None,
-    ) -> pl.DataFrame:
-        criteria = {
-            "kind": "time_bars_source",
-            "bar_name": "1m_time_bars",
-            "bar_seconds": 60,
-            "database": self.database,
-            "start_date_limit": start_date_limit,
-            "end_date_limit": end_date_limit,
-            "row_count_limit": None,
-            "random_row_count_limit": None,
-            "n_rows": None,
-            "aggregation": "source_1m_v1",
-        }
-        path = cache_path("1m_time_bars", criteria)
-        cached = read_fresh(path)
-        if cached is not None:
-            return cached
-
-        data = round_time_bars(
-            self._source(
-                "spot_klines",
-                None,
-                None,
-                60,
-                start_date_limit,
-                end_date_limit,
-                None,
-            )
-        )
-        write_cache(path, data, criteria)
-        return data
-
-    def _source(
-        self,
-        table_key: str,
-        row_count_limit: int | None,
-        random_row_count_limit: int | None,
-        kline_size: int,
-        start_date_limit: str | None,
-        end_date_limit: str | None,
-        n_rows: int | None,
-    ) -> pl.DataFrame:
-        if kline_size != 60:
-            raise ValueError("Only kline_size=60 is supported for source tables.")
-        query, parameters = source_query(
-            table_key,
-            self.database,
-            row_count_limit,
-            random_row_count_limit,
-            start_date_limit,
-            end_date_limit,
-            n_rows,
-        )
-        return self._store(query_frame(self.ssh_target, query, parameters))
 
     def _store(self, data: pl.DataFrame) -> pl.DataFrame:
         self.data = data
