@@ -360,6 +360,7 @@
   .qc-table.with-grades tbody tr.qc-group-row td[data-grade="D"]::before { color: var(--neg); }
   .qc-table.with-grades tbody tr.qc-group-row td[data-grade="C"]::before { color: var(--accent); }
   .qc-table.with-grades tbody tr.qc-group-row td[data-grade="S"]::before { color: var(--pos); }
+  .qc-table.with-grades tbody td[data-grade="NA"]::before { color: var(--fg-3); letter-spacing: 0.04em; }
   .qc-table tbody td.has-tip { cursor: help; }
   .qc-tip {
     position: fixed;
@@ -437,6 +438,8 @@
   .row-option-input::-webkit-outer-spin-button,
   .row-option-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .row-option-input:focus-visible { outline: none; border-color: var(--accent); }
+  .row-option-disabled { color: var(--fg-3); cursor: not-allowed; }
+  .row-option-disabled input { cursor: not-allowed; opacity: 0.5; }
 
   .features-builder {
     display: grid;
@@ -519,16 +522,20 @@
     border: 1px solid var(--border);
     border-radius: 2px;
     background: var(--bg);
-    transition: border-color 80ms ease;
+    transition: border-color 80ms ease, opacity 80ms ease;
   }
   .active-chip:hover { border-color: var(--border-strong); }
   .active-chip.open { border-color: var(--accent); }
+  .active-chip.dragging { opacity: 0.4; }
+  .active-chip.drop-target { border-color: var(--accent); border-style: dashed; }
   .active-chip-head {
     display: flex; align-items: center; gap: var(--s-3);
     padding: var(--s-3);
-    cursor: pointer; user-select: none;
+    cursor: grab;
+    user-select: none;
     font: 400 var(--t-base) var(--font-mono);
   }
+  .active-chip.dragging .active-chip-head { cursor: grabbing; }
   .active-chip-name { color: var(--fg); }
   .active-chip-summary {
     color: var(--fg-2);
@@ -952,22 +959,41 @@ function shouldNorm(col) {
   return normEnabled && col !== currentTarget && col !== "datetime";
 }
 
+function isTimeColumn(name) {
+  return name === "datetime" || name === "bar_start_datetime" || name === "bar_end_datetime";
+}
+
+function timePrefixCount() {
+  let n = 0;
+  for (const c of visibleColumns) {
+    if (isTimeColumn(c)) n++;
+    else break;
+  }
+  return n;
+}
+
 function colLabel(idx) {
-  if (idx === 0) return "datetime";
-  if (idx <= activeSpec.length) {
-    const s = activeSpec[idx - 1];
+  const c = visibleColumns[idx];
+  if (isTimeColumn(c)) return c;
+  const off = timePrefixCount();
+  const specIdx = idx - off;
+  if (specIdx >= 0 && specIdx < activeSpec.length) {
+    const s = activeSpec[specIdx];
     const params = paramsSummary(s);
     return params ? `${s.factory} ${params}` : s.factory;
   }
-  return visibleColumns[idx];
+  return c;
 }
 
 function isBinaryCol(idx) {
-  if (idx === 0) return false;
-  if (idx <= activeSpec.length) {
-    if (activeSpec[idx - 1].factory.startsWith("is_")) return true;
+  const c = visibleColumns[idx];
+  if (isTimeColumn(c)) return false;
+  const off = timePrefixCount();
+  const specIdx = idx - off;
+  if (specIdx >= 0 && specIdx < activeSpec.length) {
+    if (activeSpec[specIdx].factory.startsWith("is_")) return true;
   }
-  const stats = colStats.get(visibleColumns[idx]);
+  const stats = colStats.get(c);
   return !!(stats && stats.min === 0 && stats.max === 1);
 }
 
@@ -1100,7 +1126,10 @@ function render() {
   }
 }
 
+let _loadSeq = 0;
+
 async function load() {
+  const seq = ++_loadSeq;
   const bars = barsSelect.value;
   const target = targetSelect.value;
   meta.textContent = "loading…";
@@ -1108,23 +1137,45 @@ async function load() {
   const url = `/data?bars=${encodeURIComponent(bars)}`
     + `&target=${encodeURIComponent(target)}`
     + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
-  const res = await fetch(url);
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    if (seq === _loadSeq) meta.textContent = `network error: ${e.message}`;
+    return;
+  }
+  if (seq !== _loadSeq) return;
   if (!res.ok) {
     meta.textContent = `load failed: ${await res.text()}`;
     return;
   }
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    meta.textContent = `bad json: ${e.message}`;
+    return;
+  }
+  if (seq !== _loadSeq) return;
   const t1 = performance.now();
 
-  allColumns = data.columns;
-  originalAllRows = data.rows;
-  currentTarget = target;
-  lastLoadMs = t1 - t0;
+  try {
+    allColumns = data.columns;
+    originalAllRows = data.rows;
+    currentTarget = target;
+    lastLoadMs = t1 - t0;
 
-  applyDateFilter();
-  applyRowGrouping();
-  computeColStats();
-  applyVisibility();
+    applyDateFilter();
+    applyRowGrouping();
+    computeColStats();
+    applyVisibility();
+  } catch (e) {
+    console.error("render failed", e, {
+      cols: data && data.columns,
+      activeSpec,
+    });
+    meta.textContent = `render failed: ${e.message}`;
+  }
 }
 
 function scheduleRefetch() {
@@ -1185,6 +1236,14 @@ const ROW_GROUPS = [
   ]},
 ];
 const STAT_MODES = new Set(["cut", "quantile", "decile"]);
+const TIME_PERIOD_MODES = new Set([
+  "day", "week", "month", "quarter", "year",
+  "dow", "dom", "woy",
+]);
+
+function isDollarBar(barName) {
+  return typeof barName === "string" && barName.endsWith("_dollar_bars");
+}
 const QUANTILE_PCTS = [0.01, 5, 25, 50, 75, 95, 99.9];
 
 function median(values) {
@@ -1317,7 +1376,9 @@ function determineAnchorIdx() {
     if (i >= 0) return i;
   }
   for (let i = 1; i < allColumns.length; i++) {
-    if (allColumns[i] !== currentTarget) return i;
+    const c = allColumns[i];
+    if (isTimeColumn(c)) continue;
+    if (c !== currentTarget) return i;
   }
   return 1;
 }
@@ -1423,7 +1484,7 @@ const QC_META = {
   regime_spearman_std:    {range: "<0.05 stable",       tip: "Standard deviation of spearman across 4 time-quartiles. Lower = more regime-stable."},
 };
 
-let qcGradesOn = false;
+let qcGradesOn = true;
 let qcTip = null;
 
 const QC_GROUPS = [
@@ -1486,6 +1547,7 @@ function renderQc(report) {
   thead.appendChild(trH);
   tbl.appendChild(thead);
   const grades = report.grades || {};
+  const targetCol = targetSelect.value !== "none" ? targetSelect.value : null;
   const tbody = document.createElement("tbody");
 
   const rowsByMetric = {};
@@ -1506,9 +1568,13 @@ function renderQc(report) {
         td.appendChild(document.createTextNode(group.name));
       } else {
         const featureName = report.columns[i];
-        const agg = aggregateGroupGrade(group.rows, featureName, grades);
         td.textContent = "";
-        if (agg) td.dataset.grade = agg;
+        if (featureName === targetCol) {
+          td.dataset.grade = "NA";
+        } else {
+          const agg = aggregateGroupGrade(group.rows, featureName, grades);
+          if (agg) td.dataset.grade = agg;
+        }
       }
       headerTr.appendChild(td);
     }
@@ -1538,8 +1604,12 @@ function renderQc(report) {
           td.textContent = text;
           td.className = cls;
           const featureName = report.columns[i];
-          const g = grades[metric] && grades[metric][featureName];
-          if (g) td.dataset.grade = g;
+          if (featureName === targetCol) {
+            td.dataset.grade = "NA";
+          } else {
+            const g = grades[metric] && grades[metric][featureName];
+            if (g) td.dataset.grade = g;
+          }
         }
         tr.appendChild(td);
       }
@@ -1705,7 +1775,7 @@ function buildPalette() {
       e.dataTransfer.setData("text/factory", f.name);
       e.dataTransfer.effectAllowed = "copy";
     });
-    row.addEventListener("dblclick", () => addFactory(f.name));
+    row.addEventListener("click", () => addFactory(f.name));
     items.appendChild(row);
   }
   search.addEventListener("input", () => {
@@ -1772,7 +1842,23 @@ function removeFactory(idx) {
 
 function addParamSet(idx) {
   const g = activeFactories[idx];
-  g.paramSets.push(defaultParamsFor(g.factory));
+  const meta = factoriesByName.get(g.factory);
+  const params = (meta && meta.params) || [];
+  const next = defaultParamsFor(g.factory);
+  if (params.length > 0) {
+    const isDup = () => g.paramSets.some(ps =>
+      params.every(p => Number(ps[p.name]) === Number(next[p.name]))
+    );
+    if (isDup()) {
+      const p = params[0];
+      const max = Math.max(
+        ...g.paramSets.map(ps => Number(ps[p.name])).filter(Number.isFinite),
+        Number(next[p.name]) || 0
+      );
+      next[p.name] = max + 1;
+    }
+  }
+  g.paramSets.push(next);
   rebuildActiveSpec();
   renderActivePane();
   scheduleRefetch();
@@ -1817,6 +1903,37 @@ function renderActivePane() {
 
     const chip = document.createElement("div");
     chip.className = "active-chip" + (idx === openChipIdx ? " open" : "");
+    chip.draggable = true;
+    chip.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/active-chip-idx", String(idx));
+      e.dataTransfer.effectAllowed = "move";
+      chip.classList.add("dragging");
+    });
+    chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
+    chip.addEventListener("dragover", e => {
+      if (!e.dataTransfer.types.includes("text/active-chip-idx")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = "move";
+      chip.classList.add("drop-target");
+    });
+    chip.addEventListener("dragleave", () => chip.classList.remove("drop-target"));
+    chip.addEventListener("drop", e => {
+      if (!e.dataTransfer.types.includes("text/active-chip-idx")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      chip.classList.remove("drop-target");
+      const fromIdx = parseInt(e.dataTransfer.getData("text/active-chip-idx"), 10);
+      if (!Number.isFinite(fromIdx) || fromIdx === idx) return;
+      const item = activeFactories.splice(fromIdx, 1)[0];
+      activeFactories.splice(idx, 0, item);
+      if (openChipIdx === fromIdx) openChipIdx = idx;
+      else if (fromIdx < openChipIdx && idx >= openChipIdx) openChipIdx -= 1;
+      else if (fromIdx > openChipIdx && idx <= openChipIdx) openChipIdx += 1;
+      rebuildActiveSpec();
+      refreshFeaturesModal();
+      scheduleRefetch();
+    });
 
     const head = document.createElement("div");
     head.className = "active-chip-head";
@@ -1976,6 +2093,7 @@ const rowClose = document.getElementById("row-close");
 function openRowModal() {
   const container = document.createElement("div");
   container.className = "row-groups";
+  const dollar = isDollarBar(barsSelect.value);
   for (const grp of ROW_GROUPS) {
     const sec = document.createElement("div");
     sec.className = "row-group";
@@ -1985,14 +2103,16 @@ function openRowModal() {
     sec.appendChild(hdr);
     const opts = document.createElement("div");
     opts.className = "row-options";
+    const groupDisabled = dollar && (grp.title === "time" || grp.title === "period");
     for (const opt of grp.options) {
       const lbl = document.createElement("label");
-      lbl.className = "row-option";
+      lbl.className = "row-option" + (groupDisabled ? " row-option-disabled" : "");
       const input = document.createElement("input");
       input.type = "radio";
       input.name = "row-mode";
       input.value = opt.id;
       input.checked = (rowMode === opt.id);
+      input.disabled = groupDisabled;
       input.addEventListener("change", () => {
         if (input.checked) {
           rowMode = opt.id;
@@ -2060,7 +2180,13 @@ async function init() {
   targetSelect.value = "none";
   syncViewOptions();
   loadSpecFromView(viewSelect.value);
-  barsSelect.addEventListener("change", () => { syncViewOptions(); load(); });
+  barsSelect.addEventListener("change", () => {
+    if (isDollarBar(barsSelect.value) && TIME_PERIOD_MODES.has(rowMode)) {
+      rowMode = "bar";
+    }
+    syncViewOptions();
+    load();
+  });
   viewSelect.addEventListener("change", () => {
     loadSpecFromView(viewSelect.value);
     load();
@@ -2070,6 +2196,7 @@ async function init() {
   qcClose.addEventListener("click", closeQc);
   qcCopy.addEventListener("click", copyQcAsTsv);
   const qcGradesBtn = document.getElementById("qc-grades");
+  qcGradesBtn.classList.toggle("active", qcGradesOn);
   qcGradesBtn.addEventListener("click", () => {
     qcGradesOn = !qcGradesOn;
     qcGradesBtn.classList.toggle("active", qcGradesOn);
