@@ -469,11 +469,17 @@
   }
   .palette-item:hover { border-color: var(--border-strong); background: var(--bg); color: var(--accent); }
   .palette-item:active { cursor: grabbing; }
-  .palette-item .params-hint {
-    color: var(--fg-3);
-    font: 400 var(--t-xs) var(--font-mono);
-    font-variant-numeric: tabular-nums;
+  .palette-search {
+    margin-bottom: var(--s-3);
+    padding: var(--s-1) var(--s-3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--panel);
+    color: var(--fg);
+    font: 400 var(--t-base) var(--font-mono);
+    outline: none;
   }
+  .palette-search:focus { border-color: var(--accent); }
   .features-active {
     position: relative;
     transition: background 80ms ease;
@@ -1660,6 +1666,13 @@ function buildPalette() {
   hdr.className = "features-pane-header";
   hdr.textContent = "factories";
   pane.appendChild(hdr);
+  const search = document.createElement("input");
+  search.type = "text";
+  search.placeholder = "search";
+  search.className = "palette-search";
+  search.spellcheck = false;
+  search.autocomplete = "off";
+  pane.appendChild(search);
   const items = document.createElement("div");
   items.className = "palette-items";
   const activeNames = new Set(activeFactories.map(g => g.factory));
@@ -1669,15 +1682,8 @@ function buildPalette() {
     row.className = "palette-item";
     row.draggable = true;
     row.dataset.factory = f.name;
-    const lbl = document.createElement("span");
-    lbl.textContent = f.name;
-    row.appendChild(lbl);
-    if ((f.params || []).length > 0) {
-      const hint = document.createElement("span");
-      hint.className = "params-hint";
-      hint.textContent = f.params.map(p => `${p.name}=${p.default}`).join(" ");
-      row.appendChild(hint);
-    }
+    row.dataset.name = f.name.toLowerCase();
+    row.textContent = f.name;
     row.addEventListener("dragstart", e => {
       e.dataTransfer.setData("text/factory", f.name);
       e.dataTransfer.effectAllowed = "copy";
@@ -1685,6 +1691,12 @@ function buildPalette() {
     row.addEventListener("dblclick", () => addFactory(f.name));
     items.appendChild(row);
   }
+  search.addEventListener("input", () => {
+    const q = search.value.trim().toLowerCase();
+    for (const row of items.children) {
+      row.style.display = (!q || row.dataset.name.includes(q)) ? "" : "none";
+    }
+  });
   pane.appendChild(items);
   return pane;
 }

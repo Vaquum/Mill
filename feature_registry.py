@@ -287,7 +287,7 @@ def _register_limen(ns: Any) -> None:
         fn = getattr(ns, name)
         if not callable(fn):
             continue
-        REGISTRY[f"limen.{name}"] = {
+        REGISTRY[name] = {
             "producer": _limen_producer(fn),
             "params": _limen_param_specs(fn),
             "source": "limen",
