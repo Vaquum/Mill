@@ -12,28 +12,28 @@ Disclosures:
    qc.report() output (qc.py emits an "n_unique" row and a top-level
    "n_rows" field). Caller may still override n_rows via parameter.
 
-2. Spearman CI grade: spec writes the O case as "CI off zero, OR (min(...)
-   >= 0.05) → O" which is internally redundant. I treat O as the default
-   "not-D, not-C, not-S" case; the explicit S path checks tightness AND
+2. Spearman CI grade: spec writes the B case as "CI off zero, OR (min(...)
+   >= 0.05) → B" which is internally redundant. I treat B as the default
+   "not-F, not-D, not-A" case; the explicit A path checks tightness AND
    off-zero ≥ 0.10. The 0.05 boundary in the spec is not used as a hard
    threshold in this implementation.
 
 3. None handling in composite verdicts: spec is silent. I treat None as
-   "skipped" — it never counts as D/C/O/S in any condition. health_verdict
+   "skipped" — it never counts as F/D/B/A in any condition. health_verdict
    computes over non-None health cells; if all health cells are None,
    verdict is None. edge_verdict returns None when no edge cells have any
    grade (e.g., QC was run with target=none).
 
-4. STRONG edge requires ≥ 3 of 6 cells to be graded S. None cells do not
-   count as S. So a feature with 3 S grades and 3 None grades qualifies for
+4. STRONG edge requires ≥ 3 of 6 cells to be graded A. None cells do not
+   count as A. So a feature with 3 A grades and 3 None grades qualifies for
    STRONG, per the literal "≥ 3 of 6". This is the defensible reading of an
    ambiguous spec line.
 
-5. Regime sign agreement fallback (non-4-chunk): the spec gives D / C /
-   0.5–0.99 → O / 1.0 → S. The "0.5" boundary I treat as exactly 0.5 → C;
-   any value strictly above 0.5 and below 1.0 → O; 1.0 → S; below 0.5 → D.
+5. Regime sign agreement fallback (non-4-chunk): the spec gives F / D /
+   0.5–0.99 → B / 1.0 → A. The "0.5" boundary I treat as exactly 0.5 → D;
+   any value strictly above 0.5 and below 1.0 → B; 1.0 → A; below 0.5 → F.
 
-6. Stationarity special case (ADF=S AND KPSS=D) returns ("C", note). The
+6. Stationarity special case (ADF=A AND KPSS=F) returns ("D", note). The
    note is preserved in the output dict under "stationarity_note" but is
    not part of the grade itself.
 
@@ -93,14 +93,14 @@ def grade_cardinality(n_unique: int | None, n_rows: int | None) -> str | None:
     if n_unique is None or n_rows is None or n_rows <= 0:
         return None
     if n_unique <= R.CARDINALITY["constant_max"]:
-        return "D"
+        return "F"
     if n_unique == R.CARDINALITY["binary"]:
-        return "S"
+        return "A"
     if n_unique <= R.CARDINALITY["categorical_max"]:
-        return "S"
+        return "A"
     if n_unique < n_rows * R.CARDINALITY["broken_threshold_frac"]:
-        return "C"
-    return "S"
+        return "D"
+    return "A"
 
 
 def grade_skew(skew: Any) -> str | None:
@@ -118,8 +118,8 @@ def grade_stationarity(
     kpss_grade = _apply_ladder(kpss_p, R.KPSS_P)
     if adf_grade is None or kpss_grade is None:
         return None, None
-    if adf_grade == "S" and kpss_grade == "D":
-        return "C", R.STATIONARITY_DIFF_TRENDING_NOTE
+    if adf_grade == "A" and kpss_grade == "F":
+        return "D", R.STATIONARITY_DIFF_TRENDING_NOTE
     combined = R.STATIONARITY_TABLE[adf_grade][kpss_grade]
     return combined, None
 
@@ -132,17 +132,17 @@ def _grade_spearman_ci(ci_low: Any, ci_high: Any) -> str | None:
     if lo > hi:
         lo, hi = hi, lo
     if lo * hi <= 0.0:
-        return "D"
+        return "F"
     min_off = min(abs(lo), abs(hi))
     width = abs(hi - lo)
     if min_off < R.SPEARMAN_CI_NARROW_MIN_OFF_ZERO:
-        return "C"
+        return "D"
     if (
         min_off >= R.SPEARMAN_CI_STRONG_OFF_ZERO
         and width < R.SPEARMAN_CI_TIGHT_WIDTH
     ):
-        return "S"
-    return "O"
+        return "A"
+    return "B"
 
 
 def grade_spearman(spearman: Any, ci_low: Any, ci_high: Any) -> str | None:
@@ -190,12 +190,12 @@ def grade_regime_sign_agreement(agreement: Any) -> str | None:
         return None
     frac = n_agree / n_regimes
     if frac >= 1.0:
-        return "S"
+        return "A"
     if frac > 0.5:
-        return "O"
+        return "B"
     if frac == 0.5:
-        return "C"
-    return "D"
+        return "D"
+    return "F"
 
 
 def grade_regime_spearman_std(std: Any, spearman: Any) -> str | None:
@@ -223,11 +223,11 @@ def health_verdict(grades: dict[str, str | None]) -> str | None:
     valid = [g for g in cells if g is not None]
     if not valid:
         return None
-    if any(g == "D" for g in valid):
+    if any(g == "F" for g in valid):
         return "INVALID"
-    if any(g == "C" for g in valid):
+    if any(g == "D" for g in valid):
         return "WEAK"
-    if all(g == "S" for g in valid):
+    if all(g == "A" for g in valid):
         return "CLEAN"
     return "OK"
 
@@ -242,14 +242,14 @@ def edge_verdict(
         return None
     sp = cells["spearman"]
     mi = cells["mutual_information"]
-    if sp == "D" and mi == "D":
+    if sp == "F" and mi == "F":
         return "NONE"
-    if any(g == "D" for g in cells.values()):
+    if any(g == "F" for g in cells.values()):
         return "WEAK"
-    if any(g == "C" for g in cells.values()):
+    if any(g == "D" for g in cells.values()):
         return "MODERATE"
-    s_count = sum(1 for g in cells.values() if g == "S")
-    if s_count >= R.EDGE_STRONG_S_COUNT:
+    a_count = sum(1 for g in cells.values() if g == "A")
+    if a_count >= R.EDGE_STRONG_A_COUNT:
         return "STRONG"
     return "USABLE"
 
@@ -257,10 +257,10 @@ def edge_verdict(
 def selection_verdict(grades: dict[str, str | None]) -> str | None:
     g = grades.get("redundancy")
     return {
-        "D": "DUPLICATE",
-        "C": "OVERLAPPING",
-        "O": "MOSTLY_UNIQUE",
-        "S": "UNIQUE",
+        "F": "DUPLICATE",
+        "D": "OVERLAPPING",
+        "B": "MOSTLY_UNIQUE",
+        "A": "UNIQUE",
     }.get(g)
 
 

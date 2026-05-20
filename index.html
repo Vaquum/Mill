@@ -326,9 +326,10 @@
     color: var(--fg-3);
     pointer-events: none;
   }
-  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--neg); }
-  .qc-table.with-grades tbody td[data-grade="C"]::before { color: var(--accent); }
-  .qc-table.with-grades tbody td[data-grade="S"]::before { color: var(--pos); }
+  .qc-table.with-grades tbody td[data-grade="F"]::before { color: var(--c-magenta); }
+  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--c-pink); }
+  .qc-table.with-grades tbody td[data-grade="B"]::before { color: var(--c-lavender); }
+  .qc-table.with-grades tbody td[data-grade="A"]::before { color: var(--c-pale-pink); }
   .qc-table tbody tr.qc-group-row { cursor: pointer; user-select: none; }
   .qc-table tbody tr.qc-group-row td {
     color: var(--fg);
@@ -357,9 +358,10 @@
     color: var(--fg-3);
     pointer-events: none;
   }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="D"]::before { color: var(--neg); }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="C"]::before { color: var(--accent); }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="S"]::before { color: var(--pos); }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="F"]::before { color: var(--c-magenta); }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="D"]::before { color: var(--c-pink); }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="B"]::before { color: var(--c-lavender); }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="A"]::before { color: var(--c-pale-pink); }
   .qc-table.with-grades tbody td[data-grade="NA"]::before { color: var(--fg-3); letter-spacing: 0.04em; }
   .qc-table tbody td.has-tip { cursor: help; }
   .qc-tip {
@@ -1496,7 +1498,7 @@ const QC_GROUPS = [
 ];
 const QC_ROW_TO_GROUP = {};
 for (const g of QC_GROUPS) for (const r of g.rows) QC_ROW_TO_GROUP[r] = g.name;
-const GRADE_RANK = {D: 0, C: 1, O: 2, S: 3};
+const GRADE_RANK = {F: 0, D: 1, B: 2, A: 3};
 let qcGroupsExpanded = new Set();
 
 function aggregateGroupGrade(groupRows, featureName, grades) {
