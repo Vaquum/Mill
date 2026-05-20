@@ -980,9 +980,7 @@ function colLabel(idx) {
   const off = timePrefixCount();
   const specIdx = idx - off;
   if (specIdx >= 0 && specIdx < activeSpec.length) {
-    const s = activeSpec[specIdx];
-    const params = paramsSummary(s);
-    return params ? `${s.factory} ${params}` : s.factory;
+    return activeSpec[specIdx].factory;
   }
   return c;
 }
