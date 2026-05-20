@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import inspect
 from collections.abc import Mapping
 from typing import Any, Callable
 
 import polars as pl
 
 import features
+import limen.features as _LF
+import limen.indicators as _LI
 
 FactoryFn = Callable[..., pl.Expr]
+Producer = Callable[..., pl.DataFrame]
 
 
 def _raw_column(name: str) -> Callable[[], pl.Expr]:
@@ -230,16 +234,82 @@ REGISTRY: dict[str, dict[str, Any]] = {
 }
 
 
-def expr_for(factory_name: str, params: Mapping[str, Any]) -> pl.Expr:
+def _expr_producer(factory: FactoryFn) -> Producer:
+    def run(raw: pl.DataFrame, **params: Any) -> pl.DataFrame:
+        return raw.select(factory(**params) if params else factory())
+    return run
+
+
+def _limen_producer(fn: Callable[..., pl.DataFrame]) -> Producer:
+    def run(raw: pl.DataFrame, **params: Any) -> pl.DataFrame:
+        out = fn(raw, **params)
+        new = [c for c in out.columns if c not in raw.columns]
+        if not new:
+            return out.select([])
+        if not params:
+            return out.select(new)
+        suffix = "__" + "_".join(f"{k}={v}" for k, v in params.items())
+        return out.select(new).rename({c: f"{c}{suffix}" for c in new})
+    return run
+
+
+def _limen_param_specs(fn: Callable[..., Any]) -> tuple[dict[str, Any], ...]:
+    try:
+        sig = inspect.signature(fn)
+    except (TypeError, ValueError):
+        return ()
+    out: list[dict[str, Any]] = []
+    for p in sig.parameters.values():
+        if p.name in {"data", "df"}:
+            continue
+        default = p.default if p.default is not inspect.Parameter.empty else None
+        if isinstance(default, bool):
+            type_ = "bool"
+        elif isinstance(default, int):
+            type_ = "int"
+        elif isinstance(default, float):
+            type_ = "float"
+        else:
+            continue
+        out.append({"name": p.name, "type": type_, "default": default})
+    return tuple(out)
+
+
+for _entry in REGISTRY.values():
+    _entry["producer"] = _expr_producer(_entry["factory"])
+    _entry["source"] = "local"
+
+
+def _register_limen(ns: Any) -> None:
+    for name in dir(ns):
+        if name.startswith("_"):
+            continue
+        fn = getattr(ns, name)
+        if not callable(fn):
+            continue
+        REGISTRY[f"limen.{name}"] = {
+            "producer": _limen_producer(fn),
+            "params": _limen_param_specs(fn),
+            "source": "limen",
+        }
+
+
+_register_limen(_LF)
+_register_limen(_LI)
+
+
+def producer_for(factory_name: str) -> Producer:
     if factory_name not in REGISTRY:
         raise ValueError(f"Unknown factory: {factory_name!r}.")
-    entry = REGISTRY[factory_name]
-    fn: FactoryFn = entry["factory"]
-    return fn(**params) if params else fn()
+    return REGISTRY[factory_name]["producer"]
 
 
 def manifest() -> list[dict[str, Any]]:
     return [
-        {"name": name, "params": list(entry["params"])}
+        {
+            "name": name,
+            "params": list(entry["params"]),
+            "source": entry.get("source", "local"),
+        }
         for name, entry in REGISTRY.items()
     ]
