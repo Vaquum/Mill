@@ -13,3 +13,5 @@ __pycache__/
 
 *.parquet
 data/cache/
+
+feature_tags.json
