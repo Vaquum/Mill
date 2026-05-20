@@ -100,13 +100,23 @@
     padding: 0 var(--s-2);
     font: 400 var(--t-base) var(--font-mono);
     font-variant-numeric: tabular-nums;
+    line-height: 1;
     cursor: pointer;
     color-scheme: dark;
     transition: border-color 80ms ease;
+    display: inline-flex;
+    align-items: center;
   }
   .date-filter input[type="date"]:hover { border-color: var(--border-strong); }
   .date-filter input[type="date"]:focus-visible { outline: none; border-color: var(--fg-2); }
-  .date-filter input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+  .date-filter input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    padding: 0;
+    margin: 0 0 0 var(--s-1);
+    align-self: center;
+  }
+  .date-filter input[type="date"]::-webkit-datetime-edit { padding: 0; line-height: 1; }
+  .date-filter input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
   .date-presets {
     display: inline-flex;
     align-items: center;
