@@ -7,7 +7,7 @@ from table import build_from_spec
 NAME = "roc"
 
 SPEC = tuple(
-    {"factory": "roc", "params": {"period": n}}
+    {"factory": "roc", "params": {"n": n}}
     for n in (1, 2, 4, 8, 16, 32, 64, 128)
 )
 

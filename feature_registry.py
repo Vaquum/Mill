@@ -284,6 +284,8 @@ def _register_limen(ns: Any) -> None:
     for name in dir(ns):
         if name.startswith("_"):
             continue
+        if name in REGISTRY:
+            continue
         fn = getattr(ns, name)
         if not callable(fn):
             continue
