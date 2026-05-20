@@ -1749,6 +1749,22 @@ function defaultParamsFor(name) {
 }
 
 let openChipIdx = -1;
+let _paletteSearch = "";
+
+function _paletteItemVisible(name) {
+  const activeNames = new Set(activeFactories.map(g => g.factory));
+  if (activeNames.has(name)) return false;
+  if (_paletteSearch && !name.includes(_paletteSearch)) return false;
+  return true;
+}
+
+function syncPaletteVisibility() {
+  const wrapper = colBody.querySelector(".features-builder");
+  if (!wrapper) return;
+  for (const row of wrapper.querySelectorAll(".palette-item")) {
+    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
+  }
+}
 
 function buildPalette() {
   const pane = document.createElement("div");
@@ -1759,18 +1775,18 @@ function buildPalette() {
   search.className = "palette-search";
   search.spellcheck = false;
   search.autocomplete = "off";
+  search.value = _paletteSearch;
   pane.appendChild(search);
   const items = document.createElement("div");
   items.className = "palette-items";
-  const activeNames = new Set(activeFactories.map(g => g.factory));
   for (const f of factories) {
-    if (activeNames.has(f.name)) continue;
     const row = document.createElement("div");
     row.className = "palette-item";
     row.draggable = true;
     row.dataset.factory = f.name;
     row.dataset.name = f.name.toLowerCase();
     row.textContent = f.name;
+    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
     row.addEventListener("dragstart", e => {
       e.dataTransfer.setData("text/factory", f.name);
       e.dataTransfer.effectAllowed = "copy";
@@ -1779,10 +1795,8 @@ function buildPalette() {
     items.appendChild(row);
   }
   search.addEventListener("input", () => {
-    const q = search.value.trim().toLowerCase();
-    for (const row of items.children) {
-      row.style.display = (!q || row.dataset.name.includes(q)) ? "" : "none";
-    }
+    _paletteSearch = search.value.trim().toLowerCase();
+    syncPaletteVisibility();
   });
   pane.appendChild(items);
   return pane;
@@ -1880,21 +1894,22 @@ function refreshFeaturesModal() {
   if (!colModal.classList.contains("open")) return;
   const wrapper = colBody.querySelector(".features-builder");
   if (!wrapper) return;
-  const newPalette = buildPalette();
-  const oldPalette = wrapper.firstElementChild;
-  wrapper.replaceChild(newPalette, oldPalette);
+  syncPaletteVisibility();
   renderActivePane();
 }
 
 function renderActivePane() {
   const list = document.getElementById("features-active-list");
   if (!list) return;
+  const pane = list.parentElement;
+  const prevScroll = pane ? pane.scrollTop : 0;
   list.replaceChildren();
   if (activeFactories.length === 0) {
     const empty = document.createElement("div");
     empty.className = "active-empty";
     empty.textContent = "drag factories from the left to compose your view";
     list.appendChild(empty);
+    if (pane) pane.scrollTop = prevScroll;
     return;
   }
   activeFactories.forEach((g, idx) => {
@@ -2043,6 +2058,7 @@ function renderActivePane() {
 
     list.appendChild(chip);
   });
+  if (pane) pane.scrollTop = prevScroll;
 }
 
 function openColModal() {
