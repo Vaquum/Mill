@@ -479,27 +479,26 @@
   }
   .palette-item:hover { border-color: var(--border-strong); background: var(--bg); color: var(--accent); }
   .palette-item:active { cursor: grabbing; }
-  .palette-stick {
+  .palette-search {
     position: sticky;
     top: 0;
-    background: var(--panel);
     z-index: 2;
-    padding-bottom: var(--s-3);
-  }
-  .palette-stick .features-pane-header {
-    position: static;
-    margin-bottom: var(--s-3);
-  }
-  .palette-search {
     width: 100%;
     box-sizing: border-box;
     padding: var(--s-1) var(--s-3);
+    margin-bottom: var(--s-3);
     border: 1px solid var(--border);
     border-radius: 2px;
     background: var(--panel);
     color: var(--fg);
     font: 400 var(--t-base) var(--font-mono);
     outline: none;
+  }
+  .palette-search::placeholder {
+    color: var(--fg-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font: 500 var(--t-xs) var(--font-sans);
   }
   .palette-search:focus { border-color: var(--accent); }
   .features-active {
@@ -1684,20 +1683,13 @@ let openChipIdx = -1;
 function buildPalette() {
   const pane = document.createElement("div");
   pane.className = "features-pane palette";
-  const stick = document.createElement("div");
-  stick.className = "palette-stick";
-  const hdr = document.createElement("div");
-  hdr.className = "features-pane-header";
-  hdr.textContent = "factories";
-  stick.appendChild(hdr);
   const search = document.createElement("input");
   search.type = "text";
-  search.placeholder = "search";
+  search.placeholder = "factories";
   search.className = "palette-search";
   search.spellcheck = false;
   search.autocomplete = "off";
-  stick.appendChild(search);
-  pane.appendChild(stick);
+  pane.appendChild(search);
   const items = document.createElement("div");
   items.className = "palette-items";
   const activeNames = new Set(activeFactories.map(g => g.factory));
