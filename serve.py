@@ -16,7 +16,7 @@ import feature_registry
 import grading
 import qc
 import targets
-from bars import TIME_BAR_SECONDS
+from bars import FIXED_DOLLAR_BAR_THRESHOLDS, TIME_BAR_SECONDS
 from table import build_from_spec, klines
 from views import ALL as VIEWS
 
@@ -27,7 +27,7 @@ _VIEWS_DIR = Path(__file__).with_name("views")
 _TAGS_PATH = Path(__file__).with_name("feature_tags.json")
 _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-_BARS = tuple(TIME_BAR_SECONDS)
+_BARS = tuple(TIME_BAR_SECONDS) + tuple(FIXED_DOLLAR_BAR_THRESHOLDS)
 _TARGETS = ("none", *targets.NAMES)
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 _VIEW_TEMPLATE = '''from __future__ import annotations
@@ -101,13 +101,38 @@ def _spec_hash(spec: list[dict[str, Any]]) -> str:
     return hashlib.sha1(canon.encode()).hexdigest()[:16]
 
 
-def _serialize(df: pl.DataFrame) -> bytes:
-    feat_cols = [c for c in df.columns if c != "datetime"]
-    out = df.select(
-        pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("datetime"),
-        *(pl.col(c).round(4) for c in feat_cols),
+def _finite_round(name: str) -> pl.Expr:
+    return (
+        pl.when(pl.col(name).is_finite())
+        .then(pl.col(name).round(4))
+        .otherwise(None)
+        .alias(name)
     )
-    return json.dumps({"columns": out.columns, "rows": out.rows()}).encode()
+
+
+def _serialize(df: pl.DataFrame) -> bytes:
+    has_end = "bar_end_datetime" in df.columns
+    feat_cols = [c for c in df.columns if c not in ("datetime", "bar_end_datetime")]
+    numeric = {c for c, dt in df.schema.items() if dt.is_float()}
+    feat_exprs = [
+        _finite_round(c) if c in numeric else pl.col(c)
+        for c in feat_cols
+    ]
+    if has_end:
+        out = df.select(
+            pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("bar_start_datetime"),
+            pl.col("bar_end_datetime").dt.to_string("%Y-%m-%d %H:%M").alias("bar_end_datetime"),
+            *feat_exprs,
+        )
+    else:
+        out = df.select(
+            pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("datetime"),
+            *feat_exprs,
+        )
+    return json.dumps(
+        {"columns": out.columns, "rows": out.rows()},
+        allow_nan=False,
+    ).encode()
 
 
 def _raw_for(bar: str) -> pl.DataFrame:
@@ -137,6 +162,12 @@ def _ensure(
             features = build_from_spec(raw, spec)
         else:
             features = raw.select(pl.col("datetime"))
+        if "bar_end_datetime" in raw.columns:
+            features = features.join(
+                raw.select(pl.col("datetime"), pl.col("bar_end_datetime")),
+                on="datetime",
+                how="left",
+            )
         if target == "none":
             result = features
         else:
