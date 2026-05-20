@@ -1968,7 +1968,7 @@ async function saveView() {
     return;
   }
   manifest = await (await fetch("/manifest")).json();
-  factories = manifest.factories || [];
+  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   factoriesByName = new Map(factories.map(f => [f.name, f]));
   factoryTags = manifest.factory_tags || {};
   fillSelect(viewSelect, manifest.views);
@@ -2058,7 +2058,7 @@ function loadSpecFromView(name) {
 
 async function init() {
   manifest = await (await fetch("/manifest")).json();
-  factories = manifest.factories || [];
+  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   factoriesByName = new Map(factories.map(f => [f.name, f]));
   factoryTags = manifest.factory_tags || {};
   fillSelect(barsSelect, manifest.bars);
