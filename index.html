@@ -221,6 +221,7 @@
   }
   .modal-head .icon-button:hover { color: var(--fg); background: var(--bg); }
   .modal-head .icon-button.copied { color: var(--accent); }
+  .modal-head .icon-button.active { color: var(--accent); }
   .modal-head .icon-button svg { display: block; }
   .modal-head .close {
     background: transparent; border: none; color: var(--fg-2);
@@ -279,16 +280,10 @@
     color: var(--fg-2);
     font: 400 var(--t-md) var(--font-sans);
   }
-  .qc-table thead th:nth-child(2),
-  .qc-table tbody td:nth-child(2) { text-align: left; }
-  .qc-table tbody td.qc-ref {
-    color: var(--fg-3);
-    font: 400 var(--t-base) var(--font-mono);
-    white-space: nowrap;
-  }
   .qc-table {
     --metric-w: 240px;
-    --ref-w: 180px;
+    --feature-w: 132px;
+    table-layout: fixed;
   }
   .qc-table thead th:nth-child(1),
   .qc-table tbody td:nth-child(1) {
@@ -298,21 +293,63 @@
     width: var(--metric-w);
     min-width: var(--metric-w);
   }
-  .qc-table thead th:nth-child(2),
-  .qc-table tbody td:nth-child(2) {
-    position: sticky;
-    left: var(--metric-w);
-    background: var(--panel);
-    width: var(--ref-w);
-    min-width: var(--ref-w);
+  .qc-table thead th:nth-child(n+2),
+  .qc-table tbody td:nth-child(n+2) {
+    width: var(--feature-w);
+    min-width: var(--feature-w);
+    max-width: var(--feature-w);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .qc-table thead th:nth-child(1),
-  .qc-table thead th:nth-child(2) { z-index: 3; }
+  .qc-table thead th:nth-child(1) { z-index: 3; }
   .qc-table thead th { z-index: 2; }
-  .qc-table tbody td:nth-child(1),
-  .qc-table tbody td:nth-child(2) { z-index: 1; }
-  .qc-table tbody tr:hover td:nth-child(1),
-  .qc-table tbody tr:hover td:nth-child(2) { background: var(--bg); }
+  .qc-table tbody td:nth-child(1) { z-index: 1; }
+  .qc-table tbody tr:hover td:nth-child(1) { background: var(--bg); }
+  .qc-table.with-grades tbody td[data-grade] { position: relative; }
+  .qc-table.with-grades tbody td[data-grade]::before {
+    content: attr(data-grade);
+    position: absolute;
+    left: var(--s-3);
+    top: 50%;
+    transform: translateY(-50%);
+    font: 500 var(--t-xs) var(--font-sans);
+    color: var(--fg-3);
+    pointer-events: none;
+  }
+  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--neg); }
+  .qc-table.with-grades tbody td[data-grade="C"]::before { color: var(--accent); }
+  .qc-table.with-grades tbody td[data-grade="S"]::before { color: var(--pos); }
+  .qc-table tbody tr.qc-group-row { cursor: pointer; user-select: none; }
+  .qc-table tbody tr.qc-group-row td {
+    color: var(--fg);
+    font: 500 var(--t-xs) var(--font-sans);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--bg);
+  }
+  .qc-table tbody tr.qc-group-row:hover td { background: var(--bg); }
+  .qc-table tbody tr.qc-group-row td:first-child .chevron {
+    display: inline-block;
+    width: 10px;
+    color: var(--fg-3);
+    margin-right: var(--s-2);
+    transition: color 80ms ease;
+  }
+  .qc-table tbody tr.qc-group-row:hover td:first-child .chevron { color: var(--fg); }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade] { position: relative; }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade]::before {
+    content: attr(data-grade);
+    position: absolute;
+    left: var(--s-3);
+    top: 50%;
+    transform: translateY(-50%);
+    font: 500 var(--t-xs) var(--font-sans);
+    color: var(--fg-3);
+    pointer-events: none;
+  }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="D"]::before { color: var(--neg); }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="C"]::before { color: var(--accent); }
+  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="S"]::before { color: var(--pos); }
   .qc-table tbody td.has-tip { cursor: help; }
   .qc-tip {
     position: fixed;
@@ -704,6 +741,13 @@
       <div class="modal-head">
         <span id="qc-title">qc</span>
         <div class="actions">
+          <button class="icon-button" id="qc-grades" type="button" title="toggle grade overlay">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <rect x="3" y="14" width="4" height="6" />
+              <rect x="10" y="10" width="4" height="10" />
+              <rect x="17" y="4" width="4" height="16" />
+            </svg>
+          </button>
           <button class="icon-button" id="qc-copy" type="button" title="copy as TSV">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="12" height="12" rx="2"/>
@@ -1323,6 +1367,7 @@ function fmtCell(v) {
 
 const QC_META = {
   missing_rate:           {range: "<0.01 great",        tip: "Fraction of bar values missing. High values mean cold-start warmup or data gaps; <0.01 is healthy."},
+  n_unique:               {range: "1=const, 2=binary",  tip: "Distinct non-NaN values. 1 = constant (drop); 2 = binary; 3-50 = clean categorical; large = continuous. Combined with row count to grade cardinality."},
   unique_fraction:        {range: ">0.9 continuous",    tip: "Distinct values / row count. Near 1.0 = continuous numeric; near 0 = constant or near-binary."},
   min:                    {range: "—",                  tip: "Minimum non-NaN value. Sanity-check scale and outliers."},
   max:                    {range: "—",                  tip: "Maximum non-NaN value. Sanity-check scale and outliers."},
@@ -1351,16 +1396,30 @@ const QC_META = {
   regime_spearman_std:    {range: "<0.05 stable",       tip: "Standard deviation of spearman across 4 time-quartiles. Lower = more regime-stable."},
 };
 
-function augmentReportWithRef(report) {
-  const newCols = [report.columns[0], "ref", ...report.columns.slice(1)];
-  const newRows = report.rows.map(row => {
-    const meta = QC_META[row[0]];
-    return [row[0], meta ? meta.range : "", ...row.slice(1)];
-  });
-  return { columns: newCols, rows: newRows };
-}
-
+let qcGradesOn = false;
 let qcTip = null;
+
+const QC_GROUPS = [
+  {name: "HEALTH",       rows: ["missing_rate", "n_unique", "unique_fraction", "min", "max", "median", "p01", "p99", "skew"]},
+  {name: "STATIONARITY", rows: ["adf_p", "kpss_p"]},
+  {name: "REDUNDANCY",   rows: ["max_pairwise_spearman", "mean_pairwise_spearman", "redundancy_penalty", "max_pairwise_mi"]},
+  {name: "EDGE",         rows: ["spearman", "spearman_ci_lo", "spearman_ci_hi", "mutual_information", "decile_spread", "monotonic_fraction"]},
+  {name: "REGIME",       rows: ["regime_sign_agreement", "regime_spearman_std"]},
+];
+const QC_ROW_TO_GROUP = {};
+for (const g of QC_GROUPS) for (const r of g.rows) QC_ROW_TO_GROUP[r] = g.name;
+const GRADE_RANK = {D: 0, C: 1, O: 2, S: 3};
+let qcGroupsExpanded = new Set();
+
+function aggregateGroupGrade(groupRows, featureName, grades) {
+  let worst = null;
+  for (const rowName of groupRows) {
+    const g = (grades[rowName] || {})[featureName];
+    if (g == null) continue;
+    if (worst === null || GRADE_RANK[g] < GRADE_RANK[worst]) worst = g;
+  }
+  return worst;
+}
 function ensureQcTip() {
   if (!qcTip) {
     qcTip = document.createElement("div");
@@ -1388,40 +1447,79 @@ function hideQcTip() { if (qcTip) qcTip.classList.remove("open"); }
 
 function renderQc(report) {
   const tbl = document.createElement("table");
-  tbl.className = "qc-table";
+  tbl.className = "qc-table" + (qcGradesOn ? " with-grades" : "");
   const thead = document.createElement("thead");
   const trH = document.createElement("tr");
   for (const c of report.columns) {
     const th = document.createElement("th");
     th.textContent = c;
+    th.title = c;
     trH.appendChild(th);
   }
   thead.appendChild(trH);
   tbl.appendChild(thead);
+  const grades = report.grades || {};
   const tbody = document.createElement("tbody");
-  for (const row of report.rows) {
-    const tr = document.createElement("tr");
-    for (let i = 0; i < row.length; i++) {
+
+  const rowsByMetric = {};
+  for (const row of report.rows) rowsByMetric[row[0]] = row;
+
+  for (const group of QC_GROUPS) {
+    const expanded = qcGroupsExpanded.has(group.name);
+    const headerTr = document.createElement("tr");
+    headerTr.className = "qc-group-row" + (expanded ? " expanded" : "");
+    headerTr.dataset.group = group.name;
+    for (let i = 0; i < report.columns.length; i++) {
       const td = document.createElement("td");
       if (i === 0) {
-        td.textContent = row[i];
-        const meta = QC_META[row[0]];
-        if (meta && meta.tip) {
-          td.dataset.tip = meta.tip;
-          td.classList.add("has-tip");
-        }
-      } else if (i === 1) {
-        td.textContent = row[i];
-        td.className = "qc-ref";
+        const chev = document.createElement("span");
+        chev.className = "chevron";
+        chev.textContent = expanded ? "▼" : "▶";
+        td.appendChild(chev);
+        td.appendChild(document.createTextNode(group.name));
       } else {
-        const { text, cls } = fmtCell(row[i]);
-        td.textContent = text;
-        td.className = cls;
+        const featureName = report.columns[i];
+        const agg = aggregateGroupGrade(group.rows, featureName, grades);
+        td.textContent = "";
+        if (agg) td.dataset.grade = agg;
       }
-      tr.appendChild(td);
+      headerTr.appendChild(td);
     }
-    tbody.appendChild(tr);
+    headerTr.addEventListener("click", () => {
+      if (qcGroupsExpanded.has(group.name)) qcGroupsExpanded.delete(group.name);
+      else qcGroupsExpanded.add(group.name);
+      renderQc(report);
+    });
+    tbody.appendChild(headerTr);
+
+    if (!expanded) continue;
+    for (const metric of group.rows) {
+      const row = rowsByMetric[metric];
+      if (!row) continue;
+      const tr = document.createElement("tr");
+      for (let i = 0; i < row.length; i++) {
+        const td = document.createElement("td");
+        if (i === 0) {
+          td.textContent = row[i];
+          const meta = QC_META[metric];
+          if (meta && meta.tip) {
+            td.dataset.tip = meta.tip;
+            td.classList.add("has-tip");
+          }
+        } else {
+          const { text, cls } = fmtCell(row[i]);
+          td.textContent = text;
+          td.className = cls;
+          const featureName = report.columns[i];
+          const g = grades[metric] && grades[metric][featureName];
+          if (g) td.dataset.grade = g;
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
   }
+
   tbody.addEventListener("mouseover", e => {
     const td = e.target.closest("td.has-tip");
     if (td) showQcTip(td);
@@ -1453,7 +1551,7 @@ async function runQc() {
       qcBody.innerHTML = `<div class="qc-status">qc failed: ${msg}</div>`;
       return;
     }
-    const report = augmentReportWithRef(await res.json());
+    const report = await res.json();
     qcReport = report;
     renderQc(report);
     const dt = performance.now() - t0;
@@ -1942,6 +2040,13 @@ async function init() {
   qcButton.addEventListener("click", runQc);
   qcClose.addEventListener("click", closeQc);
   qcCopy.addEventListener("click", copyQcAsTsv);
+  const qcGradesBtn = document.getElementById("qc-grades");
+  qcGradesBtn.addEventListener("click", () => {
+    qcGradesOn = !qcGradesOn;
+    qcGradesBtn.classList.toggle("active", qcGradesOn);
+    const tbl = qcBody.querySelector(".qc-table");
+    if (tbl) tbl.classList.toggle("with-grades", qcGradesOn);
+  });
   qcModal.addEventListener("click", e => { if (e.target === qcModal) closeQc(); });
   colButton.addEventListener("click", openColModal);
   colClose.addEventListener("click", closeCol);

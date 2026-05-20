@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+import zlib
 from collections.abc import Sequence
 
 import numpy as np
@@ -11,7 +12,7 @@ from statsmodels.tsa.stattools import acf, adfuller, kpss
 
 
 _LAGS = (1, 5, 24, 168)
-_BLOCK_DEFAULT = 24
+_BLOCK_FALLBACK = 24
 _BLOCK_THRESHOLD = 0.05
 _BLOCK_MAX_LAG = 200
 _ADF_KPSS_MAX_N = 5000
@@ -21,10 +22,19 @@ _MI_MAX_N = 20000
 _PAIRWISE_MAX_N = 20000
 _PAIRWISE_MI_MAX_N = 5000
 _PAIRWISE_MIN_N = 30
-_RNG = np.random.default_rng(0)
+
+
+def _resolve_block(b: object) -> int:
+    return b if isinstance(b, int) and 1 <= b <= _BLOCK_MAX_LAG else _BLOCK_FALLBACK
+
+
+def _seed_for(label: str) -> int:
+    return zlib.crc32(label.encode()) & 0xFFFFFFFF
 
 
 def report(df: pl.DataFrame, target: str | None) -> dict:
+    if "datetime" in df.columns:
+        df = df.sort("datetime")
     feature_cols = [c for c in df.columns if c not in ("datetime", target)]
     has_target = bool(target) and target in df.columns
     columns = list(feature_cols) + ([target] if has_target else [])
@@ -36,7 +46,6 @@ def report(df: pl.DataFrame, target: str | None) -> dict:
 
     rows: list[tuple[str, dict[str, object]]] = []
     rows.extend(_health_rows(df, arrays, columns))
-    rows.append(("block_size", {col: blocks[col] for col in columns}))
     rows.extend(_pairwise_rows(arrays, feature_cols))
 
     if has_target:
@@ -47,6 +56,7 @@ def report(df: pl.DataFrame, target: str | None) -> dict:
     return {
         "columns": ["metric", *columns],
         "rows": [[name, *(values.get(c) for c in columns)] for name, values in rows],
+        "n_rows": df.height,
     }
 
 
@@ -60,7 +70,11 @@ def _health_rows(
 
     out.append((
         "missing_rate",
-        {c: float(df[c].null_count()) / n if n else None for c in columns},
+        {c: float(np.isnan(arrays[c]).sum()) / n if n else None for c in columns},
+    ))
+    out.append((
+        "n_unique",
+        {c: int(np.unique(_drop_nan(arrays[c])).size) for c in columns},
     ))
     out.append((
         "unique_fraction",
@@ -78,12 +92,6 @@ def _health_rows(
 
     out.append(("adf_p", {c: _safe(_adf_p, _drop_nan(arrays[c])) for c in columns}))
     out.append(("kpss_p", {c: _safe(_kpss_p, _drop_nan(arrays[c])) for c in columns}))
-
-    for lag in _LAGS:
-        out.append((
-            f"acf_lag_{lag}",
-            {c: _acf_at(arrays[c], lag) for c in columns},
-        ))
 
     return out
 
@@ -112,7 +120,9 @@ def _edge_rows(
             continue
 
         spearman[col] = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
-        lo, hi = _bootstrap_spearman_ci(xc, yc, blocks.get(col, _BLOCK_DEFAULT))
+        lo, hi = _bootstrap_spearman_ci(
+            xc, yc, _resolve_block(blocks.get(col)), seed=_seed_for(col),
+        )
         spear_lo[col] = lo
         spear_hi[col] = hi
         mi[col] = _mutual_info(xc, yc)
@@ -302,25 +312,27 @@ def _acf_at(arr: np.ndarray, lag: int) -> float | None:
         return None
 
 
-def _block_size(arr: np.ndarray) -> int:
+def _block_size(arr: np.ndarray) -> int | None:
     a = _drop_nan(arr)
-    max_lag = min(_BLOCK_MAX_LAG, max(1, a.size - 2))
     if a.size <= 3:
-        return _BLOCK_DEFAULT
+        return None
+    max_lag = min(_BLOCK_MAX_LAG, max(1, a.size - 2))
     try:
         coefs = np.abs(acf(a, nlags=max_lag, fft=True))
     except Exception:
-        return _BLOCK_DEFAULT
+        return None
     for lag in range(1, len(coefs)):
         if coefs[lag] < _BLOCK_THRESHOLD:
             return int(lag)
-    return _BLOCK_DEFAULT
+    return _BLOCK_MAX_LAG
 
 
 def _bootstrap_spearman_ci(
     x: np.ndarray,
     y: np.ndarray,
     block: int,
+    *,
+    seed: int = 0,
     n_iter: int = _BOOTSTRAP_ITER,
     ci: float = 0.95,
 ) -> tuple[float | None, float | None]:
@@ -332,11 +344,12 @@ def _bootstrap_spearman_ci(
         n = x.size
     if n < block + 1:
         return None, None
+    rng = np.random.default_rng(seed)
     starts = np.arange(n - block + 1)
     n_blocks = max(1, (n + block - 1) // block)
     estimates = np.empty(n_iter)
     for i in range(n_iter):
-        s = _RNG.choice(starts, size=n_blocks, replace=True)
+        s = rng.choice(starts, size=n_blocks, replace=True)
         idx = (s[:, None] + np.arange(block)).ravel()[:n]
         v = stats.spearmanr(x[idx], y[idx]).statistic
         estimates[i] = v if not np.isnan(v) else 0.0

@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 import polars as pl
 
 import feature_registry
+import grading
 import qc
 import targets
 from bars import TIME_BAR_SECONDS
@@ -272,6 +273,9 @@ class _Handler(BaseHTTPRequestHandler):
                 else:
                     sub = frame
                 report = qc.report(sub, target if target != "none" else None)
+                report["grades"] = grading.grade_map(
+                    report, target=target if target != "none" else None
+                )
             except Exception as exc:
                 self._send(500, "text/plain", f"qc failed: {exc}".encode())
                 return
