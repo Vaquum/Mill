@@ -479,8 +479,20 @@
   }
   .palette-item:hover { border-color: var(--border-strong); background: var(--bg); color: var(--accent); }
   .palette-item:active { cursor: grabbing; }
-  .palette-search {
+  .palette-stick {
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    z-index: 2;
+    padding-bottom: var(--s-3);
+  }
+  .palette-stick .features-pane-header {
+    position: static;
     margin-bottom: var(--s-3);
+  }
+  .palette-search {
+    width: 100%;
+    box-sizing: border-box;
     padding: var(--s-1) var(--s-3);
     border: 1px solid var(--border);
     border-radius: 2px;
@@ -1672,17 +1684,20 @@ let openChipIdx = -1;
 function buildPalette() {
   const pane = document.createElement("div");
   pane.className = "features-pane palette";
+  const stick = document.createElement("div");
+  stick.className = "palette-stick";
   const hdr = document.createElement("div");
   hdr.className = "features-pane-header";
   hdr.textContent = "factories";
-  pane.appendChild(hdr);
+  stick.appendChild(hdr);
   const search = document.createElement("input");
   search.type = "text";
   search.placeholder = "search";
   search.className = "palette-search";
   search.spellcheck = false;
   search.autocomplete = "off";
-  pane.appendChild(search);
+  stick.appendChild(search);
+  pane.appendChild(stick);
   const items = document.createElement("div");
   items.className = "palette-items";
   const activeNames = new Set(activeFactories.map(g => g.factory));
