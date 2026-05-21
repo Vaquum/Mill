@@ -172,8 +172,7 @@ def grade_decile_spread(spread: Any) -> str | None:
 def grade_monotonic_fraction(frac: Any) -> str | None:
     if not _finite(frac):
         return None
-    distance = abs(float(frac) - 0.5)
-    return _apply_ladder(distance, R.MONOTONIC_DISTANCE)
+    return _apply_ladder(float(frac), R.MONOTONIC_FRACTION)
 
 
 def grade_regime_sign_agreement(agreement: Any) -> str | None:

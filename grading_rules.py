@@ -67,11 +67,13 @@ ABS_MAX_PAIRWISE_SPEARMAN: list[tuple[float, str]] = [
     (0.0,  "A"),
 ]
 
-# Distance from 0.5 (bimodal: extremes good, mid-range bad).
-MONOTONIC_DISTANCE: list[tuple[float, str]] = [
-    (0.35, "A"),
-    (0.20, "B"),
-    (0.10, "D"),
+# monotonic_fraction is the share of decile transitions whose sign matches
+# the overall spread sign. Higher is monotonically better — a value near 1.0
+# is the unambiguous good case, never the bad one.
+MONOTONIC_FRACTION: list[tuple[float, str]] = [
+    (0.78, "A"),  # ≥ 7/9 transitions agree
+    (0.56, "B"),  # ≥ 5/9
+    (0.33, "D"),  # ≥ 3/9
     (0.0,  "F"),
 ]
 

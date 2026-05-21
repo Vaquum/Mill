@@ -11,7 +11,6 @@ from sklearn.feature_selection import mutual_info_classif, mutual_info_regressio
 from statsmodels.tsa.stattools import acf, adfuller, kpss
 
 
-_LAGS = (1, 5, 24, 168)
 _BLOCK_FALLBACK = 24
 _BLOCK_THRESHOLD = 0.05
 _BLOCK_MAX_LAG = 200
@@ -32,17 +31,21 @@ def _seed_for(label: str) -> int:
     return zlib.crc32(label.encode()) & 0xFFFFFFFF
 
 
+_TIME_COLS = ("datetime", "bar_start_datetime", "bar_end_datetime")
+
+
 def report(df: pl.DataFrame, target: str | None) -> dict:
     if "datetime" in df.columns:
         df = df.sort("datetime")
-    feature_cols = [c for c in df.columns if c not in ("datetime", target)]
+    skip = set(_TIME_COLS) | ({target} if target else set())
+    feature_cols = [c for c in df.columns if c not in skip]
     has_target = bool(target) and target in df.columns
     columns = list(feature_cols) + ([target] if has_target else [])
 
     arrays: dict[str, np.ndarray] = {
         col: df[col].cast(pl.Float64, strict=False).to_numpy() for col in columns
     }
-    blocks = {col: _block_size(arrays[col]) for col in columns}
+    blocks: dict[str, int | None] = {col: _block_size(arrays[col]) for col in columns}
 
     rows: list[tuple[str, dict[str, object]]] = []
     rows.extend(_health_rows(df, arrays, columns))
@@ -100,7 +103,7 @@ def _edge_rows(
     arrays: dict[str, np.ndarray],
     feature_cols: Sequence[str],
     target_arr: np.ndarray,
-    blocks: dict[str, int],
+    blocks: dict[str, int | None],
     target_label: str,
 ) -> list[tuple[str, dict[str, object]]]:
     spearman: dict[str, object] = {}
@@ -272,9 +275,13 @@ def _safe(fn, *args):
         result = fn(*args)
     except Exception:
         return None
-    if isinstance(result, float) and (np.isnan(result) or np.isinf(result)):
+    if result is None:
         return None
-    return result if result is not None else None
+    if isinstance(result, np.generic):
+        result = result.item()
+    if isinstance(result, float) and not np.isfinite(result):
+        return None
+    return result
 
 
 def _adf_p(arr: np.ndarray) -> float | None:
@@ -298,18 +305,6 @@ def _kpss_p(arr: np.ndarray) -> float | None:
 def _stride(arr: np.ndarray, n: int) -> np.ndarray:
     step = max(1, arr.size // n)
     return arr[::step][:n]
-
-
-def _acf_at(arr: np.ndarray, lag: int) -> float | None:
-    a = _drop_nan(arr)
-    if a.size <= lag + 1:
-        return None
-    try:
-        coefs = acf(a, nlags=lag, fft=True)
-        v = float(coefs[lag])
-        return None if np.isnan(v) else v
-    except Exception:
-        return None
 
 
 def _block_size(arr: np.ndarray) -> int | None:
