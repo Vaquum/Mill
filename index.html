@@ -1112,8 +1112,12 @@ function render() {
 }
 
 let _loadSeq = 0;
+let _loadAbort = null;
 
 async function load() {
+  if (_loadAbort) _loadAbort.abort();
+  const ctrl = new AbortController();
+  _loadAbort = ctrl;
   const seq = ++_loadSeq;
   const bars = barsSelect.value;
   const target = targetSelect.value;
@@ -1124,8 +1128,9 @@ async function load() {
     + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
   let res;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { signal: ctrl.signal });
   } catch (e) {
+    if (e.name === "AbortError") return;
     if (seq === _loadSeq) meta.textContent = `network error: ${e.message}`;
     return;
   }
@@ -1138,6 +1143,7 @@ async function load() {
   try {
     data = await res.json();
   } catch (e) {
+    if (e.name === "AbortError") return;
     meta.textContent = `bad json: ${e.message}`;
     return;
   }
@@ -1606,7 +1612,12 @@ function renderQc(report) {
   qcBody.replaceChildren(tbl);
 }
 
+let _qcAbort = null;
+
 async function runQc() {
+  if (_qcAbort) _qcAbort.abort();
+  const ctrl = new AbortController();
+  _qcAbort = ctrl;
   const bars = barsSelect.value;
   const target = targetSelect.value;
   const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== currentTarget);
@@ -1620,7 +1631,7 @@ async function runQc() {
       + `&target=${encodeURIComponent(target)}`
       + `&cols=${encodeURIComponent(cols)}`
       + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) {
       const msg = await res.text();
       qcBody.innerHTML = `<div class="qc-status">qc failed: ${msg}</div>`;
@@ -1632,6 +1643,7 @@ async function runQc() {
     const dt = performance.now() - t0;
     qcTitle.textContent = `qc · ${bars} · ${target}  ·  ${(dt/1000).toFixed(1)}s`;
   } catch (e) {
+    if (e.name === "AbortError") return;
     qcBody.innerHTML = `<div class="qc-status">qc failed: ${e}</div>`;
   }
 }
@@ -1684,6 +1696,7 @@ async function copyQcAsTsv() {
 }
 
 function closeQc() {
+  if (_qcAbort) _qcAbort.abort();
   qcModal.classList.remove("open");
   hideQcTip();
 }
