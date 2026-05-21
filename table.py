@@ -6,7 +6,7 @@ from typing import Any
 
 import polars as pl
 
-from bars import FIXED_DOLLAR_BAR_THRESHOLDS, TIME_BAR_SECONDS
+from bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
 from feature_registry import producer_for
 from get_data import GetData
 
@@ -22,13 +22,12 @@ def klines(bar_name: str) -> pl.DataFrame:
             start_date_limit=_START,
             end_date_limit=_END,
         )
-    if bar_name in FIXED_DOLLAR_BAR_THRESHOLDS:
-        df = gd.get_dollar_bars(
+    if bar_name in DOLLAR_BAR_USD:
+        return gd.get_dollar_bars(
             bar_name,
             start_date_limit=_START,
             end_date_limit=_END,
         )
-        return df.rename({"bar_start_datetime": "datetime"})
     raise ValueError(f"Unknown bar: {bar_name!r}.")
 
 

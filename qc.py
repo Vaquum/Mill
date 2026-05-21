@@ -31,13 +31,10 @@ def _seed_for(label: str) -> int:
     return zlib.crc32(label.encode()) & 0xFFFFFFFF
 
 
-_TIME_COLS = ("datetime", "bar_start_datetime", "bar_end_datetime")
-
-
 def report(df: pl.DataFrame, target: str | None) -> dict:
     if "datetime" in df.columns:
         df = df.sort("datetime")
-    skip = set(_TIME_COLS) | ({target} if target else set())
+    skip = {"datetime"} | ({target} if target else set())
     feature_cols = [c for c in df.columns if c not in skip]
     has_target = bool(target) and target in df.columns
     columns = list(feature_cols) + ([target] if has_target else [])
