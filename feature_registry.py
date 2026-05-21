@@ -248,7 +248,7 @@ def _limen_producer(fn: Callable[..., pl.DataFrame]) -> Producer:
             return out.select([])
         if not params:
             return out.select(new)
-        suffix = "__" + "_".join(f"{k}={v}" for k, v in params.items())
+        suffix = "__" + "_".join(f"{k}={params[k]}" for k in sorted(params))
         return out.select(new).rename({c: f"{c}{suffix}" for c in new})
     return run
 

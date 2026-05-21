@@ -44,11 +44,8 @@ def build_from_spec(
             continue
         seen.add(key)
         unique.append(item)
-    out = raw.select(pl.col("datetime"))
+    parts: list[pl.DataFrame] = [raw.select(pl.col("datetime"))]
     for item in unique:
         producer = producer_for(item["factory"])
-        out = pl.concat(
-            [out, producer(raw, **(item.get("params") or {}))],
-            how="horizontal",
-        )
-    return out
+        parts.append(producer(raw, **(item.get("params") or {})))
+    return pl.concat(parts, how="horizontal")

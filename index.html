@@ -347,21 +347,6 @@
     transition: color 80ms ease;
   }
   .qc-table tbody tr.qc-group-row:hover td:first-child .chevron { color: var(--fg); }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade] { position: relative; }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade]::before {
-    content: attr(data-grade);
-    position: absolute;
-    left: var(--s-3);
-    top: 50%;
-    transform: translateY(-50%);
-    font: 500 var(--t-xs) var(--font-sans);
-    color: var(--fg-3);
-    pointer-events: none;
-  }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="F"]::before { color: var(--c-magenta); }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="D"]::before { color: var(--c-pink); }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="B"]::before { color: var(--c-lavender); }
-  .qc-table.with-grades tbody tr.qc-group-row td[data-grade="A"]::before { color: var(--c-pale-pink); }
   .qc-table.with-grades tbody td[data-grade="NA"]::before { color: var(--fg-3); letter-spacing: 0.04em; }
   .qc-table tbody td.has-tip { cursor: help; }
   .qc-tip {
@@ -1454,34 +1439,29 @@ function fmtCell(v) {
 }
 
 const QC_META = {
-  missing_rate:           {range: "<0.01 great",        tip: "Fraction of bar values missing. High values mean cold-start warmup or data gaps; <0.01 is healthy."},
-  n_unique:               {range: "1=const, 2=binary",  tip: "Distinct non-NaN values. 1 = constant (drop); 2 = binary; 3-50 = clean categorical; large = continuous. Combined with row count to grade cardinality."},
-  unique_fraction:        {range: ">0.9 continuous",    tip: "Distinct values / row count. Near 1.0 = continuous numeric; near 0 = constant or near-binary."},
-  min:                    {range: "—",                  tip: "Minimum non-NaN value. Sanity-check scale and outliers."},
-  max:                    {range: "—",                  tip: "Maximum non-NaN value. Sanity-check scale and outliers."},
-  median:                 {range: "—",                  tip: "50th percentile. Robust central tendency."},
-  p01:                    {range: "—",                  tip: "1st percentile. Lower-tail bound for the bulk of the distribution."},
-  p99:                    {range: "—",                  tip: "99th percentile. Upper-tail bound for the bulk of the distribution."},
-  skew:                   {range: "|s|<1 symmetric",    tip: "Distribution asymmetry. Heavy positive skew is normal for vol; large |skew| flags a log-transform candidate."},
-  adf_p:                  {range: "<0.05 stationary",   tip: "Augmented Dickey–Fuller p-value. Low p rejects a unit root, i.e. the series is stationary."},
-  kpss_p:                 {range: ">0.05 stationary",   tip: "KPSS p-value. High p fails to reject strict stationarity. Long-memory series often reject both ADF and KPSS — that's expected, not a defect."},
-  acf_lag_1:              {range: ">0.5 persistent",    tip: "Autocorrelation at lag 1 bar. High = vol-clustering / momentum; near 0 = fast-mixing."},
-  acf_lag_5:              {range: ">0.3 persistent",    tip: "Autocorrelation at lag 5 bars. Decay rate of short-horizon dependence."},
-  acf_lag_24:             {range: ">0.2 daily cycle",   tip: "Autocorrelation at lag 24 bars. On 1h bars this is the daily-seasonal lag."},
-  acf_lag_168:            {range: ">0.2 weekly cycle",  tip: "Autocorrelation at lag 168 bars. On 1h bars this is the weekly-seasonal lag."},
-  block_size:             {range: "1–200 bars",         tip: "Lag at which |ACF| drops below 0.05; used as bootstrap block length for the Spearman CI. Cap is 200."},
-  max_pairwise_spearman:  {range: "<0.3 unique",        tip: "Highest |Spearman| with any other feature in the set. >0.7 = essentially a duplicate; 0.3–0.7 = some overlap; <0.3 = uniquely shaped."},
-  mean_pairwise_spearman: {range: "<0.3 mostly unique", tip: "Average |Spearman| across all other features. Catches diffuse redundancy that max misses."},
-  redundancy_penalty:     {range: ">0.7 unique",        tip: "1 − max_pairwise_spearman. Pre-computed multiplier for uniqueness-adjusted edge."},
-  max_pairwise_mi:        {range: "<0.1 independent",   tip: "Highest pairwise mutual information. Catches non-linear redundancy that Spearman misses."},
-  spearman:               {range: "|ρ|>0.1 strong",     tip: "Rank correlation with target. ±0.05 = noise band; ±0.10+ = meaningful directional edge."},
-  spearman_ci_lo:         {range: "—",                  tip: "Block-bootstrap 95% lower bound for spearman. If [lo, hi] crosses zero, the edge is not statistically significant."},
-  spearman_ci_hi:         {range: "—",                  tip: "Block-bootstrap 95% upper bound for spearman. Use with lo to check significance."},
-  mutual_information:     {range: ">0 has info",        tip: "Mutual information with target. Catches non-linear edge that Spearman misses."},
-  decile_spread:          {range: "|d|>0.1 useful",     tip: "Mean target in top decile minus mean target in bottom decile. Sign + magnitude of the directional edge."},
-  monotonic_fraction:     {range: ">0.7 monotone",      tip: "Fraction of consecutive feature deciles whose mean-target moves in the overall direction. >0.7 = clean monotone edge."},
-  regime_sign_agreement:  {range: "4/4 stable",         tip: "Sign of spearman across 4 chronological quartiles. 4/4 = stable across regimes; 2/4 = sign-flipping; lower = unstable."},
-  regime_spearman_std:    {range: "<0.05 stable",       tip: "Standard deviation of spearman across 4 time-quartiles. Lower = more regime-stable."},
+  missing_rate:           {tip: "Fraction of bar values missing (Polars nulls + NaN/failed casts after Float64 cast). High values mean cold-start warmup or data gaps; <0.01 is healthy."},
+  n_unique:               {tip: "Distinct non-NaN values. 1 = constant (drop); 2 = binary; 3-50 = clean categorical; large = continuous. Combined with row count to grade cardinality."},
+  unique_fraction:        {tip: "Distinct values / row count. Near 1.0 = continuous numeric; near 0 = constant or near-binary."},
+  min:                    {tip: "Minimum non-NaN value. Sanity-check scale and outliers."},
+  max:                    {tip: "Maximum non-NaN value. Sanity-check scale and outliers."},
+  median:                 {tip: "50th percentile. Robust central tendency."},
+  p01:                    {tip: "1st percentile. Lower-tail bound for the bulk of the distribution."},
+  p99:                    {tip: "99th percentile. Upper-tail bound for the bulk of the distribution."},
+  skew:                   {tip: "Distribution asymmetry. Heavy positive skew is normal for vol; large |skew| flags a log-transform candidate."},
+  adf_p:                  {tip: "Augmented Dickey–Fuller p-value. Low p rejects a unit root, i.e. the series is stationary."},
+  kpss_p:                 {tip: "KPSS p-value. High p fails to reject strict stationarity. Long-memory series often reject both ADF and KPSS — that's expected, not a defect."},
+  max_pairwise_spearman:  {tip: "Highest |Spearman| with any other feature in the set. >0.7 = essentially a duplicate; 0.3–0.7 = some overlap; <0.3 = uniquely shaped."},
+  mean_pairwise_spearman: {tip: "Average |Spearman| across all other features. Catches diffuse redundancy that max misses."},
+  redundancy_penalty:     {tip: "1 − max_pairwise_spearman. Pre-computed multiplier for uniqueness-adjusted edge."},
+  max_pairwise_mi:        {tip: "Highest pairwise mutual information. Catches non-linear redundancy that Spearman misses."},
+  spearman:               {tip: "Rank correlation with target. ±0.05 = noise band; ±0.10+ = meaningful directional edge."},
+  spearman_ci_lo:         {tip: "Block-bootstrap 95% lower bound for spearman (block length resolved internally; bootstrap is seeded by column name for determinism). If [lo, hi] crosses zero, the edge is not statistically significant."},
+  spearman_ci_hi:         {tip: "Block-bootstrap 95% upper bound for spearman. Use with lo to check significance."},
+  mutual_information:     {tip: "Mutual information with target. Catches non-linear edge that Spearman misses."},
+  decile_spread:          {tip: "Mean target in top decile minus mean target in bottom decile. Sign + magnitude of the directional edge."},
+  monotonic_fraction:     {tip: "Fraction of consecutive feature deciles whose mean-target moves in the overall direction. >0.7 = clean monotone edge."},
+  regime_sign_agreement:  {tip: "Sign of spearman across 4 chronological quartiles. 4/4 = stable across regimes; 2/4 = sign-flipping; lower = unstable."},
+  regime_spearman_std:    {tip: "Standard deviation of spearman across 4 time-quartiles. Lower = more regime-stable."},
 };
 
 let qcGradesOn = true;
@@ -1494,8 +1474,6 @@ const QC_GROUPS = [
   {name: "EDGE",         rows: ["spearman", "spearman_ci_lo", "spearman_ci_hi", "mutual_information", "decile_spread", "monotonic_fraction"]},
   {name: "REGIME",       rows: ["regime_sign_agreement", "regime_spearman_std"]},
 ];
-const QC_ROW_TO_GROUP = {};
-for (const g of QC_GROUPS) for (const r of g.rows) QC_ROW_TO_GROUP[r] = g.name;
 const GRADE_RANK = {F: 0, D: 1, B: 2, A: 3};
 let qcGroupsExpanded = new Set();
 
@@ -1631,7 +1609,7 @@ function renderQc(report) {
 async function runQc() {
   const bars = barsSelect.value;
   const target = targetSelect.value;
-  const colsForQc = visibleColumns.filter(c => c !== "datetime" && c !== currentTarget);
+  const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== currentTarget);
   const cols = colsForQc.join(",");
   qcTitle.textContent = `qc · ${bars} · ${target}`;
   qcBody.innerHTML = `<div class="qc-status">running quality control…</div>`;
