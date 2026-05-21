@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+import json
+from collections.abc import Sequence
 from typing import Any
 
 import polars as pl
 
 from bars import FIXED_DOLLAR_BAR_THRESHOLDS, TIME_BAR_SECONDS
-from feature_registry import expr_for
+from feature_registry import producer_for
 from get_data import GetData
 
 _START = "2024-01-01"
@@ -31,12 +32,20 @@ def klines(bar_name: str) -> pl.DataFrame:
     raise ValueError(f"Unknown bar: {bar_name!r}.")
 
 
-def select_features(raw: pl.DataFrame, expressions: Iterable[pl.Expr]) -> pl.DataFrame:
-    return raw.select(pl.col("datetime"), *expressions)
-
-
 def build_from_spec(
     raw: pl.DataFrame, spec: Sequence[dict[str, Any]]
 ) -> pl.DataFrame:
-    exprs = [expr_for(item["factory"], item.get("params") or {}) for item in spec]
-    return select_features(raw, exprs)
+    seen: set[tuple[str, str]] = set()
+    unique: list[dict[str, Any]] = []
+    for item in spec:
+        params = item.get("params") or {}
+        key = (item["factory"], json.dumps(params, sort_keys=True))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    parts: list[pl.DataFrame] = [raw.select(pl.col("datetime"))]
+    for item in unique:
+        producer = producer_for(item["factory"])
+        parts.append(producer(raw, **(item.get("params") or {})))
+    return pl.concat(parts, how="horizontal")

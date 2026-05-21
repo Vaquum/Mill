@@ -100,13 +100,23 @@
     padding: 0 var(--s-2);
     font: 400 var(--t-base) var(--font-mono);
     font-variant-numeric: tabular-nums;
+    line-height: 1;
     cursor: pointer;
     color-scheme: dark;
     transition: border-color 80ms ease;
+    display: inline-flex;
+    align-items: center;
   }
   .date-filter input[type="date"]:hover { border-color: var(--border-strong); }
   .date-filter input[type="date"]:focus-visible { outline: none; border-color: var(--fg-2); }
-  .date-filter input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+  .date-filter input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    padding: 0;
+    margin: 0 0 0 var(--s-1);
+    align-self: center;
+  }
+  .date-filter input[type="date"]::-webkit-datetime-edit { padding: 0; line-height: 1; }
+  .date-filter input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
   .date-presets {
     display: inline-flex;
     align-items: center;
@@ -221,6 +231,7 @@
   }
   .modal-head .icon-button:hover { color: var(--fg); background: var(--bg); }
   .modal-head .icon-button.copied { color: var(--accent); }
+  .modal-head .icon-button.active { color: var(--accent); }
   .modal-head .icon-button svg { display: block; }
   .modal-head .close {
     background: transparent; border: none; color: var(--fg-2);
@@ -279,16 +290,10 @@
     color: var(--fg-2);
     font: 400 var(--t-md) var(--font-sans);
   }
-  .qc-table thead th:nth-child(2),
-  .qc-table tbody td:nth-child(2) { text-align: left; }
-  .qc-table tbody td.qc-ref {
-    color: var(--fg-3);
-    font: 400 var(--t-base) var(--font-mono);
-    white-space: nowrap;
-  }
   .qc-table {
     --metric-w: 240px;
-    --ref-w: 180px;
+    --feature-w: 132px;
+    table-layout: fixed;
   }
   .qc-table thead th:nth-child(1),
   .qc-table tbody td:nth-child(1) {
@@ -298,21 +303,51 @@
     width: var(--metric-w);
     min-width: var(--metric-w);
   }
-  .qc-table thead th:nth-child(2),
-  .qc-table tbody td:nth-child(2) {
-    position: sticky;
-    left: var(--metric-w);
-    background: var(--panel);
-    width: var(--ref-w);
-    min-width: var(--ref-w);
+  .qc-table thead th:nth-child(n+2),
+  .qc-table tbody td:nth-child(n+2) {
+    width: var(--feature-w);
+    min-width: var(--feature-w);
+    max-width: var(--feature-w);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .qc-table thead th:nth-child(1),
-  .qc-table thead th:nth-child(2) { z-index: 3; }
+  .qc-table thead th:nth-child(1) { z-index: 3; }
   .qc-table thead th { z-index: 2; }
-  .qc-table tbody td:nth-child(1),
-  .qc-table tbody td:nth-child(2) { z-index: 1; }
-  .qc-table tbody tr:hover td:nth-child(1),
-  .qc-table tbody tr:hover td:nth-child(2) { background: var(--bg); }
+  .qc-table tbody td:nth-child(1) { z-index: 1; }
+  .qc-table tbody tr:hover td:nth-child(1) { background: var(--bg); }
+  .qc-table.with-grades tbody td[data-grade] { position: relative; }
+  .qc-table.with-grades tbody td[data-grade]::before {
+    content: attr(data-grade);
+    position: absolute;
+    left: var(--s-3);
+    top: 50%;
+    transform: translateY(-50%);
+    font: 500 var(--t-xs) var(--font-sans);
+    color: var(--fg-3);
+    pointer-events: none;
+  }
+  .qc-table.with-grades tbody td[data-grade="F"]::before { color: var(--c-magenta); }
+  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--c-pink); }
+  .qc-table.with-grades tbody td[data-grade="B"]::before { color: var(--c-lavender); }
+  .qc-table.with-grades tbody td[data-grade="A"]::before { color: var(--c-pale-pink); }
+  .qc-table tbody tr.qc-group-row { cursor: pointer; user-select: none; }
+  .qc-table tbody tr.qc-group-row td {
+    color: var(--fg);
+    font: 500 var(--t-xs) var(--font-sans);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--bg);
+  }
+  .qc-table tbody tr.qc-group-row:hover td { background: var(--bg); }
+  .qc-table tbody tr.qc-group-row td:first-child .chevron {
+    display: inline-block;
+    width: 10px;
+    color: var(--fg-3);
+    margin-right: var(--s-2);
+    transition: color 80ms ease;
+  }
+  .qc-table tbody tr.qc-group-row:hover td:first-child .chevron { color: var(--fg); }
+  .qc-table.with-grades tbody td[data-grade="NA"]::before { color: var(--fg-3); letter-spacing: 0.04em; }
   .qc-table tbody td.has-tip { cursor: help; }
   .qc-tip {
     position: fixed;
@@ -390,6 +425,8 @@
   .row-option-input::-webkit-outer-spin-button,
   .row-option-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .row-option-input:focus-visible { outline: none; border-color: var(--accent); }
+  .row-option-disabled { color: var(--fg-3); cursor: not-allowed; }
+  .row-option-disabled input { cursor: not-allowed; opacity: 0.5; }
 
   .features-builder {
     display: grid;
@@ -432,11 +469,28 @@
   }
   .palette-item:hover { border-color: var(--border-strong); background: var(--bg); color: var(--accent); }
   .palette-item:active { cursor: grabbing; }
-  .palette-item .params-hint {
-    color: var(--fg-3);
-    font: 400 var(--t-xs) var(--font-mono);
-    font-variant-numeric: tabular-nums;
+  .palette-search {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--s-1) var(--s-3);
+    margin-bottom: var(--s-3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--panel);
+    color: var(--fg);
+    font: 400 var(--t-base) var(--font-mono);
+    outline: none;
   }
+  .palette-search::placeholder {
+    color: var(--fg-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font: 500 var(--t-xs) var(--font-sans);
+  }
+  .palette-search:focus { border-color: var(--accent); }
   .features-active {
     position: relative;
     transition: background 80ms ease;
@@ -455,16 +509,20 @@
     border: 1px solid var(--border);
     border-radius: 2px;
     background: var(--bg);
-    transition: border-color 80ms ease;
+    transition: border-color 80ms ease, opacity 80ms ease;
   }
   .active-chip:hover { border-color: var(--border-strong); }
   .active-chip.open { border-color: var(--accent); }
+  .active-chip.dragging { opacity: 0.4; }
+  .active-chip.drop-target { border-color: var(--accent); border-style: dashed; }
   .active-chip-head {
     display: flex; align-items: center; gap: var(--s-3);
     padding: var(--s-3);
-    cursor: pointer; user-select: none;
+    cursor: grab;
+    user-select: none;
     font: 400 var(--t-base) var(--font-mono);
   }
+  .active-chip.dragging .active-chip-head { cursor: grabbing; }
   .active-chip-name { color: var(--fg); }
   .active-chip-summary {
     color: var(--fg-2);
@@ -704,6 +762,13 @@
       <div class="modal-head">
         <span id="qc-title">qc</span>
         <div class="actions">
+          <button class="icon-button" id="qc-grades" type="button" title="toggle grade overlay">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <rect x="3" y="14" width="4" height="6" />
+              <rect x="10" y="10" width="4" height="10" />
+              <rect x="17" y="4" width="4" height="16" />
+            </svg>
+          </button>
           <button class="icon-button" id="qc-copy" type="button" title="copy as TSV">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="12" height="12" rx="2"/>
@@ -881,22 +946,39 @@ function shouldNorm(col) {
   return normEnabled && col !== currentTarget && col !== "datetime";
 }
 
-function colLabel(idx) {
-  if (idx === 0) return "datetime";
-  if (idx <= activeSpec.length) {
-    const s = activeSpec[idx - 1];
-    const params = paramsSummary(s);
-    return params ? `${s.factory} ${params}` : s.factory;
+function isTimeColumn(name) {
+  return name === "datetime" || name === "bar_start_datetime" || name === "bar_end_datetime";
+}
+
+function timePrefixCount() {
+  let n = 0;
+  for (const c of visibleColumns) {
+    if (isTimeColumn(c)) n++;
+    else break;
   }
-  return visibleColumns[idx];
+  return n;
+}
+
+function colLabel(idx) {
+  const c = visibleColumns[idx];
+  if (isTimeColumn(c)) return c;
+  const off = timePrefixCount();
+  const specIdx = idx - off;
+  if (specIdx >= 0 && specIdx < activeSpec.length) {
+    return activeSpec[specIdx].factory;
+  }
+  return c;
 }
 
 function isBinaryCol(idx) {
-  if (idx === 0) return false;
-  if (idx <= activeSpec.length) {
-    if (activeSpec[idx - 1].factory.startsWith("is_")) return true;
+  const c = visibleColumns[idx];
+  if (isTimeColumn(c)) return false;
+  const off = timePrefixCount();
+  const specIdx = idx - off;
+  if (specIdx >= 0 && specIdx < activeSpec.length) {
+    if (activeSpec[specIdx].factory.startsWith("is_")) return true;
   }
-  const stats = colStats.get(visibleColumns[idx]);
+  const stats = colStats.get(c);
   return !!(stats && stats.min === 0 && stats.max === 1);
 }
 
@@ -1029,7 +1111,10 @@ function render() {
   }
 }
 
+let _loadSeq = 0;
+
 async function load() {
+  const seq = ++_loadSeq;
   const bars = barsSelect.value;
   const target = targetSelect.value;
   meta.textContent = "loading…";
@@ -1037,23 +1122,45 @@ async function load() {
   const url = `/data?bars=${encodeURIComponent(bars)}`
     + `&target=${encodeURIComponent(target)}`
     + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
-  const res = await fetch(url);
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    if (seq === _loadSeq) meta.textContent = `network error: ${e.message}`;
+    return;
+  }
+  if (seq !== _loadSeq) return;
   if (!res.ok) {
     meta.textContent = `load failed: ${await res.text()}`;
     return;
   }
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    meta.textContent = `bad json: ${e.message}`;
+    return;
+  }
+  if (seq !== _loadSeq) return;
   const t1 = performance.now();
 
-  allColumns = data.columns;
-  originalAllRows = data.rows;
-  currentTarget = target;
-  lastLoadMs = t1 - t0;
+  try {
+    allColumns = data.columns;
+    originalAllRows = data.rows;
+    currentTarget = target;
+    lastLoadMs = t1 - t0;
 
-  applyDateFilter();
-  applyRowGrouping();
-  computeColStats();
-  applyVisibility();
+    applyDateFilter();
+    applyRowGrouping();
+    computeColStats();
+    applyVisibility();
+  } catch (e) {
+    console.error("render failed", e, {
+      cols: data && data.columns,
+      activeSpec,
+    });
+    meta.textContent = `render failed: ${e.message}`;
+  }
 }
 
 function scheduleRefetch() {
@@ -1114,6 +1221,14 @@ const ROW_GROUPS = [
   ]},
 ];
 const STAT_MODES = new Set(["cut", "quantile", "decile"]);
+const TIME_PERIOD_MODES = new Set([
+  "day", "week", "month", "quarter", "year",
+  "dow", "dom", "woy",
+]);
+
+function isDollarBar(barName) {
+  return typeof barName === "string" && barName.endsWith("_dollar_bars");
+}
 const QUANTILE_PCTS = [0.01, 5, 25, 50, 75, 95, 99.9];
 
 function median(values) {
@@ -1246,7 +1361,9 @@ function determineAnchorIdx() {
     if (i >= 0) return i;
   }
   for (let i = 1; i < allColumns.length; i++) {
-    if (allColumns[i] !== currentTarget) return i;
+    const c = allColumns[i];
+    if (isTimeColumn(c)) continue;
+    if (c !== currentTarget) return i;
   }
   return 1;
 }
@@ -1322,45 +1439,53 @@ function fmtCell(v) {
 }
 
 const QC_META = {
-  missing_rate:           {range: "<0.01 great",        tip: "Fraction of bar values missing. High values mean cold-start warmup or data gaps; <0.01 is healthy."},
-  unique_fraction:        {range: ">0.9 continuous",    tip: "Distinct values / row count. Near 1.0 = continuous numeric; near 0 = constant or near-binary."},
-  min:                    {range: "—",                  tip: "Minimum non-NaN value. Sanity-check scale and outliers."},
-  max:                    {range: "—",                  tip: "Maximum non-NaN value. Sanity-check scale and outliers."},
-  median:                 {range: "—",                  tip: "50th percentile. Robust central tendency."},
-  p01:                    {range: "—",                  tip: "1st percentile. Lower-tail bound for the bulk of the distribution."},
-  p99:                    {range: "—",                  tip: "99th percentile. Upper-tail bound for the bulk of the distribution."},
-  skew:                   {range: "|s|<1 symmetric",    tip: "Distribution asymmetry. Heavy positive skew is normal for vol; large |skew| flags a log-transform candidate."},
-  adf_p:                  {range: "<0.05 stationary",   tip: "Augmented Dickey–Fuller p-value. Low p rejects a unit root, i.e. the series is stationary."},
-  kpss_p:                 {range: ">0.05 stationary",   tip: "KPSS p-value. High p fails to reject strict stationarity. Long-memory series often reject both ADF and KPSS — that's expected, not a defect."},
-  acf_lag_1:              {range: ">0.5 persistent",    tip: "Autocorrelation at lag 1 bar. High = vol-clustering / momentum; near 0 = fast-mixing."},
-  acf_lag_5:              {range: ">0.3 persistent",    tip: "Autocorrelation at lag 5 bars. Decay rate of short-horizon dependence."},
-  acf_lag_24:             {range: ">0.2 daily cycle",   tip: "Autocorrelation at lag 24 bars. On 1h bars this is the daily-seasonal lag."},
-  acf_lag_168:            {range: ">0.2 weekly cycle",  tip: "Autocorrelation at lag 168 bars. On 1h bars this is the weekly-seasonal lag."},
-  block_size:             {range: "1–200 bars",         tip: "Lag at which |ACF| drops below 0.05; used as bootstrap block length for the Spearman CI. Cap is 200."},
-  max_pairwise_spearman:  {range: "<0.3 unique",        tip: "Highest |Spearman| with any other feature in the set. >0.7 = essentially a duplicate; 0.3–0.7 = some overlap; <0.3 = uniquely shaped."},
-  mean_pairwise_spearman: {range: "<0.3 mostly unique", tip: "Average |Spearman| across all other features. Catches diffuse redundancy that max misses."},
-  redundancy_penalty:     {range: ">0.7 unique",        tip: "1 − max_pairwise_spearman. Pre-computed multiplier for uniqueness-adjusted edge."},
-  max_pairwise_mi:        {range: "<0.1 independent",   tip: "Highest pairwise mutual information. Catches non-linear redundancy that Spearman misses."},
-  spearman:               {range: "|ρ|>0.1 strong",     tip: "Rank correlation with target. ±0.05 = noise band; ±0.10+ = meaningful directional edge."},
-  spearman_ci_lo:         {range: "—",                  tip: "Block-bootstrap 95% lower bound for spearman. If [lo, hi] crosses zero, the edge is not statistically significant."},
-  spearman_ci_hi:         {range: "—",                  tip: "Block-bootstrap 95% upper bound for spearman. Use with lo to check significance."},
-  mutual_information:     {range: ">0 has info",        tip: "Mutual information with target. Catches non-linear edge that Spearman misses."},
-  decile_spread:          {range: "|d|>0.1 useful",     tip: "Mean target in top decile minus mean target in bottom decile. Sign + magnitude of the directional edge."},
-  monotonic_fraction:     {range: ">0.7 monotone",      tip: "Fraction of consecutive feature deciles whose mean-target moves in the overall direction. >0.7 = clean monotone edge."},
-  regime_sign_agreement:  {range: "4/4 stable",         tip: "Sign of spearman across 4 chronological quartiles. 4/4 = stable across regimes; 2/4 = sign-flipping; lower = unstable."},
-  regime_spearman_std:    {range: "<0.05 stable",       tip: "Standard deviation of spearman across 4 time-quartiles. Lower = more regime-stable."},
+  missing_rate:           {tip: "Fraction of bar values missing (Polars nulls + NaN/failed casts after Float64 cast). High values mean cold-start warmup or data gaps; <0.01 is healthy."},
+  n_unique:               {tip: "Distinct non-NaN values. 1 = constant (drop); 2 = binary; 3-50 = clean categorical; large = continuous. Combined with row count to grade cardinality."},
+  unique_fraction:        {tip: "Distinct values / row count. Near 1.0 = continuous numeric; near 0 = constant or near-binary."},
+  min:                    {tip: "Minimum non-NaN value. Sanity-check scale and outliers."},
+  max:                    {tip: "Maximum non-NaN value. Sanity-check scale and outliers."},
+  median:                 {tip: "50th percentile. Robust central tendency."},
+  p01:                    {tip: "1st percentile. Lower-tail bound for the bulk of the distribution."},
+  p99:                    {tip: "99th percentile. Upper-tail bound for the bulk of the distribution."},
+  skew:                   {tip: "Distribution asymmetry. Heavy positive skew is normal for vol; large |skew| flags a log-transform candidate."},
+  adf_p:                  {tip: "Augmented Dickey–Fuller p-value. Low p rejects a unit root, i.e. the series is stationary."},
+  kpss_p:                 {tip: "KPSS p-value. High p fails to reject strict stationarity. Long-memory series often reject both ADF and KPSS — that's expected, not a defect."},
+  max_pairwise_spearman:  {tip: "Highest |Spearman| with any other feature in the set. >0.7 = essentially a duplicate; 0.3–0.7 = some overlap; <0.3 = uniquely shaped."},
+  mean_pairwise_spearman: {tip: "Average |Spearman| across all other features. Catches diffuse redundancy that max misses."},
+  redundancy_penalty:     {tip: "1 − max_pairwise_spearman. Pre-computed multiplier for uniqueness-adjusted edge."},
+  max_pairwise_mi:        {tip: "Highest pairwise mutual information. Catches non-linear redundancy that Spearman misses."},
+  spearman:               {tip: "Rank correlation with target. ±0.05 = noise band; ±0.10+ = meaningful directional edge."},
+  spearman_ci_lo:         {tip: "Block-bootstrap 95% lower bound for spearman (block length resolved internally; bootstrap is seeded by column name for determinism). If [lo, hi] crosses zero, the edge is not statistically significant."},
+  spearman_ci_hi:         {tip: "Block-bootstrap 95% upper bound for spearman. Use with lo to check significance."},
+  mutual_information:     {tip: "Mutual information with target. Catches non-linear edge that Spearman misses."},
+  decile_spread:          {tip: "Mean target in top decile minus mean target in bottom decile. Sign + magnitude of the directional edge."},
+  monotonic_fraction:     {tip: "Fraction of consecutive feature deciles whose mean-target moves in the overall direction. >0.7 = clean monotone edge."},
+  regime_sign_agreement:  {tip: "Sign of spearman across 4 chronological quartiles. 4/4 = stable across regimes; 2/4 = sign-flipping; lower = unstable."},
+  regime_spearman_std:    {tip: "Standard deviation of spearman across 4 time-quartiles. Lower = more regime-stable."},
 };
 
-function augmentReportWithRef(report) {
-  const newCols = [report.columns[0], "ref", ...report.columns.slice(1)];
-  const newRows = report.rows.map(row => {
-    const meta = QC_META[row[0]];
-    return [row[0], meta ? meta.range : "", ...row.slice(1)];
-  });
-  return { columns: newCols, rows: newRows };
-}
-
+let qcGradesOn = true;
 let qcTip = null;
+
+const QC_GROUPS = [
+  {name: "HEALTH",       rows: ["missing_rate", "n_unique", "unique_fraction", "min", "max", "median", "p01", "p99", "skew"]},
+  {name: "STATIONARITY", rows: ["adf_p", "kpss_p"]},
+  {name: "REDUNDANCY",   rows: ["max_pairwise_spearman", "mean_pairwise_spearman", "redundancy_penalty", "max_pairwise_mi"]},
+  {name: "EDGE",         rows: ["spearman", "spearman_ci_lo", "spearman_ci_hi", "mutual_information", "decile_spread", "monotonic_fraction"]},
+  {name: "REGIME",       rows: ["regime_sign_agreement", "regime_spearman_std"]},
+];
+const GRADE_RANK = {F: 0, D: 1, B: 2, A: 3};
+let qcGroupsExpanded = new Set();
+
+function aggregateGroupGrade(groupRows, featureName, grades) {
+  let worst = null;
+  for (const rowName of groupRows) {
+    const g = (grades[rowName] || {})[featureName];
+    if (g == null) continue;
+    if (worst === null || GRADE_RANK[g] < GRADE_RANK[worst]) worst = g;
+  }
+  return worst;
+}
 function ensureQcTip() {
   if (!qcTip) {
     qcTip = document.createElement("div");
@@ -1388,40 +1513,88 @@ function hideQcTip() { if (qcTip) qcTip.classList.remove("open"); }
 
 function renderQc(report) {
   const tbl = document.createElement("table");
-  tbl.className = "qc-table";
+  tbl.className = "qc-table" + (qcGradesOn ? " with-grades" : "");
   const thead = document.createElement("thead");
   const trH = document.createElement("tr");
   for (const c of report.columns) {
     const th = document.createElement("th");
     th.textContent = c;
+    th.title = c;
     trH.appendChild(th);
   }
   thead.appendChild(trH);
   tbl.appendChild(thead);
+  const grades = report.grades || {};
+  const targetCol = targetSelect.value !== "none" ? targetSelect.value : null;
   const tbody = document.createElement("tbody");
-  for (const row of report.rows) {
-    const tr = document.createElement("tr");
-    for (let i = 0; i < row.length; i++) {
+
+  const rowsByMetric = {};
+  for (const row of report.rows) rowsByMetric[row[0]] = row;
+
+  for (const group of QC_GROUPS) {
+    const expanded = qcGroupsExpanded.has(group.name);
+    const headerTr = document.createElement("tr");
+    headerTr.className = "qc-group-row" + (expanded ? " expanded" : "");
+    headerTr.dataset.group = group.name;
+    for (let i = 0; i < report.columns.length; i++) {
       const td = document.createElement("td");
       if (i === 0) {
-        td.textContent = row[i];
-        const meta = QC_META[row[0]];
-        if (meta && meta.tip) {
-          td.dataset.tip = meta.tip;
-          td.classList.add("has-tip");
-        }
-      } else if (i === 1) {
-        td.textContent = row[i];
-        td.className = "qc-ref";
+        const chev = document.createElement("span");
+        chev.className = "chevron";
+        chev.textContent = expanded ? "▼" : "▶";
+        td.appendChild(chev);
+        td.appendChild(document.createTextNode(group.name));
       } else {
-        const { text, cls } = fmtCell(row[i]);
-        td.textContent = text;
-        td.className = cls;
+        const featureName = report.columns[i];
+        td.textContent = "";
+        if (featureName === targetCol) {
+          td.dataset.grade = "NA";
+        } else {
+          const agg = aggregateGroupGrade(group.rows, featureName, grades);
+          if (agg) td.dataset.grade = agg;
+        }
       }
-      tr.appendChild(td);
+      headerTr.appendChild(td);
     }
-    tbody.appendChild(tr);
+    headerTr.addEventListener("click", () => {
+      if (qcGroupsExpanded.has(group.name)) qcGroupsExpanded.delete(group.name);
+      else qcGroupsExpanded.add(group.name);
+      renderQc(report);
+    });
+    tbody.appendChild(headerTr);
+
+    if (!expanded) continue;
+    for (const metric of group.rows) {
+      const row = rowsByMetric[metric];
+      if (!row) continue;
+      const tr = document.createElement("tr");
+      for (let i = 0; i < row.length; i++) {
+        const td = document.createElement("td");
+        if (i === 0) {
+          td.textContent = row[i];
+          const meta = QC_META[metric];
+          if (meta && meta.tip) {
+            td.dataset.tip = meta.tip;
+            td.classList.add("has-tip");
+          }
+        } else {
+          const { text, cls } = fmtCell(row[i]);
+          td.textContent = text;
+          td.className = cls;
+          const featureName = report.columns[i];
+          if (featureName === targetCol) {
+            td.dataset.grade = "NA";
+          } else {
+            const g = grades[metric] && grades[metric][featureName];
+            if (g) td.dataset.grade = g;
+          }
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
   }
+
   tbody.addEventListener("mouseover", e => {
     const td = e.target.closest("td.has-tip");
     if (td) showQcTip(td);
@@ -1436,7 +1609,7 @@ function renderQc(report) {
 async function runQc() {
   const bars = barsSelect.value;
   const target = targetSelect.value;
-  const colsForQc = visibleColumns.filter(c => c !== "datetime" && c !== currentTarget);
+  const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== currentTarget);
   const cols = colsForQc.join(",");
   qcTitle.textContent = `qc · ${bars} · ${target}`;
   qcBody.innerHTML = `<div class="qc-status">running quality control…</div>`;
@@ -1453,7 +1626,7 @@ async function runQc() {
       qcBody.innerHTML = `<div class="qc-status">qc failed: ${msg}</div>`;
       return;
     }
-    const report = augmentReportWithRef(await res.json());
+    const report = await res.json();
     qcReport = report;
     renderQc(report);
     const dt = performance.now() - t0;
@@ -1554,39 +1727,55 @@ function defaultParamsFor(name) {
 }
 
 let openChipIdx = -1;
+let _paletteSearch = "";
+
+function _paletteItemVisible(name) {
+  const activeNames = new Set(activeFactories.map(g => g.factory));
+  if (activeNames.has(name)) return false;
+  if (_paletteSearch && !name.includes(_paletteSearch)) return false;
+  return true;
+}
+
+function syncPaletteVisibility() {
+  const wrapper = colBody.querySelector(".features-builder");
+  if (!wrapper) return;
+  for (const row of wrapper.querySelectorAll(".palette-item")) {
+    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
+  }
+}
 
 function buildPalette() {
   const pane = document.createElement("div");
   pane.className = "features-pane palette";
-  const hdr = document.createElement("div");
-  hdr.className = "features-pane-header";
-  hdr.textContent = "factories";
-  pane.appendChild(hdr);
+  const search = document.createElement("input");
+  search.type = "text";
+  search.placeholder = "factories";
+  search.className = "palette-search";
+  search.spellcheck = false;
+  search.autocomplete = "off";
+  search.value = _paletteSearch;
+  pane.appendChild(search);
   const items = document.createElement("div");
   items.className = "palette-items";
-  const activeNames = new Set(activeFactories.map(g => g.factory));
   for (const f of factories) {
-    if (activeNames.has(f.name)) continue;
     const row = document.createElement("div");
     row.className = "palette-item";
     row.draggable = true;
     row.dataset.factory = f.name;
-    const lbl = document.createElement("span");
-    lbl.textContent = f.name;
-    row.appendChild(lbl);
-    if ((f.params || []).length > 0) {
-      const hint = document.createElement("span");
-      hint.className = "params-hint";
-      hint.textContent = f.params.map(p => `${p.name}=${p.default}`).join(" ");
-      row.appendChild(hint);
-    }
+    row.dataset.name = f.name.toLowerCase();
+    row.textContent = f.name;
+    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
     row.addEventListener("dragstart", e => {
       e.dataTransfer.setData("text/factory", f.name);
       e.dataTransfer.effectAllowed = "copy";
     });
-    row.addEventListener("dblclick", () => addFactory(f.name));
+    row.addEventListener("click", () => addFactory(f.name));
     items.appendChild(row);
   }
+  search.addEventListener("input", () => {
+    _paletteSearch = search.value.trim().toLowerCase();
+    syncPaletteVisibility();
+  });
   pane.appendChild(items);
   return pane;
 }
@@ -1645,7 +1834,23 @@ function removeFactory(idx) {
 
 function addParamSet(idx) {
   const g = activeFactories[idx];
-  g.paramSets.push(defaultParamsFor(g.factory));
+  const meta = factoriesByName.get(g.factory);
+  const params = (meta && meta.params) || [];
+  const next = defaultParamsFor(g.factory);
+  if (params.length > 0) {
+    const isDup = () => g.paramSets.some(ps =>
+      params.every(p => Number(ps[p.name]) === Number(next[p.name]))
+    );
+    if (isDup()) {
+      const p = params[0];
+      const max = Math.max(
+        ...g.paramSets.map(ps => Number(ps[p.name])).filter(Number.isFinite),
+        Number(next[p.name]) || 0
+      );
+      next[p.name] = max + 1;
+    }
+  }
+  g.paramSets.push(next);
   rebuildActiveSpec();
   renderActivePane();
   scheduleRefetch();
@@ -1667,21 +1872,22 @@ function refreshFeaturesModal() {
   if (!colModal.classList.contains("open")) return;
   const wrapper = colBody.querySelector(".features-builder");
   if (!wrapper) return;
-  const newPalette = buildPalette();
-  const oldPalette = wrapper.firstElementChild;
-  wrapper.replaceChild(newPalette, oldPalette);
+  syncPaletteVisibility();
   renderActivePane();
 }
 
 function renderActivePane() {
   const list = document.getElementById("features-active-list");
   if (!list) return;
+  const pane = list.parentElement;
+  const prevScroll = pane ? pane.scrollTop : 0;
   list.replaceChildren();
   if (activeFactories.length === 0) {
     const empty = document.createElement("div");
     empty.className = "active-empty";
     empty.textContent = "drag factories from the left to compose your view";
     list.appendChild(empty);
+    if (pane) pane.scrollTop = prevScroll;
     return;
   }
   activeFactories.forEach((g, idx) => {
@@ -1690,6 +1896,37 @@ function renderActivePane() {
 
     const chip = document.createElement("div");
     chip.className = "active-chip" + (idx === openChipIdx ? " open" : "");
+    chip.draggable = true;
+    chip.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/active-chip-idx", String(idx));
+      e.dataTransfer.effectAllowed = "move";
+      chip.classList.add("dragging");
+    });
+    chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
+    chip.addEventListener("dragover", e => {
+      if (!e.dataTransfer.types.includes("text/active-chip-idx")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = "move";
+      chip.classList.add("drop-target");
+    });
+    chip.addEventListener("dragleave", () => chip.classList.remove("drop-target"));
+    chip.addEventListener("drop", e => {
+      if (!e.dataTransfer.types.includes("text/active-chip-idx")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      chip.classList.remove("drop-target");
+      const fromIdx = parseInt(e.dataTransfer.getData("text/active-chip-idx"), 10);
+      if (!Number.isFinite(fromIdx) || fromIdx === idx) return;
+      const item = activeFactories.splice(fromIdx, 1)[0];
+      activeFactories.splice(idx, 0, item);
+      if (openChipIdx === fromIdx) openChipIdx = idx;
+      else if (fromIdx < openChipIdx && idx >= openChipIdx) openChipIdx -= 1;
+      else if (fromIdx > openChipIdx && idx <= openChipIdx) openChipIdx += 1;
+      rebuildActiveSpec();
+      refreshFeaturesModal();
+      scheduleRefetch();
+    });
 
     const head = document.createElement("div");
     head.className = "active-chip-head";
@@ -1799,6 +2036,7 @@ function renderActivePane() {
 
     list.appendChild(chip);
   });
+  if (pane) pane.scrollTop = prevScroll;
 }
 
 function openColModal() {
@@ -1833,7 +2071,7 @@ async function saveView() {
     return;
   }
   manifest = await (await fetch("/manifest")).json();
-  factories = manifest.factories || [];
+  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   factoriesByName = new Map(factories.map(f => [f.name, f]));
   factoryTags = manifest.factory_tags || {};
   fillSelect(viewSelect, manifest.views);
@@ -1849,6 +2087,7 @@ const rowClose = document.getElementById("row-close");
 function openRowModal() {
   const container = document.createElement("div");
   container.className = "row-groups";
+  const dollar = isDollarBar(barsSelect.value);
   for (const grp of ROW_GROUPS) {
     const sec = document.createElement("div");
     sec.className = "row-group";
@@ -1858,14 +2097,16 @@ function openRowModal() {
     sec.appendChild(hdr);
     const opts = document.createElement("div");
     opts.className = "row-options";
+    const groupDisabled = dollar && (grp.title === "time" || grp.title === "period");
     for (const opt of grp.options) {
       const lbl = document.createElement("label");
-      lbl.className = "row-option";
+      lbl.className = "row-option" + (groupDisabled ? " row-option-disabled" : "");
       const input = document.createElement("input");
       input.type = "radio";
       input.name = "row-mode";
       input.value = opt.id;
       input.checked = (rowMode === opt.id);
+      input.disabled = groupDisabled;
       input.addEventListener("change", () => {
         if (input.checked) {
           rowMode = opt.id;
@@ -1923,7 +2164,7 @@ function loadSpecFromView(name) {
 
 async function init() {
   manifest = await (await fetch("/manifest")).json();
-  factories = manifest.factories || [];
+  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   factoriesByName = new Map(factories.map(f => [f.name, f]));
   factoryTags = manifest.factory_tags || {};
   fillSelect(barsSelect, manifest.bars);
@@ -1933,7 +2174,13 @@ async function init() {
   targetSelect.value = "none";
   syncViewOptions();
   loadSpecFromView(viewSelect.value);
-  barsSelect.addEventListener("change", () => { syncViewOptions(); load(); });
+  barsSelect.addEventListener("change", () => {
+    if (isDollarBar(barsSelect.value) && TIME_PERIOD_MODES.has(rowMode)) {
+      rowMode = "bar";
+    }
+    syncViewOptions();
+    load();
+  });
   viewSelect.addEventListener("change", () => {
     loadSpecFromView(viewSelect.value);
     load();
@@ -1942,6 +2189,14 @@ async function init() {
   qcButton.addEventListener("click", runQc);
   qcClose.addEventListener("click", closeQc);
   qcCopy.addEventListener("click", copyQcAsTsv);
+  const qcGradesBtn = document.getElementById("qc-grades");
+  qcGradesBtn.classList.toggle("active", qcGradesOn);
+  qcGradesBtn.addEventListener("click", () => {
+    qcGradesOn = !qcGradesOn;
+    qcGradesBtn.classList.toggle("active", qcGradesOn);
+    const tbl = qcBody.querySelector(".qc-table");
+    if (tbl) tbl.classList.toggle("with-grades", qcGradesOn);
+  });
   qcModal.addEventListener("click", e => { if (e.target === qcModal) closeQc(); });
   colButton.addEventListener("click", openColModal);
   colClose.addEventListener("click", closeCol);

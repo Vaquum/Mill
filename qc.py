@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+import zlib
 from collections.abc import Sequence
 
 import numpy as np
@@ -10,8 +11,7 @@ from sklearn.feature_selection import mutual_info_classif, mutual_info_regressio
 from statsmodels.tsa.stattools import acf, adfuller, kpss
 
 
-_LAGS = (1, 5, 24, 168)
-_BLOCK_DEFAULT = 24
+_BLOCK_FALLBACK = 24
 _BLOCK_THRESHOLD = 0.05
 _BLOCK_MAX_LAG = 200
 _ADF_KPSS_MAX_N = 5000
@@ -21,22 +21,34 @@ _MI_MAX_N = 20000
 _PAIRWISE_MAX_N = 20000
 _PAIRWISE_MI_MAX_N = 5000
 _PAIRWISE_MIN_N = 30
-_RNG = np.random.default_rng(0)
+
+
+def _resolve_block(b: object) -> int:
+    return b if isinstance(b, int) and 1 <= b <= _BLOCK_MAX_LAG else _BLOCK_FALLBACK
+
+
+def _seed_for(label: str) -> int:
+    return zlib.crc32(label.encode()) & 0xFFFFFFFF
+
+
+_TIME_COLS = ("datetime", "bar_start_datetime", "bar_end_datetime")
 
 
 def report(df: pl.DataFrame, target: str | None) -> dict:
-    feature_cols = [c for c in df.columns if c not in ("datetime", target)]
+    if "datetime" in df.columns:
+        df = df.sort("datetime")
+    skip = set(_TIME_COLS) | ({target} if target else set())
+    feature_cols = [c for c in df.columns if c not in skip]
     has_target = bool(target) and target in df.columns
     columns = list(feature_cols) + ([target] if has_target else [])
 
     arrays: dict[str, np.ndarray] = {
         col: df[col].cast(pl.Float64, strict=False).to_numpy() for col in columns
     }
-    blocks = {col: _block_size(arrays[col]) for col in columns}
+    blocks: dict[str, int | None] = {col: _block_size(arrays[col]) for col in columns}
 
     rows: list[tuple[str, dict[str, object]]] = []
     rows.extend(_health_rows(df, arrays, columns))
-    rows.append(("block_size", {col: blocks[col] for col in columns}))
     rows.extend(_pairwise_rows(arrays, feature_cols))
 
     if has_target:
@@ -47,6 +59,7 @@ def report(df: pl.DataFrame, target: str | None) -> dict:
     return {
         "columns": ["metric", *columns],
         "rows": [[name, *(values.get(c) for c in columns)] for name, values in rows],
+        "n_rows": df.height,
     }
 
 
@@ -60,7 +73,11 @@ def _health_rows(
 
     out.append((
         "missing_rate",
-        {c: float(df[c].null_count()) / n if n else None for c in columns},
+        {c: float(np.isnan(arrays[c]).sum()) / n if n else None for c in columns},
+    ))
+    out.append((
+        "n_unique",
+        {c: int(np.unique(_drop_nan(arrays[c])).size) for c in columns},
     ))
     out.append((
         "unique_fraction",
@@ -79,12 +96,6 @@ def _health_rows(
     out.append(("adf_p", {c: _safe(_adf_p, _drop_nan(arrays[c])) for c in columns}))
     out.append(("kpss_p", {c: _safe(_kpss_p, _drop_nan(arrays[c])) for c in columns}))
 
-    for lag in _LAGS:
-        out.append((
-            f"acf_lag_{lag}",
-            {c: _acf_at(arrays[c], lag) for c in columns},
-        ))
-
     return out
 
 
@@ -92,7 +103,7 @@ def _edge_rows(
     arrays: dict[str, np.ndarray],
     feature_cols: Sequence[str],
     target_arr: np.ndarray,
-    blocks: dict[str, int],
+    blocks: dict[str, int | None],
     target_label: str,
 ) -> list[tuple[str, dict[str, object]]]:
     spearman: dict[str, object] = {}
@@ -112,7 +123,9 @@ def _edge_rows(
             continue
 
         spearman[col] = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
-        lo, hi = _bootstrap_spearman_ci(xc, yc, blocks.get(col, _BLOCK_DEFAULT))
+        lo, hi = _bootstrap_spearman_ci(
+            xc, yc, _resolve_block(blocks.get(col)), seed=_seed_for(col),
+        )
         spear_lo[col] = lo
         spear_hi[col] = hi
         mi[col] = _mutual_info(xc, yc)
@@ -262,9 +275,13 @@ def _safe(fn, *args):
         result = fn(*args)
     except Exception:
         return None
-    if isinstance(result, float) and (np.isnan(result) or np.isinf(result)):
+    if result is None:
         return None
-    return result if result is not None else None
+    if isinstance(result, np.generic):
+        result = result.item()
+    if isinstance(result, float) and not np.isfinite(result):
+        return None
+    return result
 
 
 def _adf_p(arr: np.ndarray) -> float | None:
@@ -290,37 +307,27 @@ def _stride(arr: np.ndarray, n: int) -> np.ndarray:
     return arr[::step][:n]
 
 
-def _acf_at(arr: np.ndarray, lag: int) -> float | None:
+def _block_size(arr: np.ndarray) -> int | None:
     a = _drop_nan(arr)
-    if a.size <= lag + 1:
-        return None
-    try:
-        coefs = acf(a, nlags=lag, fft=True)
-        v = float(coefs[lag])
-        return None if np.isnan(v) else v
-    except Exception:
-        return None
-
-
-def _block_size(arr: np.ndarray) -> int:
-    a = _drop_nan(arr)
-    max_lag = min(_BLOCK_MAX_LAG, max(1, a.size - 2))
     if a.size <= 3:
-        return _BLOCK_DEFAULT
+        return None
+    max_lag = min(_BLOCK_MAX_LAG, max(1, a.size - 2))
     try:
         coefs = np.abs(acf(a, nlags=max_lag, fft=True))
     except Exception:
-        return _BLOCK_DEFAULT
+        return None
     for lag in range(1, len(coefs)):
         if coefs[lag] < _BLOCK_THRESHOLD:
             return int(lag)
-    return _BLOCK_DEFAULT
+    return _BLOCK_MAX_LAG
 
 
 def _bootstrap_spearman_ci(
     x: np.ndarray,
     y: np.ndarray,
     block: int,
+    *,
+    seed: int = 0,
     n_iter: int = _BOOTSTRAP_ITER,
     ci: float = 0.95,
 ) -> tuple[float | None, float | None]:
@@ -332,11 +339,12 @@ def _bootstrap_spearman_ci(
         n = x.size
     if n < block + 1:
         return None, None
+    rng = np.random.default_rng(seed)
     starts = np.arange(n - block + 1)
     n_blocks = max(1, (n + block - 1) // block)
     estimates = np.empty(n_iter)
     for i in range(n_iter):
-        s = _RNG.choice(starts, size=n_blocks, replace=True)
+        s = rng.choice(starts, size=n_blocks, replace=True)
         idx = (s[:, None] + np.arange(block)).ravel()[:n]
         v = stats.spearmanr(x[idx], y[idx]).statistic
         estimates[i] = v if not np.isnan(v) else 0.0
