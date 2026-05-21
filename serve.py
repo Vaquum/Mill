@@ -29,6 +29,25 @@ _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
 _BARS = tuple(TIME_BAR_SECONDS) + tuple(DOLLAR_BAR_USD)
 _TARGETS = ("none", *targets.NAMES)
+_BAR_DATA_SOURCES: dict[str, dict[str, object]] = {
+    **{
+        name: {
+            "method": "limen.data.HistoricalData.get_spot_klines",
+            "params": {"kline_size": seconds},
+        }
+        for name, seconds in TIME_BAR_SECONDS.items()
+    },
+    **{
+        name: {
+            "method": "limen.data.HistoricalData.get_spot_dollar_klines",
+            "params": {"dollar_bar_size": usd},
+        }
+        for name, usd in DOLLAR_BAR_USD.items()
+    },
+}
+_TARGET_CLASSES: dict[str, dict[str, object]] = {
+    name: targets.binding(name) for name in targets.NAMES
+}
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 _VIEW_TEMPLATE = '''from __future__ import annotations
 
@@ -243,6 +262,8 @@ class _Handler(BaseHTTPRequestHandler):
                         "targets": list(_TARGETS),
                         "factories": feature_registry.manifest(),
                         "factory_tags": _FACTORY_TAGS,
+                        "bar_data_sources": _BAR_DATA_SOURCES,
+                        "target_classes": _TARGET_CLASSES,
                     }
                 ).encode()
             self._send(200, "application/json", body)

@@ -708,6 +708,106 @@
   .row .cell.pos { color: var(--pos); }
   .row .cell.neg { color: var(--neg); }
   .row .cell.null { color: var(--fg-3); }
+
+  /* ---- YML modal: three side-by-side YAML segments rendered by the same
+     gutter+highlight+buffer trio used in experiment_runner's manifest view. */
+  .yml-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--s-5);
+    padding: var(--s-5);
+    align-items: stretch;
+  }
+  .yml-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: var(--s-2);
+  }
+  .yml-col-head {
+    flex: 0 0 auto;
+    display: flex; justify-content: space-between; align-items: baseline;
+    color: var(--fg-3);
+    font: 500 var(--t-xs) var(--font-sans);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .yml-col-title { color: var(--fg-2); }
+  .yml-copy {
+    background: transparent; border: none;
+    color: var(--fg-3); cursor: pointer;
+    font: 500 var(--t-xs) var(--font-sans);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0;
+    transition: color 80ms ease;
+  }
+  .yml-copy:hover { color: var(--fg); }
+  .yml-copy.copied { color: var(--accent); }
+
+  .manifest-editor {
+    flex: 1 1 auto;
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+  }
+  .manifest-gutter {
+    flex: 0 0 auto;
+    padding: var(--s-3) var(--s-3);
+    text-align: right;
+    color: var(--fg-3);
+    font: 400 var(--t-base) var(--font-mono);
+    line-height: 1.65;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+    border-right: 1px solid var(--border);
+    white-space: pre;
+    overflow: hidden;
+    min-width: 3.5ch;
+  }
+  .manifest-buffer-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .manifest-buffer,
+  .manifest-highlight {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: var(--s-3) var(--s-4);
+    font: 400 var(--t-base) var(--font-mono);
+    line-height: 1.65;
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: 0;
+    white-space: pre;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    border: 0;
+    background: transparent;
+    overflow: auto;
+  }
+  .manifest-buffer {
+    outline: none;
+    resize: none;
+    color: transparent;
+    caret-color: var(--accent);
+  }
+  .manifest-buffer:focus { outline: none; }
+  .manifest-buffer::selection { background: rgba(221, 217, 65, 0.22); }
+  .manifest-highlight { pointer-events: none; color: var(--fg-2); }
+
+  .tok-key     { color: var(--fg); }
+  .tok-punc    { color: var(--fg-3); }
+  .tok-plain   { color: var(--fg-2); }
+  .tok-comment { color: var(--fg-3); }
+  .tok-string  { color: var(--fg-2); }
+  .tok-number  { color: var(--neg); }
+  .tok-keyword { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -735,6 +835,7 @@
         <button class="button" id="row-button" type="button">ROW</button>
         <button class="button" id="col-button" type="button">COL</button>
         <button class="button" id="save-button" type="button">SAVE</button>
+        <button class="button" id="yml-button" type="button">YML</button>
       </div>
     </div>
     <div class="right">
@@ -799,6 +900,59 @@
         <button class="close" id="row-close" type="button">&times;</button>
       </div>
       <div class="modal-body" id="row-body"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="yml-modal">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <span>YML</span>
+        <button class="close" id="yml-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body yml-body" id="yml-body">
+        <div class="yml-col" data-segment="data_source">
+          <div class="yml-col-head">
+            <span class="yml-col-title">data_source</span>
+            <button class="yml-copy" type="button" data-target="yml-buf-data_source">copy</button>
+          </div>
+          <div class="manifest-editor">
+            <div class="manifest-gutter" aria-hidden="true"></div>
+            <div class="manifest-buffer-wrap">
+              <pre class="manifest-highlight" aria-hidden="true"></pre>
+              <textarea class="manifest-buffer" id="yml-buf-data_source" spellcheck="false"
+                        autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="yml-col" data-segment="indicators_features">
+          <div class="yml-col-head">
+            <span class="yml-col-title">indicators / features</span>
+            <button class="yml-copy" type="button" data-target="yml-buf-indicators_features">copy</button>
+          </div>
+          <div class="manifest-editor">
+            <div class="manifest-gutter" aria-hidden="true"></div>
+            <div class="manifest-buffer-wrap">
+              <pre class="manifest-highlight" aria-hidden="true"></pre>
+              <textarea class="manifest-buffer" id="yml-buf-indicators_features" spellcheck="false"
+                        autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="yml-col" data-segment="target">
+          <div class="yml-col-head">
+            <span class="yml-col-title">target</span>
+            <button class="yml-copy" type="button" data-target="yml-buf-target">copy</button>
+          </div>
+          <div class="manifest-editor">
+            <div class="manifest-gutter" aria-hidden="true"></div>
+            <div class="manifest-buffer-wrap">
+              <pre class="manifest-highlight" aria-hidden="true"></pre>
+              <textarea class="manifest-buffer" id="yml-buf-target" spellcheck="false"
+                        autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2303,6 +2457,185 @@ async function init() {
   });
   await load();
 }
+
+/* ---- YML modal — three side-by-side YAML segments mirroring
+   experiment_runner's manifest editor. Highlighter is a per-line
+   single-pass YAML tokenizer (no cross-line state). ---- */
+(() => {
+  const YAML_KEYWORDS = new Set(["true", "false", "null", "yes", "no"]);
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function highlightLine(line) {
+    let out = "";
+    let i = 0;
+    const n = line.length;
+    let colonSeen = false;
+    while (i < n) {
+      const c = line[i];
+      if (c === "#" && (i === 0 || /\s/.test(line[i - 1]))) {
+        out += '<span class="tok-comment">' + escapeHtml(line.slice(i)) + "</span>";
+        break;
+      }
+      if (c === '"' || c === "'") {
+        let j = i + 1;
+        while (j < n && line[j] !== c) j++;
+        out += '<span class="tok-string">' + escapeHtml(line.slice(i, Math.min(j + 1, n))) + "</span>";
+        i = j + 1;
+        continue;
+      }
+      if (/\s/.test(c)) { out += c; i++; continue; }
+      if ("-:{}[],".indexOf(c) !== -1) {
+        out += '<span class="tok-punc">' + c + "</span>";
+        if (c === ":") colonSeen = true;
+        i++;
+        continue;
+      }
+      let j = i;
+      while (j < n && /[^\s:{}[\],"'#]/.test(line[j])) j++;
+      const word = line.slice(i, j);
+      const isKey = !colonSeen && /^\s*:/.test(line.slice(j));
+      let cls;
+      if (isKey) cls = "tok-key";
+      else if (YAML_KEYWORDS.has(word.toLowerCase())) cls = "tok-keyword";
+      else if (/^-?\d[\d._]*$/.test(word)) cls = "tok-number";
+      else cls = "tok-plain";
+      out += '<span class="' + cls + '">' + escapeHtml(word) + "</span>";
+      i = j;
+    }
+    return out;
+  }
+
+  function highlight(text) { return text.split("\n").map(highlightLine).join("\n"); }
+
+  function attachEditor(root) {
+    const buffer = root.querySelector(".manifest-buffer");
+    const pre = root.querySelector(".manifest-highlight");
+    const gutter = root.querySelector(".manifest-gutter");
+    if (!buffer || !pre) return;
+    function paint() {
+      pre.innerHTML = highlight(buffer.value) + "\u200B";
+      if (gutter) {
+        const count = buffer.value.split("\n").length;
+        let g = "";
+        for (let k = 1; k <= count; k++) g += k + "\n";
+        gutter.textContent = g;
+      }
+    }
+    function syncScroll() {
+      pre.scrollTop = buffer.scrollTop;
+      pre.scrollLeft = buffer.scrollLeft;
+      if (gutter) gutter.scrollTop = buffer.scrollTop;
+    }
+    buffer.addEventListener("input", paint);
+    buffer.addEventListener("scroll", syncScroll);
+    paint();
+    syncScroll();
+  }
+
+  function yamlScalar(v) {
+    if (v === null || v === undefined) return "~";
+    if (typeof v === "boolean") return v ? "true" : "false";
+    if (typeof v === "number") return Number.isFinite(v) ? String(v) : "~";
+    if (Array.isArray(v)) return "[" + v.map(yamlScalar).join(", ") + "]";
+    const s = String(v);
+    if (/^[A-Za-z_][A-Za-z0-9_.]*$/.test(s)) return s;
+    return '"' + s.replace(/"/g, '\\"') + '"';
+  }
+
+  function emitParams(params, indent) {
+    const keys = Object.keys(params || {});
+    if (!keys.length) return "";
+    const pad = " ".repeat(indent);
+    return keys.map(k => `\n${pad}${k}: ${yamlScalar(params[k])}`).join("");
+  }
+
+  function emitDataSource() {
+    const bar = barsSelect.value;
+    const src = manifest && manifest.bar_data_sources && manifest.bar_data_sources[bar];
+    if (!src) return "data_source: ~";
+    const params = { ...(src.params || {}) };
+    if (dateFrom) params.start_date_limit = dateFrom;
+    if (dateTo)   params.end_date_limit   = dateTo;
+    return `data_source:\n  method: ${src.method}\n  params:${emitParams(params, 4)}`;
+  }
+
+  function emitFuncList(label, source) {
+    const items = activeSpec
+      .filter(s => {
+        const m = factoriesByName.get(s.factory);
+        return m && m.source === source;
+      });
+    if (!items.length) return `${label}: []`;
+    let out = `${label}:`;
+    for (const it of items) {
+      out += `\n  - func: ${source}.${it.factory}`;
+      const ps = it.params || {};
+      const keys = Object.keys(ps);
+      if (keys.length) {
+        out += `\n    params:` + emitParams(ps, 6);
+      }
+    }
+    return out;
+  }
+
+  function emitIndicatorsFeatures() {
+    return emitFuncList("indicators", "limen.indicators") + "\n\n" +
+           emitFuncList("features",   "limen.features");
+  }
+
+  function emitTarget() {
+    const t = currentTarget;
+    if (!t || t === "none") return "target: ~";
+    const cls = manifest && manifest.target_classes && manifest.target_classes[t];
+    if (!cls) return `target:\n  name: ${t}`;
+    let out = `target:\n  name: ${t}\n  class: ${cls.class}`;
+    const keys = Object.keys(cls.params || {});
+    if (keys.length) out += `\n  params:` + emitParams(cls.params, 4);
+    return out;
+  }
+
+  function setBuf(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = text;
+    el.dispatchEvent(new Event("input"));
+  }
+
+  function refresh() {
+    setBuf("yml-buf-data_source",         emitDataSource());
+    setBuf("yml-buf-indicators_features", emitIndicatorsFeatures());
+    setBuf("yml-buf-target",              emitTarget());
+  }
+
+  const modal = document.getElementById("yml-modal");
+  document.querySelectorAll("#yml-modal .manifest-editor").forEach(attachEditor);
+  document.getElementById("yml-button").addEventListener("click", () => {
+    refresh();
+    modal.classList.add("open");
+  });
+  document.getElementById("yml-close").addEventListener("click", () => {
+    modal.classList.remove("open");
+  });
+  document.querySelectorAll(".yml-copy").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const tgt = document.getElementById(btn.dataset.target);
+      if (!tgt) return;
+      try {
+        await navigator.clipboard.writeText(tgt.value);
+        btn.classList.add("copied");
+        const prev = btn.textContent;
+        btn.textContent = "copied";
+        setTimeout(() => { btn.classList.remove("copied"); btn.textContent = prev; }, 1100);
+      } catch (_) {
+        tgt.select();
+        document.execCommand("copy");
+      }
+    });
+  });
+})();
 
 init();
 </script>

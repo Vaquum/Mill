@@ -27,12 +27,6 @@ def _is_instantiable(cls: type) -> bool:
     return True
 
 
-def _bind(cls: type, **kwargs: object) -> Callable[[pl.DataFrame, str], pl.DataFrame]:
-    def fn(raw: pl.DataFrame, name: str) -> pl.DataFrame:
-        return cls(train_data=raw, target_name=name, **kwargs).transform(raw)
-    return fn
-
-
 _PROBE = pl.DataFrame({
     "datetime": pl.datetime_range(
         pl.datetime(2024, 1, 1), pl.datetime(2024, 1, 8), interval="1h", eager=True
@@ -60,19 +54,27 @@ def _can_apply(cls: type) -> bool:
     return True
 
 
-_FACTORIES: dict[str, Callable[[pl.DataFrame, str], pl.DataFrame]] = {
-    _snake_case(name): _bind(cls)
+_BINDINGS: dict[str, tuple[type, dict[str, object]]] = {
+    _snake_case(name): (cls, {})
     for name in _LT.__all__
     if _is_instantiable(cls := getattr(_LT, name)) and _can_apply(cls)
 }
-_FACTORIES["abs_forward_vol_normalized_return"] = _bind(
-    _LT.ForwardVolNormalizedReturnTarget, absolute=True
+_BINDINGS["abs_forward_vol_normalized_return"] = (
+    _LT.ForwardVolNormalizedReturnTarget, {"absolute": True}
 )
 
-NAMES: tuple[str, ...] = tuple(_FACTORIES)
+NAMES: tuple[str, ...] = tuple(_BINDINGS)
 
 
 def apply(raw: pl.DataFrame, name: str) -> pl.DataFrame:
-    if name not in _FACTORIES:
+    if name not in _BINDINGS:
         raise ValueError(f"Unknown target: {name!r}.")
-    return _FACTORIES[name](raw, name)
+    cls, kwargs = _BINDINGS[name]
+    return cls(train_data=raw, target_name=name, **kwargs).transform(raw)
+
+
+def binding(name: str) -> dict[str, object]:
+    if name not in _BINDINGS:
+        raise ValueError(f"Unknown target: {name!r}.")
+    cls, kwargs = _BINDINGS[name]
+    return {"class": f"limen.targets.{cls.__name__}", "params": dict(kwargs)}
