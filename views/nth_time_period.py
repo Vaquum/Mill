@@ -9,12 +9,7 @@ NAME = "nth_time_period"
 BARS = tuple(TIME_BAR_SECONDS)
 
 SPEC = (
-    {"factory": "nth_minute",  "params": {}},
-    {"factory": "nth_hour",    "params": {}},
-    {"factory": "nth_day",     "params": {}},
-    {"factory": "nth_month",   "params": {}},
-    {"factory": "nth_quarter", "params": {}},
-    {"factory": "nth_half",    "params": {}},
+    {"factory": "calendar_time_features", "params": {}},
 )
 
 
