@@ -6,7 +6,7 @@ from table import build_from_spec
 
 NAME = 'gen3'
 
-TARGET = 'forward_vol_normalized_return'
+TARGET = 'abs_forward_vol_normalized_return'
 
 SPEC = (
     {"factory": 'parkinson_volatility', "params": {'window': 1}},

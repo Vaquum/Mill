@@ -27,9 +27,9 @@ def _is_instantiable(cls: type) -> bool:
     return True
 
 
-def _bind(cls: type) -> Callable[[pl.DataFrame, str], pl.DataFrame]:
+def _bind(cls: type, **kwargs: object) -> Callable[[pl.DataFrame, str], pl.DataFrame]:
     def fn(raw: pl.DataFrame, name: str) -> pl.DataFrame:
-        return cls(train_data=raw, target_name=name).transform(raw)
+        return cls(train_data=raw, target_name=name, **kwargs).transform(raw)
     return fn
 
 
@@ -65,6 +65,9 @@ _FACTORIES: dict[str, Callable[[pl.DataFrame, str], pl.DataFrame]] = {
     for name in _LT.__all__
     if _is_instantiable(cls := getattr(_LT, name)) and _can_apply(cls)
 }
+_FACTORIES["abs_forward_vol_normalized_return"] = _bind(
+    _LT.ForwardVolNormalizedReturnTarget, absolute=True
+)
 
 NAMES: tuple[str, ...] = tuple(_FACTORIES)
 
