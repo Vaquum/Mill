@@ -6,15 +6,15 @@
 - We don't create long workflow files, but atomic composable functions which we then reuse
 - We have to do 100% of our work on conda env `limen`
 - You can install any deps in that conda env
-- We have only have two allowed way to pull data: 1) through `GetData` OR 2) through local parquette files we save ... but the loading must take place through `GetData.from_parquet`
+- We have only two allowed ways to pull data: 1) through `GetData` OR 2) through local parquet files we save ... but the loading must take place through `GetData.from_parquet`
 - In case you would pull data from any other source, I immediately block you from using any commands at all without permission and our work grinds to a halt
 - We work exclusively with data starting on 2024-01-01 and never before that and ending at 2026-05-15 and never later than that
 - We always pull time bars through `GetData.get_time_bars` unless I specifically say otherwise
-- When we craft new features, we never user `prc` and always use `bps`
+- When we craft new features, we never use `prc` and always use `bps`
 - When we craft new features with `bps`, we always make them `per_bar`
 - Never add features/columns I don't ask you
 - Every feature we create we create a high performance polars expression
 - Never allow any command run longer than 1 minute ... nothing we do should take more than 1 minute ... if it takes more than one minute something is wrong and you have to stop immediately and report back to me
-- Any query with risk of being long-running, wrap it in something that inrerrupts it it after one minute automatically...we must never just sit there beyond one minute and wait
+- Any query with risk of being long-running, wrap it in something that interrupts it after one minute automatically...we must never just sit there beyond one minute and wait
 - Waiting is the death of productivity, never do it more than one minute
 - Make a commit before completing any task and post commit hash and message at the conclusion

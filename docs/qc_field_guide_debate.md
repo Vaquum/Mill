@@ -1,8 +1,14 @@
-# QC field guide debate
+# QC field guide audit log
 
-## Scope
+Historical record of the audit that produced the current `docs/QC.md` and the
+follow-up changes to `qc.py` and `grading.py`. Kept for traceability; the
+operative documents are `docs/QC.md`, `qc.py`, `grading.py`, and
+`grading_rules.py`.
 
-Target: evaluate the proposed "QC report - field guide for the operator" against the current implementation.
+## Scope of the original audit
+
+Target: evaluate an earlier draft of `docs/QC.md` against the `qc.py` revision
+that existed at the time.
 
 Primary code read:
 - `qc.py`
@@ -19,7 +25,7 @@ No data was pulled.
 | Codex | Codex CLI, `gpt-5.5`, `model_reasoning_effort=xhigh` | Read-only execution. |
 | Gemini | Cursor CLI, `gemini-3.1-pro` | Provider failed on some retries; successful rounds recorded below. |
 | Grok | Cursor CLI, `grok-4.3` | Cursor CLI only. |
-| Moderator | Current Codex session | Direct code witness and final alignment. |
+| Moderator | Codex session at the time | Direct code witness and final alignment. |
 
 ## Round record
 
@@ -31,33 +37,47 @@ No data was pulled.
 | 4 | Style conflict | Opus, Codex, Gemini, and moderator chose compact prose-led guide. Grok dissented for table-only. |
 | 5 | Final alignment | Opus, Codex, Gemini, Grok, and moderator accepted compact field guide plus surgical factual fixes. |
 
-## Final verdict
+## What was identified vs what is true today
 
-The current draft is close in substance but not publish-ready as-is.
-
-Use it as a compact field guide, not as a table-only manual and not as long literary prose. Keep prose only where it changes operator judgment. Cut ornament, transitions, and repeated caveats.
-
-## Required fixes
+The audit's "required fixes" list was written against the older `qc.py` and
+older `docs/QC.md`. Several items have since been addressed in code, not just
+in prose. Annotated for current accuracy:
 
 1. `ref` is frontend presentation, inserted by `index.html` from `QC_META`. It is not emitted by `qc.report`.
-2. `missing_rate` is `df[c].null_count() / n`. It counts Polars nulls, not floating `NaN`.
-3. Regime rows split the input row order into four contiguous chunks. Say row-order chunks, not statistical quartiles. Ordering is the caller's responsibility.
-4. `block_size=24` can mean a real first crossing at lag 24 or fallback. Fallback covers `n<=3`, ACF failure, and no lag clearing `abs(ACF) < 0.05`.
-5. Mutual information must stay target-scoped. Pairwise MI always uses `mutual_info_regression`; edge MI switches to classification only when target unique count is `<=10`.
-6. Thresholds are operator guidance from the UI layer, not Python source constants.
-7. The draft says "six layers" while naming seven if decorrelation is separate. Either merge persistence/decorrelation or say seven.
-8. If describing subsampling exactly: ADF/KPSS use `_stride`; pairwise and edge caps use `np.linspace` grid indices.
+   *Today:* still true. The UI no longer renders a REF column; row-level guidance lives in tooltips (`QC_META.tip`) and the grading thresholds.
 
-## Keep
+2. `missing_rate` is `df[c].null_count() / n`. It counts Polars nulls, not floating `NaN`.
+   *Today:* **outdated.** `qc._health_rows` now computes `missing_rate` from the Float64-cast numpy arrays via `np.isnan(...).sum() / n`, so it counts both Polars nulls and NaN/cast failures.
+
+3. Regime rows split the input row order into four contiguous chunks.
+   *Today:* `qc.report()` now sorts by `datetime` at entry when the column is present, so regime chunks are chronological by construction. Caller order no longer matters when `datetime` is a column.
+
+4. `block_size=24` can mean a real first crossing at lag 24 or fallback.
+   *Today:* `_block_size()` returns `int | None`. None when `n <= 3` or the ACF computation fails; an integer 1..200 when a lag clears the threshold; `_BLOCK_MAX_LAG` (200) when no lag clears within the search window. The fallback `_BLOCK_FALLBACK = 24` is applied at use sites via `_resolve_block(...)`. Block size is no longer surfaced as a row in the report.
+
+5. Mutual information must stay target-scoped. Pairwise MI always uses `mutual_info_regression`; edge MI switches to classification only when target unique count is `<= 10`.
+   *Today:* still accurate.
+
+6. Thresholds are operator guidance from the UI layer, not Python source constants.
+   *Today:* the interpretive thresholds now live in `grading_rules.py` as Python data; the UI per-row tooltips describe them. The threshold ladders are explicit and editable in one place.
+
+7. The draft said "six layers" while naming seven. *Today:* the new draft is organised into the five groups the UI actually renders (HEALTH / STATIONARITY / REDUNDANCY / EDGE / REGIME). Persistence/decorrelation rows were removed from `qc.report()` output.
+
+8. Subsampling specifics. *Today:* still accurate — ADF/KPSS via `_stride`; pairwise and edge caps via `np.linspace` grid indices.
+
+## Items that are still keep
 
 - `None` means undefined, not zero.
 - Target pairwise and edge cells are blank by construction.
 - ADF and KPSS must be read jointly.
 - Pairwise metrics use the strict all-feature non-NaN row filter.
-- Bootstrap RNG is module-scoped and reproducible only under identical call sequence after import.
 - The QC report creates candidates only; OOS validation, leakage review, costs, and live monitoring remain outside the panel.
 
-## Style decision
+## Outdated statements that have since been replaced
+
+- The audit's keep list said: *"Bootstrap RNG is module-scoped and reproducible only under identical call sequence after import."* This is **outdated.** `_bootstrap_spearman_ci` now creates a fresh `np.random.default_rng(seed)` per call where `seed` is derived from the column name via `zlib.crc32`. CIs are now per-column deterministic regardless of call order or imports.
+
+## Style decision (still operative)
 
 Final form: compact field guide.
 
@@ -68,7 +88,7 @@ Structure:
 - metric sections only where interpretation changes action
 - known limitations kept short and code-faithful
 
-Reject:
+Rejected:
 - table-only manual
 - long atmospheric prose
 - code improvement proposals
