@@ -245,6 +245,21 @@ def _save_view(
     return 200, "ok"
 
 
+def _delete_view(name: str) -> tuple[int, str]:
+    if not _NAME_RE.fullmatch(name):
+        return 400, "invalid view name"
+    with _REGISTRY_LOCK:
+        if name not in _VIEW_SPECS:
+            return 404, f"unknown view: {name!r}"
+        _VIEW_SPECS.pop(name, None)
+        _VIEW_TARGETS.pop(name, None)
+        _VIEW_BARS.pop(name, None)
+    path = _VIEWS_DIR / f"{name}.py"
+    if path.exists():
+        path.unlink()
+    return 200, "ok"
+
+
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         url = urlsplit(self.path)
@@ -350,6 +365,16 @@ class _Handler(BaseHTTPRequestHandler):
                     self._send(400, "text/plain", f"unknown factory: {item.get('factory')!r}".encode())
                     return
             status, msg = _save_view(name, spec, target)
+            self._send(status, "application/json", json.dumps({"ok": status == 200, "msg": msg, "name": name}).encode())
+        elif url.path == "/delete_view":
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                body = json.loads(self.rfile.read(length).decode() or "{}")
+            except json.JSONDecodeError as exc:
+                self._send(400, "text/plain", f"bad json: {exc}".encode())
+                return
+            name = body.get("name", "")
+            status, msg = _delete_view(name)
             self._send(status, "application/json", json.dumps({"ok": status == 200, "msg": msg, "name": name}).encode())
         elif url.path == "/save_tags":
             length = int(self.headers.get("Content-Length") or 0)
