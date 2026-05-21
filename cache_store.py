@@ -3,15 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 import polars as pl
 
 from frames import read_parquet, write_parquet
-
-TTL_SECONDS = 86_400
 
 
 def cache_root() -> Path:
@@ -29,7 +26,9 @@ def cache_path(label: str, criteria: dict[str, object]) -> Path:
 def read_fresh(path: Path) -> pl.DataFrame | None:
     if not path.exists():
         return None
-    if time.time() - path.stat().st_mtime >= TTL_SECONDS:
+    written = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).date()
+    today = datetime.now(tz=timezone.utc).date()
+    if written < today:
         return None
     try:
         return read_parquet(path)

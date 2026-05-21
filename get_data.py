@@ -12,17 +12,7 @@ from cache_store import cache_path, read_fresh, write_cache
 from frames import read_parquet, write_parquet
 
 
-_REGISTRY_LOCK = threading.Lock()
-_KEY_LOCKS: dict[Path, threading.Lock] = {}
-
-
-def _key_lock(path: Path) -> threading.Lock:
-    with _REGISTRY_LOCK:
-        lock = _KEY_LOCKS.get(path)
-        if lock is None:
-            lock = threading.Lock()
-            _KEY_LOCKS[path] = lock
-        return lock
+_LIMEN_LOCK = threading.Lock()
 
 
 class GetData:
@@ -111,7 +101,7 @@ class GetData:
         cached = read_fresh(path)
         if cached is not None:
             return self._store(cached)
-        with _key_lock(path):
+        with _LIMEN_LOCK:
             cached = read_fresh(path)
             if cached is not None:
                 return self._store(cached)
