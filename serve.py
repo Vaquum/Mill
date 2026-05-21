@@ -310,7 +310,11 @@ class _Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 self._send(500, "text/plain", f"qc failed: {exc}".encode())
                 return
-            body = json.dumps(report).encode()
+            try:
+                body = json.dumps(report, allow_nan=False).encode()
+            except ValueError as exc:
+                self._send(500, "text/plain", f"qc serialize failed: {exc}".encode())
+                return
             _QC_CACHE[cache_key] = body
             self._send(200, "application/json", body)
         else:

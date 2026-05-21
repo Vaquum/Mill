@@ -187,14 +187,7 @@ def grade_regime_sign_agreement(agreement: Any) -> str | None:
     n_regimes = int(m.group(2))
     if n_regimes <= 0:
         return None
-    frac = n_agree / n_regimes
-    if frac >= 1.0:
-        return "A"
-    if frac > 0.5:
-        return "B"
-    if frac == 0.5:
-        return "D"
-    return "F"
+    return _apply_ladder(n_agree / n_regimes, R.REGIME_AGREEMENT_FALLBACK)
 
 
 def grade_regime_spearman_std(std: Any, spearman: Any) -> str | None:

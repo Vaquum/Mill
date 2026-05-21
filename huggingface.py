@@ -25,6 +25,9 @@ _BAR_TO_SIZE = {
     "2h_time_bars":  "2h",
     "4h_time_bars":  "4h",
 }
+# Per AGENTS.md: nothing we issue may sit blocking for more than a minute.
+_META_TIMEOUT = 30
+_PAYLOAD_TIMEOUT = 60
 
 
 def _http_get(url: str, *, timeout: int) -> bytes:
@@ -36,10 +39,17 @@ def klines(bar_name: str) -> pl.DataFrame:
     if bar_name not in _BAR_TO_SIZE:
         raise ValueError(f"Unsupported bar for HF source: {bar_name!r}")
     base = _BASE.format(size=_BAR_TO_SIZE[bar_name])
-    meta = json.loads(_http_get(f"{base}/latest.json", timeout=30).decode())
+    meta = json.loads(_http_get(f"{base}/latest.json", timeout=_META_TIMEOUT).decode())
     file_name = meta["file_name"]
     expected = meta["sha256"]
-    payload = _http_get(f"{base}/{file_name}", timeout=180)
+    try:
+        payload = _http_get(f"{base}/{file_name}", timeout=_PAYLOAD_TIMEOUT)
+    except TimeoutError as exc:
+        raise TimeoutError(
+            f"HF parquet for {bar_name} ({file_name}) did not finish within "
+            f"{_PAYLOAD_TIMEOUT}s. Retry from a faster network or pre-cache "
+            f"the snapshot once."
+        ) from exc
     actual = hashlib.sha256(payload).hexdigest()
     if actual != expected:
         raise RuntimeError(
