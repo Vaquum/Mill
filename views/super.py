@@ -6,7 +6,7 @@ from table import build_from_spec
 
 NAME = 'super'
 
-TARGET = 'abs_vol_normalized_return'
+TARGET = 'forward_vol_normalized_return'
 
 SPEC = (
     {"factory": 'rolling_zscore', "params": {'column': 'close', 'window': 96, 'transform': 'abs'}},
