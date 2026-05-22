@@ -45,6 +45,12 @@
     --neg:      var(--c-coral);     /* negative values */
     --danger:   var(--c-magenta);   /* destructive actions */
 
+    /* heatmap — diverging value fill, palette hues only */
+    --heat-mix: 0.4;
+    --heat-base: var(--c-near-black);
+    --heat-neg:  var(--c-coral);
+    --heat-pos:  var(--c-lavender);
+
     /* QC grades — pink hue ramp, best → worst */
     --grade-a: var(--c-pale-pink);
     --grade-b: var(--c-pink);
@@ -721,6 +727,15 @@
       transparent var(--bar-pct, 0%)
     );
   }
+  .body.heatmap-on .cell .val-heat {
+    display: inline-block;
+    padding: 0 3px;
+    border-radius: 1px;
+  }
+  .body.heatmap-on .cell .val-text {
+    position: relative;
+    z-index: 1;
+  }
   .cell.binary-on {
     justify-content: center;
     color: var(--fg-2);
@@ -885,6 +900,18 @@
             <line x1="4" y1="7"  x2="20" y2="7"/>
             <line x1="4" y1="12" x2="14" y2="12"/>
             <line x1="4" y1="17" x2="17" y2="17"/>
+          </svg>
+        </button>
+        <button class="icon-button toggle" id="heat-button" type="button" title="Value heatmap">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="1"/>
+            <line x1="4" y1="10" x2="20" y2="10"/>
+            <line x1="4" y1="16" x2="20" y2="16"/>
+            <line x1="10" y1="4" x2="10" y2="20"/>
+            <line x1="16" y1="4" x2="16" y2="20"/>
+            <rect x="11" y="5" width="4" height="4" fill="currentColor" stroke="none"/>
+            <rect x="5" y="11" width="4" height="4" fill="currentColor" stroke="none" opacity="0.45"/>
+            <rect x="17" y="11" width="3" height="3" fill="currentColor" stroke="none" opacity="0.75"/>
           </svg>
         </button>
         <button class="icon-button" id="qc-button" type="button" title="Quality control">
@@ -1080,6 +1107,7 @@ let pool = [];
 let renderedStart = -1, renderedEnd = -1;
 let colStats = new Map();
 let normEnabled = false;
+let heatmapEnabled = false;
 let rowMode = "bar";
 let cutN = 5;
 
@@ -1184,6 +1212,74 @@ function normValue(v, col) {
 
 function shouldNorm(col) {
   return normEnabled && col !== currentTarget && col !== "datetime";
+}
+
+function heatTokens() {
+  const r = document.documentElement;
+  const s = getComputedStyle(r);
+  return {
+    mix: parseFloat(s.getPropertyValue("--heat-mix")) || 0.4,
+    base: s.getPropertyValue("--heat-base").trim(),
+    neg: s.getPropertyValue("--heat-neg").trim(),
+    pos: s.getPropertyValue("--heat-pos").trim(),
+  };
+}
+
+function _parseHex(hex) {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
+
+function _lerpHex(c0, c1, t) {
+  const a = _parseHex(c0);
+  const b = _parseHex(c1);
+  const f = (i) => Math.round(a[i] + (b[i] - a[i]) * t);
+  return `#${[f(0), f(1), f(2)].map(x => x.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function heatFill(raw, col) {
+  const s = colStats.get(col);
+  if (!s || raw === 0 || raw === null) return "";
+  const { mix, base, neg, pos } = heatTokens();
+  if (raw < 0 && s.min < 0) {
+    const t = Math.min(1, (raw / s.min) * mix);
+    return _lerpHex(base, neg, t);
+  }
+  if (raw > 0 && s.max > 0) {
+    const t = Math.min(1, (raw / s.max) * mix);
+    return _lerpHex(base, pos, t);
+  }
+  return "";
+}
+
+function setCellPlain(cell, text, cls) {
+  cell.replaceChildren();
+  cell.textContent = text;
+  cell.className = cls;
+}
+
+function setCellNumeric(cell, text, raw, col, cls) {
+  if (!heatmapEnabled) {
+    setCellPlain(cell, text, cls);
+    return;
+  }
+  const baseCls = cls.replace(/\b(pos|neg)\b/g, "").replace(/\s+/g, " ").trim();
+  cell.className = baseCls;
+  let wrap = cell.querySelector(".val-heat");
+  if (!wrap) {
+    wrap = document.createElement("span");
+    wrap.className = "val-heat";
+    const txt = document.createElement("span");
+    txt.className = "val-text";
+    wrap.appendChild(txt);
+    cell.replaceChildren(wrap);
+  }
+  wrap.querySelector(".val-text").textContent = text;
+  wrap.style.backgroundColor = heatFill(raw, col);
 }
 
 function isTimeColumn(name) {
@@ -1323,30 +1419,33 @@ function render() {
       const col = visibleColumns[j];
       const raw = r[visibleIdxs[j]];
       const cell = cells[j];
-      let cls = "cell";
       if (raw === null) {
-        cell.textContent = "—";
-        cls = "cell null";
+        setCellPlain(cell, "—", "cell null");
       } else if (binaryFlags[j]) {
-        cell.textContent = raw === 1 ? "●" : "";
-        cls = raw === 1 ? "cell binary-on" : "cell";
+        setCellPlain(cell, raw === 1 ? "●" : "", raw === 1 ? "cell binary-on" : "cell");
       } else if (typeof raw === "number") {
         const v = shouldNorm(col) ? normValue(raw, col) : raw;
-        cell.textContent = FMT.format(v);
-        cls = v > 0 ? "cell pos" : v < 0 ? "cell neg" : "cell";
-        const stats = colStats.get(col);
-        if (stats && stats.max > stats.min) {
-          const pct = ((raw - stats.min) / (stats.max - stats.min)) * 100;
-          cell.style.setProperty("--bar-pct", pct.toFixed(1) + "%");
-          cls += " has-bar";
+        const text = FMT.format(v);
+        let cls = "cell";
+        if (!heatmapEnabled) {
+          cls = v > 0 ? "cell pos" : v < 0 ? "cell neg" : "cell";
+          const stats = colStats.get(col);
+          if (stats && stats.max > stats.min) {
+            const pct = ((raw - stats.min) / (stats.max - stats.min)) * 100;
+            cell.style.setProperty("--bar-pct", pct.toFixed(1) + "%");
+            cls += " has-bar";
+          } else {
+            cell.style.removeProperty("--bar-pct");
+          }
+          setCellPlain(cell, text, cls);
         } else {
           cell.style.removeProperty("--bar-pct");
+          setCellNumeric(cell, text, raw, col, "cell");
         }
       } else {
-        cell.textContent = String(raw);
+        setCellPlain(cell, String(raw), "cell");
       }
-      if (hoverCol === j) cls += " col-hover";
-      cell.className = cls;
+      cell.classList.toggle("col-hover", hoverCol === j);
     }
   }
 }
@@ -2546,6 +2645,15 @@ async function init() {
   barButton.addEventListener("click", () => {
     body.classList.toggle("bars-on");
     barButton.classList.toggle("active", body.classList.contains("bars-on"));
+  });
+  const heatButton = document.getElementById("heat-button");
+  heatButton.addEventListener("click", () => {
+    heatmapEnabled = !heatmapEnabled;
+    body.classList.toggle("heatmap-on", heatmapEnabled);
+    heatButton.classList.toggle("active", heatmapEnabled);
+    renderedStart = -1;
+    renderedEnd = -1;
+    render();
   });
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") closeAllOverlays();
