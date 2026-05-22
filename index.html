@@ -45,8 +45,8 @@
     --neg:      var(--c-coral);     /* negative values */
     --danger:   var(--c-magenta);   /* destructive actions */
 
-    /* heatmap — diverging value fill, palette hues only */
-    --heat-mix: 0.4;
+    /* heatmap — per-column rank, diverging from median */
+    --heat-mix: 0.55;
     --heat-base: var(--c-near-black);
     --heat-neg:  var(--c-coral);
     --heat-pos:  var(--c-lavender);
@@ -1190,15 +1190,35 @@ function computeColStats() {
   colStats = new Map();
   for (let i = 1; i < allColumns.length; i++) {
     const col = allColumns[i];
-    let mn = Infinity, mx = -Infinity;
+    const vals = [];
     for (const r of allRows) {
       const v = r[i];
-      if (v === null || typeof v !== "number" || !Number.isFinite(v)) continue;
-      if (v < mn) mn = v;
-      if (v > mx) mx = v;
+      if (v !== null && typeof v === "number" && Number.isFinite(v)) vals.push(v);
     }
-    if (mn !== Infinity) colStats.set(col, { min: mn, max: mx });
+    if (vals.length === 0) continue;
+    vals.sort((a, b) => a - b);
+    const mn = vals[0];
+    const mx = vals[vals.length - 1];
+    let sum = 0;
+    for (const v of vals) sum += v;
+    const mean = sum / vals.length;
+    let varSum = 0;
+    for (const v of vals) varSum += (v - mean) ** 2;
+    const std = Math.sqrt(varSum / vals.length);
+    colStats.set(col, { min: mn, max: mx, mean, std, sorted: vals });
   }
+}
+
+function colPctRank(sorted, v) {
+  if (sorted.length <= 1) return 0.5;
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (sorted[mid] <= v) lo = mid + 1;
+    else hi = mid;
+  }
+  return (lo - 1) / (sorted.length - 1);
 }
 
 function normValue(v, col) {
@@ -1243,17 +1263,15 @@ function _lerpHex(c0, c1, t) {
 
 function heatFill(raw, col) {
   const s = colStats.get(col);
-  if (!s || raw === 0 || raw === null) return "";
+  if (!s || raw === null || typeof raw !== "number" || !Number.isFinite(raw)) return "";
+  if (s.sorted.length <= 1) return "";
   const { mix, base, neg, pos } = heatTokens();
-  if (raw < 0 && s.min < 0) {
-    const t = Math.min(1, (raw / s.min) * mix);
-    return _lerpHex(base, neg, t);
-  }
-  if (raw > 0 && s.max > 0) {
-    const t = Math.min(1, (raw / s.max) * mix);
-    return _lerpHex(base, pos, t);
-  }
-  return "";
+  // Per-column percentile rank, median-centered: -1 (column low) .. +1 (column high).
+  const d = (colPctRank(s.sorted, raw) - 0.5) * 2;
+  if (d === 0) return "";
+  const t = Math.abs(d) * mix;
+  if (d < 0) return _lerpHex(base, neg, t);
+  return _lerpHex(base, pos, t);
 }
 
 function setCellPlain(cell, text, cls) {
