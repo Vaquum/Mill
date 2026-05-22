@@ -9,14 +9,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
   :root {
+    /* palette — literals; never reference directly in rules */
     --c-near-black: #121212;
-    --c-warm-black: #231F20;
     --c-dark-gray:  #444444;
     --c-mid-gray:   #808080;
     --c-light-gray: #D3D3D3;
     --c-pale-gray:  #F3F3F3;
     --c-off-white:  #F8F8F8;
-    --c-cyan:       #C4E8F4;
     --c-pale-pink:  #FCE2EB;
     --c-pink:       #EAA3C8;
     --c-magenta:    #DC65A6;
@@ -24,20 +23,38 @@
     --c-lavender:   #BCABD3;
     --c-yellow:     #DDD941;
 
-    --bg:            var(--c-near-black);
-    --bg-1:          var(--c-warm-black);
-    --panel:         var(--c-warm-black);
+    /* surfaces */
+    --bg:      var(--c-near-black);
+    --surface: var(--c-dark-gray);
+
+    /* borders */
     --border:        var(--c-dark-gray);
     --border-strong: var(--c-mid-gray);
-    --fg:            var(--c-off-white);
-    --fg-1:          var(--c-pale-gray);
-    --fg-2:          var(--c-light-gray);
-    --fg-3:          var(--c-mid-gray);
-    --pos:           var(--c-cyan);
-    --neg:           var(--c-coral);
-    --accent:        var(--c-yellow);
-    --active:        var(--c-cyan);
-    --hot:           var(--c-magenta);
+
+    /* text */
+    --fg:   var(--c-off-white);
+    --fg-1: var(--c-pale-gray);
+    --fg-2: var(--c-light-gray);
+    --fg-3: var(--c-mid-gray);
+
+    /* semantics — one palette hue, one meaning */
+    --accent:   var(--c-yellow);    /* focus, toggles, copy confirm */
+    --pos:      var(--c-lavender);  /* positive values */
+    --neg:      var(--c-coral);     /* negative values */
+    --danger:   var(--c-magenta);   /* destructive actions */
+
+    /* QC grades — pink hue ramp, best → worst */
+    --grade-a: var(--c-pale-pink);
+    --grade-b: var(--c-pink);
+    --grade-c: var(--c-pink);
+    --grade-d: var(--c-pink);
+    --grade-f: var(--c-pink);
+
+    /* syntax — neutral scale only */
+    --syntax-fg:      var(--fg);
+    --syntax-base:    var(--fg-2);
+    --syntax-dim:     var(--fg-3);
+    --syntax-muted:   var(--fg-1);
 
     --font-sans: "IBM Plex Sans", sans-serif;
     --font-mono: "IBM Plex Mono", monospace;
@@ -178,11 +195,10 @@
     top: calc(100% + var(--s-2));
     right: 0;
     z-index: 50;
-    background: var(--panel);
-    border: 1px solid var(--border);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
     border-radius: 2px;
     padding: var(--s-3) var(--s-4);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   }
   .date-popover[hidden] { display: none; }
   .control select {
@@ -203,7 +219,7 @@
   }
   .control select:hover { border-color: var(--border-strong); }
   .control select:focus-visible { outline: none; border-color: var(--fg-2); }
-  .control select option { background: var(--panel); color: var(--fg); }
+  .control select option { background: var(--surface); color: var(--fg); }
   .control select option:disabled { color: var(--fg-3); }
 
   .content {
@@ -224,7 +240,7 @@
   .modal-panel {
     flex: 1 1 auto;
     margin: var(--s-6);
-    background: var(--panel);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 2px;
     display: flex; flex-direction: column;
@@ -261,7 +277,7 @@
     flex: 1 1 auto;
     overflow: auto;
     padding: 0;
-    background: var(--panel);
+    background: var(--surface);
   }
   .qc-table {
     border-collapse: collapse;
@@ -271,7 +287,7 @@
   }
   .qc-table thead th {
     position: sticky; top: 0;
-    background: var(--panel);
+    background: var(--surface);
     color: var(--fg-2);
     font: 500 var(--t-xs) var(--font-sans);
     letter-spacing: 0.08em;
@@ -316,7 +332,7 @@
   .qc-table tbody td:nth-child(1) {
     position: sticky;
     left: 0;
-    background: var(--panel);
+    background: var(--surface);
     width: var(--metric-w);
     min-width: var(--metric-w);
   }
@@ -343,10 +359,11 @@
     color: var(--fg-3);
     pointer-events: none;
   }
-  .qc-table.with-grades tbody td[data-grade="F"]::before { color: var(--c-magenta); }
-  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--c-pink); }
-  .qc-table.with-grades tbody td[data-grade="B"]::before { color: var(--c-lavender); }
-  .qc-table.with-grades tbody td[data-grade="A"]::before { color: var(--c-pale-pink); }
+  .qc-table.with-grades tbody td[data-grade="A"]::before { color: var(--grade-a); }
+  .qc-table.with-grades tbody td[data-grade="B"]::before { color: var(--grade-b); }
+  .qc-table.with-grades tbody td[data-grade="C"]::before { color: var(--grade-c); }
+  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--grade-d); }
+  .qc-table.with-grades tbody td[data-grade="F"]::before { color: var(--grade-f); }
   .qc-table tbody tr.qc-group-row { cursor: pointer; user-select: none; }
   .qc-table tbody tr.qc-group-row td {
     color: var(--fg);
@@ -464,7 +481,7 @@
     margin-bottom: var(--s-3);
     padding-bottom: var(--s-2);
     border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: var(--panel); z-index: 1;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
   }
   .palette-items {
     display: flex;
@@ -496,7 +513,7 @@
     margin-bottom: var(--s-3);
     border: 1px solid var(--border);
     border-radius: 2px;
-    background: var(--panel);
+    background: var(--surface);
     color: var(--fg);
     font: 400 var(--t-base) var(--font-mono);
     outline: none;
@@ -554,7 +571,7 @@
     padding: 0 var(--s-1);
     transition: color 80ms ease;
   }
-  .active-chip-remove:hover { color: var(--neg); }
+  .active-chip-remove:hover { color: var(--danger); }
   .active-chip-params {
     display: none;
     flex-direction: column;
@@ -612,7 +629,7 @@
     flex: 0 0 auto;
   }
   .paramset-remove { width: 24px; padding: 0; }
-  .paramset-remove:hover { color: var(--neg); border-color: var(--neg); }
+  .paramset-remove:hover { color: var(--danger); border-color: var(--danger); }
   .paramset-add {
     height: 28px;
     padding: 0 var(--s-3);
@@ -665,9 +682,9 @@
   .row {
     position: absolute; left: 0; right: 0;
     height: var(--row-h);
-    border-bottom: 1px solid var(--panel);
+    border-bottom: 1px solid var(--surface);
   }
-  .row:hover { background: var(--panel); }
+  .row:hover { background: var(--surface); }
 
   .cell {
     padding: 0 var(--s-4);
@@ -684,7 +701,7 @@
     padding-left: var(--s-5);
     color: var(--fg-2);
   }
-  .cell.col-hover { background: var(--panel); }
+  .cell.col-hover { background: var(--surface); }
   .body.bars-on .cell.has-bar {
     background: linear-gradient(
       to right,
@@ -709,7 +726,7 @@
     transition: color 80ms ease;
   }
   .head .cell:hover { color: var(--fg-1); }
-  .head .cell.active { color: var(--active); }
+  .head .cell.active { color: var(--fg); }
   .head .caret {
     display: inline-block;
     width: 8px;
@@ -720,7 +737,7 @@
     text-align: center;
     flex: 0 0 auto;
   }
-  .head .cell.active .caret { color: var(--active); }
+  .head .cell.active .caret { color: var(--fg-1); }
 
   .row .cell.pos { color: var(--pos); }
   .row .cell.neg { color: var(--neg); }
@@ -815,16 +832,16 @@
     caret-color: var(--accent);
   }
   .manifest-buffer:focus { outline: none; }
-  .manifest-buffer::selection { background: rgba(221, 217, 65, 0.22); }
-  .manifest-highlight { pointer-events: none; color: var(--fg-2); }
+  .manifest-buffer::selection { background: var(--surface); color: var(--fg); }
+  .manifest-highlight { pointer-events: none; color: var(--syntax-base); }
 
-  .tok-key     { color: var(--fg); }
-  .tok-punc    { color: var(--fg-3); }
-  .tok-plain   { color: var(--fg-2); }
-  .tok-comment { color: var(--fg-3); }
-  .tok-string  { color: var(--fg-2); }
-  .tok-number  { color: var(--neg); }
-  .tok-keyword { color: var(--accent); }
+  .tok-key     { color: var(--syntax-fg); }
+  .tok-punc    { color: var(--syntax-dim); }
+  .tok-plain   { color: var(--syntax-base); }
+  .tok-comment { color: var(--syntax-dim); }
+  .tok-string  { color: var(--syntax-muted); }
+  .tok-number  { color: var(--syntax-base); }
+  .tok-keyword { color: var(--syntax-fg); }
 </style>
 </head>
 <body>
