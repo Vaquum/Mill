@@ -1660,6 +1660,7 @@ function fillSelect(el, values) {
 }
 
 const qcModal = document.getElementById("qc-modal");
+const ymlModal = document.getElementById("yml-modal");
 const qcBody = document.getElementById("qc-body");
 const qcTitle = document.getElementById("qc-title");
 const qcButton = document.getElementById("qc-button");
@@ -1849,7 +1850,10 @@ function renderQc(report) {
   qcBody.replaceChildren(tbl);
 }
 
+function closeYml() { closeAllOverlays(); }
+
 let _qcAbort = null;
+let refreshYml = () => {};
 
 async function runQc() {
   if (_qcAbort) _qcAbort.abort();
@@ -1932,11 +1936,7 @@ async function copyQcAsTsv() {
   }
 }
 
-function closeQc() {
-  if (_qcAbort) _qcAbort.abort();
-  qcModal.classList.remove("open");
-  hideQcTip();
-}
+function closeQc() { closeAllOverlays(); }
 
 function syncViewOptions() {
   const bar = barsSelect.value;
@@ -2322,7 +2322,7 @@ function openColModal() {
   colModal.classList.add("open");
 }
 
-function closeCol() { colModal.classList.remove("open"); }
+function closeCol() { closeAllOverlays(); }
 
 const saveButton = document.getElementById("save-button");
 const deleteButton = document.getElementById("delete-button");
@@ -2378,6 +2378,40 @@ const rowButton = document.getElementById("row-button");
 const rowModal = document.getElementById("row-modal");
 const rowBody = document.getElementById("row-body");
 const rowClose = document.getElementById("row-close");
+
+let _openOverlay = null;
+
+function syncOverlayButtons() {
+  document.getElementById("qc-button")?.classList.toggle("active", _openOverlay === "qc");
+  document.getElementById("col-button")?.classList.toggle("active", _openOverlay === "col");
+  document.getElementById("row-button")?.classList.toggle("active", _openOverlay === "row");
+  document.getElementById("yml-button")?.classList.toggle("active", _openOverlay === "yml");
+  document.getElementById("cal-button")?.classList.toggle("active", _openOverlay === "cal");
+}
+
+function closeAllOverlays() {
+  if (_qcAbort) _qcAbort.abort();
+  qcModal.classList.remove("open");
+  hideQcTip();
+  colModal.classList.remove("open");
+  rowModal.classList.remove("open");
+  ymlModal.classList.remove("open");
+  const pop = document.getElementById("date-popover");
+  if (pop) pop.hidden = true;
+  _openOverlay = null;
+  syncOverlayButtons();
+}
+
+function toggleOverlay(id, openFn) {
+  if (_openOverlay === id) {
+    closeAllOverlays();
+    return;
+  }
+  closeAllOverlays();
+  openFn();
+  _openOverlay = id;
+  syncOverlayButtons();
+}
 
 function openRowModal() {
   const container = document.createElement("div");
@@ -2438,7 +2472,7 @@ function openRowModal() {
   rowModal.classList.add("open");
 }
 
-function closeRow() { rowModal.classList.remove("open"); }
+function closeRow() { closeAllOverlays(); }
 
 function loadSpecFromView(name) {
   const preset = (manifest.view_specs || {})[name] || [];
@@ -2481,7 +2515,7 @@ async function init() {
     load();
   });
   targetSelect.addEventListener("change", load);
-  qcButton.addEventListener("click", runQc);
+  qcButton.addEventListener("click", () => toggleOverlay("qc", () => runQc()));
   qcClose.addEventListener("click", closeQc);
   qcCopy.addEventListener("click", copyQcAsTsv);
   const qcGradesBtn = document.getElementById("qc-grades");
@@ -2493,12 +2527,12 @@ async function init() {
     if (tbl) tbl.classList.toggle("with-grades", qcGradesOn);
   });
   qcModal.addEventListener("click", e => { if (e.target === qcModal) closeQc(); });
-  colButton.addEventListener("click", openColModal);
+  colButton.addEventListener("click", () => toggleOverlay("col", openColModal));
   colClose.addEventListener("click", closeCol);
   colModal.addEventListener("click", e => { if (e.target === colModal) closeCol(); });
   saveButton.addEventListener("click", saveView);
   deleteButton.addEventListener("click", deleteView);
-  rowButton.addEventListener("click", openRowModal);
+  rowButton.addEventListener("click", () => toggleOverlay("row", openRowModal));
   rowClose.addEventListener("click", closeRow);
   rowModal.addEventListener("click", e => { if (e.target === rowModal) closeRow(); });
   const normButton = document.getElementById("norm-button");
@@ -2514,7 +2548,7 @@ async function init() {
     barButton.classList.toggle("active", body.classList.contains("bars-on"));
   });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { closeQc(); closeCol(); closeRow(); }
+    if (e.key === "Escape") closeAllOverlays();
   });
   body.addEventListener("scroll", render, { passive: true });
   body.addEventListener("mouseleave", () => setHoverCol(-1));
@@ -2564,21 +2598,22 @@ async function init() {
   const calButton = document.getElementById("cal-button");
   const datePopover = document.getElementById("date-popover");
   const calWrap = calButton.parentElement;
-  function setCalOpen(open) {
-    datePopover.hidden = !open;
-    calButton.classList.toggle("active", open);
-  }
   calButton.addEventListener("click", e => {
     e.stopPropagation();
-    setCalOpen(datePopover.hidden);
+    toggleOverlay("cal", () => { datePopover.hidden = false; });
   });
   document.addEventListener("click", e => {
-    if (datePopover.hidden) return;
-    if (!calWrap.contains(e.target)) setCalOpen(false);
+    if (_openOverlay !== "cal") return;
+    if (!calWrap.contains(e.target)) closeAllOverlays();
   });
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && !datePopover.hidden) setCalOpen(false);
+  document.getElementById("yml-button").addEventListener("click", () => {
+    toggleOverlay("yml", () => {
+      refreshYml();
+      ymlModal.classList.add("open");
+    });
   });
+  document.getElementById("yml-close").addEventListener("click", closeYml);
+  ymlModal.addEventListener("click", e => { if (e.target === ymlModal) closeYml(); });
   await load();
 }
 
@@ -2733,16 +2768,9 @@ async function init() {
     setBuf("yml-buf-indicators_features", emitIndicatorsFeatures());
     setBuf("yml-buf-target",              emitTarget());
   }
+  refreshYml = refresh;
 
-  const modal = document.getElementById("yml-modal");
   document.querySelectorAll("#yml-modal .manifest-editor").forEach(attachEditor);
-  document.getElementById("yml-button").addEventListener("click", () => {
-    refresh();
-    modal.classList.add("open");
-  });
-  document.getElementById("yml-close").addEventListener("click", () => {
-    modal.classList.remove("open");
-  });
   document.querySelectorAll(".yml-copy").forEach(btn => {
     btn.addEventListener("click", async () => {
       const tgt = document.getElementById(btn.dataset.target);
