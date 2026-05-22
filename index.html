@@ -1451,6 +1451,7 @@ async function load() {
     applyRowGrouping();
     computeColStats();
     applyVisibility();
+    refreshQcIfOpen();
   } catch (e) {
     console.error("render failed", e, {
       cols: data && data.columns,
@@ -1701,6 +1702,7 @@ function applyAfterDateChange() {
   applyRowGrouping();
   computeColStats();
   applyVisibility();
+  refreshQcIfOpen();
 }
 
 function fillSelect(el, values) {
@@ -1943,6 +1945,8 @@ async function runQc() {
     const url = `/qc?bars=${encodeURIComponent(bars)}`
       + `&target=${encodeURIComponent(target)}`
       + `&cols=${encodeURIComponent(cols)}`
+      + `&from=${encodeURIComponent(dateFrom)}`
+      + `&to=${encodeURIComponent(dateTo)}`
       + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) {
@@ -1959,6 +1963,10 @@ async function runQc() {
     if (e.name === "AbortError") return;
     qcBody.innerHTML = `<div class="qc-status">qc failed: ${e}</div>`;
   }
+}
+
+function refreshQcIfOpen() {
+  if (_openOverlay === "qc") runQc();
 }
 
 function formatCellForCopy(v) {

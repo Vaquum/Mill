@@ -69,7 +69,7 @@ def build(raw: pl.DataFrame) -> pl.DataFrame:
 
 _PAYLOADS: dict[tuple[str, str, str], bytes] = {}
 _FRAMES: dict[tuple[str, str, str], pl.DataFrame] = {}
-_QC_CACHE: dict[tuple[str, str, str, tuple[str, ...]], bytes] = {}
+_QC_CACHE: dict[tuple[str, str, str, tuple[str, ...], str, str], bytes] = {}
 _RAW_CACHE: dict[str, pl.DataFrame] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
@@ -152,6 +152,17 @@ def _raw_for(bar: str) -> pl.DataFrame:
         raw = klines(bar)
         _RAW_CACHE[bar] = raw
     return raw
+
+
+def _date_filter(df: pl.DataFrame, date_from: str, date_to: str) -> pl.DataFrame:
+    if "datetime" not in df.columns or not (date_from or date_to):
+        return df
+    day = pl.col("datetime").dt.date()
+    if date_from:
+        df = df.filter(day >= pl.lit(date_from).str.to_date())
+    if date_to:
+        df = df.filter(day <= pl.lit(date_to).str.to_date())
+    return df
 
 
 def _ensure(
@@ -310,8 +321,10 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             cols_str = q.get("cols", [""])[0]
             cols = tuple(c for c in cols_str.split(",") if c)
+            date_from = q.get("from", [""])[0]
+            date_to = q.get("to", [""])[0]
             sh = _spec_hash(spec)
-            cache_key = (bar, target, sh, cols)
+            cache_key = (bar, target, sh, cols, date_from, date_to)
             cached = _QC_CACHE.get(cache_key)
             if cached is not None:
                 self._send(200, "application/json", cached)
@@ -325,6 +338,7 @@ class _Handler(BaseHTTPRequestHandler):
                     sub = frame.select(sel)
                 else:
                     sub = frame
+                sub = _date_filter(sub, date_from, date_to)
                 report = qc.report(sub, target if target != "none" else None)
                 report["grades"] = grading.grade_map(
                     report, target=target if target != "none" else None
