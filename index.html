@@ -1689,12 +1689,6 @@ function fmtCell(v) {
 const QC_META = {
   missing_rate:           {tip: "Fraction of bar values missing (Polars nulls + NaN/failed casts after Float64 cast). High values mean cold-start warmup or data gaps; <0.01 is healthy."},
   n_unique:               {tip: "Distinct non-NaN values. 1 = constant (drop); 2 = binary; 3-50 = clean categorical; large = continuous. Combined with row count to grade cardinality."},
-  unique_fraction:        {tip: "Distinct values / row count. Near 1.0 = continuous numeric; near 0 = constant or near-binary."},
-  min:                    {tip: "Minimum non-NaN value. Sanity-check scale and outliers."},
-  max:                    {tip: "Maximum non-NaN value. Sanity-check scale and outliers."},
-  median:                 {tip: "50th percentile. Robust central tendency."},
-  p01:                    {tip: "1st percentile. Lower-tail bound for the bulk of the distribution."},
-  p99:                    {tip: "99th percentile. Upper-tail bound for the bulk of the distribution."},
   skew:                   {tip: "Distribution asymmetry. Heavy positive skew is normal for vol; large |skew| flags a log-transform candidate."},
   adf_p:                  {tip: "Augmented Dickey–Fuller p-value. Low p rejects a unit root, i.e. the series is stationary."},
   kpss_p:                 {tip: "KPSS p-value. High p fails to reject strict stationarity. Long-memory series often reject both ADF and KPSS — that's expected, not a defect."},
@@ -1716,7 +1710,7 @@ let qcGradesOn = true;
 let qcTip = null;
 
 const QC_GROUPS = [
-  {name: "HEALTH",       rows: ["missing_rate", "n_unique", "unique_fraction", "min", "max", "median", "p01", "p99", "skew"]},
+  {name: "HEALTH",       rows: ["missing_rate", "n_unique", "skew"]},
   {name: "STATIONARITY", rows: ["adf_p", "kpss_p"]},
   {name: "REDUNDANCY",   rows: ["max_pairwise_spearman", "mean_pairwise_spearman", "redundancy_penalty", "max_pairwise_mi"]},
   {name: "EDGE",         rows: ["spearman", "spearman_ci_lo", "spearman_ci_hi", "mutual_information", "decile_spread", "monotonic_fraction"]},

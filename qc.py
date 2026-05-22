@@ -77,18 +77,9 @@ def _health_rows(
         {c: int(np.unique(_drop_nan(arrays[c])).size) for c in columns},
     ))
     out.append((
-        "unique_fraction",
-        {c: float(df[c].n_unique()) / n if n else None for c in columns},
+        "skew",
+        {c: _safe(lambda a: stats.skew(a, nan_policy="omit", bias=False), _drop_nan(arrays[c])) for c in columns},
     ))
-    for name, fn in (
-        ("min", np.nanmin),
-        ("max", np.nanmax),
-        ("median", np.nanmedian),
-        ("p01", lambda a: np.nanpercentile(a, 1)),
-        ("p99", lambda a: np.nanpercentile(a, 99)),
-        ("skew", lambda a: stats.skew(a, nan_policy="omit", bias=False)),
-    ):
-        out.append((name, {c: _safe(fn, _drop_nan(arrays[c])) for c in columns}))
 
     out.append(("adf_p", {c: _safe(_adf_p, _drop_nan(arrays[c])) for c in columns}))
     out.append(("kpss_p", {c: _safe(_kpss_p, _drop_nan(arrays[c])) for c in columns}))

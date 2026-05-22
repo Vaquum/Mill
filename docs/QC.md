@@ -21,7 +21,7 @@ The `/qc` endpoint ships a `grades` map alongside the metric rows. Each per-feat
 | Group | Red flag | Action |
 |---|---|---|
 | HEALTH       | `missing_rate` above tolerance | repair or drop |
-| HEALTH       | very low `unique_fraction` or `n_unique = 1` | treat as discrete or drop |
+| HEALTH       | `n_unique = 1` | treat as discrete or drop |
 | STATIONARITY | ADF does not reject and KPSS rejects | difference or detrend before edge metrics |
 | REDUNDANCY   | `max_pairwise_spearman` ≥ 0.7 | cluster; keep one representative |
 | EDGE         | Spearman CI crosses zero | do not treat the sign as stable |
@@ -40,9 +40,7 @@ The target's own column under the pairwise and edge rows is blank by constructio
 
 `missing_rate` is the fraction of bar values missing **after** a Float64 cast — Polars nulls plus any value that becomes NaN through casting. Below one percent is operationally invisible. Above a few percent the column should be repaired or excluded before any downstream metric is trusted, because every subsequent row drops NaNs before computing — a 30 percent missing rate means stationarity, correlation, and edge all rest on a 70 percent subsample whose representativeness is not established. The pairwise metrics are **more vulnerable still**: they require rows where every feature is simultaneously non-NaN, so a single column with heavy missingness reduces the effective sample for all of them.
 
-`n_unique` is the count of distinct non-NaN values; it feeds the cardinality grade alongside the report's top-level `n_rows`. `unique_fraction` is `n_unique / n_rows`. Continuous features sit near 1.0; discrete or low-cardinality features sit near 0. The reading interacts with later metrics: a feature with `unique_fraction` near zero may return `None` for decile spread because the deciles collapse onto each other.
-
-The five distributional markers — `min`, `max`, `median`, `p01`, `p99` — describe the spread on non-NaN values. The percentile pair is the working description of the tails. Compare each against the column's expected physical range. A z-score that drifts to ±8 has either tail mass that ordinary scaling cannot tame or a clipping bound that has come loose.
+`n_unique` is the count of distinct non-NaN values; it feeds the cardinality grade alongside the report's top-level `n_rows`. Low cardinality interacts with later metrics: a near-constant feature may return `None` for decile spread because the deciles collapse onto each other.
 
 `skew` is the bias-corrected sample skewness. Symmetric distributions sit near zero. Above roughly two, the column has a tail that will dominate ordinary regression and bias any metric that relies on means. A log or signed-log transform is the standard remedy before downstream use. Parkinson volatilities, absolute z-scores, and absolute normalised return all show skew above 2.5; that is the expected signature of those constructions.
 
