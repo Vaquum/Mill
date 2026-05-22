@@ -381,7 +381,7 @@
   .qc-table tbody tr:hover td:nth-child(1) { background: var(--highlight); }
   .qc-table.with-grades tbody td:nth-child(n+2) {
     position: relative;
-    padding-left: calc(var(--s-4) + 22px);
+    padding-left: calc(var(--s-4) + 34px);
   }
   .qc-grade {
     position: absolute;
@@ -390,12 +390,12 @@
     transform: translateY(-50%);
     display: inline-flex;
     align-items: center;
-    gap: 1px;
+    gap: 2px;
     pointer-events: none;
   }
   .qc-dot {
     font: var(--text-data);
-    font-size: 7px;
+    font-size: 11px;
     line-height: 1;
     color: var(--fg);
   }
@@ -1718,7 +1718,7 @@ const QC_GROUPS = [
   {name: "REGIME",       rows: ["regime_sign_agreement", "regime_spearman_std"]},
 ];
 const GRADE_RANK = {F: 0, D: 1, B: 2, A: 3};
-const QC_GRADE_DOTS = { A: 4, B: 3, D: 1, F: 1 };
+const QC_GRADE_DOTS = { A: 4, B: 3, D: 2, F: 1 };
 let qcGroupsExpanded = new Set();
 
 function qcGradeEl(grade) {
