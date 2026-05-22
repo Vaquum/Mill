@@ -11,6 +11,7 @@
   :root {
     /* palette — literals; never reference directly in rules */
     --c-near-black: #121212;
+    --c-warm-black: #231F20;
     --c-dark-gray:  #444444;
     --c-mid-gray:   #808080;
     --c-light-gray: #D3D3D3;
@@ -24,11 +25,12 @@
     --c-yellow:     #DDD941;
 
     /* surfaces */
-    --bg:      var(--c-near-black);
-    --surface: var(--c-dark-gray);
+    --bg:        var(--c-near-black);
+    --highlight: var(--c-warm-black);  /* subtle lift: row/col hover only */
 
     /* borders */
     --border:        var(--c-dark-gray);
+    --border-subtle: var(--c-warm-black);
     --border-strong: var(--c-mid-gray);
 
     /* text */
@@ -195,7 +197,7 @@
     top: calc(100% + var(--s-2));
     right: 0;
     z-index: 50;
-    background: var(--surface);
+    background: var(--bg);
     border: 1px solid var(--border-strong);
     border-radius: 2px;
     padding: var(--s-3) var(--s-4);
@@ -219,7 +221,7 @@
   }
   .control select:hover { border-color: var(--border-strong); }
   .control select:focus-visible { outline: none; border-color: var(--fg-2); }
-  .control select option { background: var(--surface); color: var(--fg); }
+  .control select option { background: var(--bg); color: var(--fg); }
   .control select option:disabled { color: var(--fg-3); }
 
   .content {
@@ -240,7 +242,7 @@
   .modal-panel {
     flex: 1 1 auto;
     margin: var(--s-6);
-    background: var(--surface);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 2px;
     display: flex; flex-direction: column;
@@ -277,7 +279,7 @@
     flex: 1 1 auto;
     overflow: auto;
     padding: 0;
-    background: var(--surface);
+    background: var(--bg);
   }
   .qc-table {
     border-collapse: collapse;
@@ -287,14 +289,14 @@
   }
   .qc-table thead th {
     position: sticky; top: 0;
-    background: var(--surface);
+    background: var(--bg);
     color: var(--fg-2);
     font: 500 var(--t-xs) var(--font-sans);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     text-align: right;
     padding: var(--s-3) var(--s-4);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-subtle);
     border-right: 1px solid var(--border);
     white-space: nowrap;
   }
@@ -314,7 +316,6 @@
     font: 400 var(--t-md) var(--font-sans);
   }
   .qc-table tbody td:last-child { border-right: none; }
-  .qc-table tbody tr:hover td { background: var(--bg); }
   .qc-table .num.pos { color: var(--pos); }
   .qc-table .num.neg { color: var(--neg); }
   .qc-table .num.null { color: var(--fg-3); }
@@ -332,7 +333,7 @@
   .qc-table tbody td:nth-child(1) {
     position: sticky;
     left: 0;
-    background: var(--surface);
+    background: var(--bg);
     width: var(--metric-w);
     min-width: var(--metric-w);
   }
@@ -347,7 +348,8 @@
   .qc-table thead th:nth-child(1) { z-index: 3; }
   .qc-table thead th { z-index: 2; }
   .qc-table tbody td:nth-child(1) { z-index: 1; }
-  .qc-table tbody tr:hover td:nth-child(1) { background: var(--bg); }
+  .qc-table tbody tr:hover td { background: var(--highlight); }
+  .qc-table tbody tr:hover td:nth-child(1) { background: var(--highlight); }
   .qc-table.with-grades tbody td[data-grade] { position: relative; }
   .qc-table.with-grades tbody td[data-grade]::before {
     content: attr(data-grade);
@@ -481,7 +483,7 @@
     margin-bottom: var(--s-3);
     padding-bottom: var(--s-2);
     border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: var(--surface); z-index: 1;
+    position: sticky; top: 0; background: var(--bg); z-index: 1;
   }
   .palette-items {
     display: flex;
@@ -513,7 +515,7 @@
     margin-bottom: var(--s-3);
     border: 1px solid var(--border);
     border-radius: 2px;
-    background: var(--surface);
+    background: var(--bg);
     color: var(--fg);
     font: 400 var(--t-base) var(--font-mono);
     outline: none;
@@ -682,9 +684,9 @@
   .row {
     position: absolute; left: 0; right: 0;
     height: var(--row-h);
-    border-bottom: 1px solid var(--surface);
+    border-bottom: 1px solid var(--border-subtle);
   }
-  .row:hover { background: var(--surface); }
+  .row:hover { background: var(--highlight); }
 
   .cell {
     padding: 0 var(--s-4);
@@ -701,7 +703,7 @@
     padding-left: var(--s-5);
     color: var(--fg-2);
   }
-  .cell.col-hover { background: var(--surface); }
+  .cell.col-hover { background: var(--highlight); }
   .body.bars-on .cell.has-bar {
     background: linear-gradient(
       to right,
@@ -832,7 +834,7 @@
     caret-color: var(--accent);
   }
   .manifest-buffer:focus { outline: none; }
-  .manifest-buffer::selection { background: var(--surface); color: var(--fg); }
+  .manifest-buffer::selection { background: var(--highlight); color: var(--fg); }
   .manifest-highlight { pointer-events: none; color: var(--syntax-base); }
 
   .tok-key     { color: var(--syntax-fg); }
