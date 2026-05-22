@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 import numpy as np
 import polars as pl
+from numba import njit, prange
 from scipy import stats
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from statsmodels.tsa.stattools import acf, adfuller, kpss
@@ -310,6 +311,70 @@ def _block_size(arr: np.ndarray) -> int | None:
     return _BLOCK_MAX_LAG
 
 
+@njit
+def _rankdata_1d(arr: np.ndarray) -> np.ndarray:
+    n = arr.size
+    order = np.argsort(arr)
+    ranks = np.empty(n, dtype=np.float64)
+    i = 0
+    while i < n:
+        j = i
+        while j + 1 < n and arr[order[j + 1]] == arr[order[i]]:
+            j += 1
+        avg = (i + j + 2) / 2.0
+        for k in range(i, j + 1):
+            ranks[order[k]] = avg
+        i = j + 1
+    return ranks
+
+
+@njit
+def _pearson(arr_x: np.ndarray, arr_y: np.ndarray) -> float:
+    arr_x = arr_x - arr_x.mean()
+    arr_y = arr_y - arr_y.mean()
+    denom = np.sqrt((arr_x * arr_x).sum() * (arr_y * arr_y).sum())
+    if denom == 0.0:
+        return 0.0
+    return float((arr_x * arr_y).sum() / denom)
+
+
+@njit(parallel=True)
+def _bootstrap_spearman_estimates(
+    arr_x: np.ndarray,
+    arr_y: np.ndarray,
+    idx: np.ndarray,
+) -> np.ndarray:
+    n_iter = idx.shape[0]
+    estimates = np.empty(n_iter, dtype=np.float64)
+    for i in prange(n_iter):
+        sample_x = arr_x[idx[i]]
+        sample_y = arr_y[idx[i]]
+        value = _pearson(_rankdata_1d(sample_x), _rankdata_1d(sample_y))
+        estimates[i] = 0.0 if np.isnan(value) else value
+    return estimates
+
+
+def _bootstrap_block_indices(
+    n: int,
+    block: int,
+    n_iter: int,
+    seed: int,
+) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    starts = np.arange(n - block + 1)
+    n_blocks = max(1, (n + block - 1) // block)
+    block_starts = rng.choice(starts, size=(n_iter, n_blocks), replace=True)
+    return (
+        block_starts[:, :, None] + np.arange(block)
+    ).reshape(n_iter, -1)[:, :n]
+
+
+def _warmup_bootstrap() -> None:
+    arr = np.arange(32, dtype=np.float64)
+    idx = np.arange(32, dtype=np.int64).reshape(1, -1)
+    _bootstrap_spearman_estimates(arr, arr, idx)
+
+
 def _bootstrap_spearman_ci(
     x: np.ndarray,
     y: np.ndarray,
@@ -319,6 +384,8 @@ def _bootstrap_spearman_ci(
     n_iter: int = _BOOTSTRAP_ITER,
     ci: float = 0.95,
 ) -> tuple[float | None, float | None]:
+    x = np.ascontiguousarray(x, dtype=np.float64)
+    y = np.ascontiguousarray(y, dtype=np.float64)
     n = x.size
     if n > _BOOTSTRAP_MAX_N:
         idx = np.linspace(0, n - 1, _BOOTSTRAP_MAX_N).astype(np.int64)
@@ -327,15 +394,8 @@ def _bootstrap_spearman_ci(
         n = x.size
     if n < block + 1:
         return None, None
-    rng = np.random.default_rng(seed)
-    starts = np.arange(n - block + 1)
-    n_blocks = max(1, (n + block - 1) // block)
-    estimates = np.empty(n_iter)
-    for i in range(n_iter):
-        s = rng.choice(starts, size=n_blocks, replace=True)
-        idx = (s[:, None] + np.arange(block)).ravel()[:n]
-        v = stats.spearmanr(x[idx], y[idx]).statistic
-        estimates[i] = v if not np.isnan(v) else 0.0
+    idx = _bootstrap_block_indices(n, block, n_iter, seed)
+    estimates = _bootstrap_spearman_estimates(x, y, idx)
     alpha = (1 - ci) / 2
     return (
         float(np.percentile(estimates, 100 * alpha)),
