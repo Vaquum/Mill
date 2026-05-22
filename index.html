@@ -45,11 +45,7 @@
     --neg:      var(--c-coral);     /* negative values */
     --danger:   var(--c-magenta);   /* destructive actions */
 
-    /* QC grades — pink hue ramp, best → worst */
-    --grade-a: var(--c-pale-pink);
-    --grade-b: var(--c-pink);
-    --grade-c: var(--c-pink);
-    --grade-d: var(--c-pink);
+    /* QC grades */
     --grade-f: var(--c-pink);
 
     /* syntax — neutral scale only */
@@ -107,7 +103,6 @@
   .date-presets a,
   .modal-head,
   .qc-table thead th,
-  .qc-table.with-grades tbody td[data-grade]::before,
   .qc-table tbody tr.qc-group-row td,
   .row-group-header,
   .features-pane-header,
@@ -384,21 +379,28 @@
   .qc-table tbody td:nth-child(1) { z-index: 1; }
   .qc-table tbody tr:hover td { background: var(--highlight); }
   .qc-table tbody tr:hover td:nth-child(1) { background: var(--highlight); }
-  .qc-table.with-grades tbody td[data-grade] { position: relative; }
-  .qc-table.with-grades tbody td[data-grade]::before {
-    content: attr(data-grade);
+  .qc-table.with-grades tbody td:nth-child(n+2) {
+    position: relative;
+    padding-left: calc(var(--s-4) + 22px);
+  }
+  .qc-grade {
     position: absolute;
     left: var(--s-3);
     top: 50%;
     transform: translateY(-50%);
-    color: var(--fg-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
     pointer-events: none;
   }
-  .qc-table.with-grades tbody td[data-grade="A"]::before { color: var(--grade-a); }
-  .qc-table.with-grades tbody td[data-grade="B"]::before { color: var(--grade-b); }
-  .qc-table.with-grades tbody td[data-grade="C"]::before { color: var(--grade-c); }
-  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--grade-d); }
-  .qc-table.with-grades tbody td[data-grade="F"]::before { color: var(--grade-f); }
+  .qc-dot {
+    font: var(--text-data);
+    font-size: 7px;
+    line-height: 1;
+    color: var(--fg);
+  }
+  .qc-dot.fail { color: var(--grade-f); }
+  .qc-table tbody td .qc-val { display: block; }
   .qc-table tbody tr.qc-group-row { cursor: pointer; user-select: none; }
   .qc-table tbody tr.qc-group-row td {
     color: var(--fg);
@@ -414,7 +416,6 @@
     transition: color 80ms ease;
   }
   .qc-table tbody tr.qc-group-row:hover td:first-child .chevron { color: var(--fg); }
-  .qc-table.with-grades tbody td[data-grade="NA"]::before { color: var(--fg-3); }
   .qc-table tbody td.has-tip { cursor: help; }
   .qc-tip {
     position: fixed;
@@ -1717,7 +1718,38 @@ const QC_GROUPS = [
   {name: "REGIME",       rows: ["regime_sign_agreement", "regime_spearman_std"]},
 ];
 const GRADE_RANK = {F: 0, D: 1, B: 2, A: 3};
+const QC_GRADE_DOTS = { A: 4, B: 3, D: 1, F: 1 };
 let qcGroupsExpanded = new Set();
+
+function qcGradeEl(grade) {
+  const n = QC_GRADE_DOTS[grade];
+  if (!n) return null;
+  const wrap = document.createElement("span");
+  wrap.className = "qc-grade";
+  wrap.title = grade;
+  for (let i = 0; i < n; i++) {
+    const dot = document.createElement("span");
+    dot.className = "qc-dot" + (grade === "F" ? " fail" : "");
+    dot.textContent = "●";
+    wrap.appendChild(dot);
+  }
+  return wrap;
+}
+
+function setQcFeatureCell(td, text, cls, grade) {
+  td.replaceChildren();
+  if (qcGradesOn && grade && grade !== "NA") {
+    const g = qcGradeEl(grade);
+    if (g) td.appendChild(g);
+  }
+  if (text != null && text !== "") {
+    const val = document.createElement("span");
+    val.className = "qc-val";
+    val.textContent = text;
+    td.appendChild(val);
+  }
+  td.className = cls || "";
+}
 
 function aggregateGroupGrade(groupRows, featureName, grades) {
   let worst = null;
@@ -1788,13 +1820,10 @@ function renderQc(report) {
         td.appendChild(document.createTextNode(group.name));
       } else {
         const featureName = report.columns[i];
-        td.textContent = "";
-        if (featureName === targetCol) {
-          td.dataset.grade = "NA";
-        } else {
-          const agg = aggregateGroupGrade(group.rows, featureName, grades);
-          if (agg) td.dataset.grade = agg;
-        }
+        const agg = featureName === targetCol
+          ? null
+          : aggregateGroupGrade(group.rows, featureName, grades);
+        setQcFeatureCell(td, "", "", agg);
       }
       headerTr.appendChild(td);
     }
@@ -1821,15 +1850,11 @@ function renderQc(report) {
           }
         } else {
           const { text, cls } = fmtCell(row[i]);
-          td.textContent = text;
-          td.className = cls;
           const featureName = report.columns[i];
-          if (featureName === targetCol) {
-            td.dataset.grade = "NA";
-          } else {
-            const g = grades[metric] && grades[metric][featureName];
-            if (g) td.dataset.grade = g;
-          }
+          const grade = featureName === targetCol
+            ? null
+            : ((grades[metric] || {})[featureName] || null);
+          setQcFeatureCell(td, text, cls, grade);
         }
         tr.appendChild(td);
       }
@@ -2521,8 +2546,7 @@ async function init() {
   qcGradesBtn.addEventListener("click", () => {
     qcGradesOn = !qcGradesOn;
     qcGradesBtn.classList.toggle("active", qcGradesOn);
-    const tbl = qcBody.querySelector(".qc-table");
-    if (tbl) tbl.classList.toggle("with-grades", qcGradesOn);
+    if (qcReport) renderQc(qcReport);
   });
   qcModal.addEventListener("click", e => { if (e.target === qcModal) closeQc(); });
   colButton.addEventListener("click", () => toggleOverlay("col", openColModal));
