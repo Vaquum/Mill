@@ -16,7 +16,7 @@ import feature_registry
 import grading
 import qc
 import targets
-from bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
+from bars import TIME_BAR_SECONDS
 from table import build_from_spec, klines
 from views import ALL as VIEWS
 
@@ -27,23 +27,14 @@ _VIEWS_DIR = Path(__file__).with_name("views")
 _TAGS_PATH = Path(__file__).with_name("feature_tags.json")
 _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-_BARS = tuple(TIME_BAR_SECONDS) + tuple(DOLLAR_BAR_USD)
+_BARS = tuple(TIME_BAR_SECONDS)
 _TARGETS = ("none", *targets.NAMES)
 _BAR_DATA_SOURCES: dict[str, dict[str, object]] = {
-    **{
-        name: {
-            "method": "limen.HistoricalData.get_spot_klines",
-            "params": {"kline_size": seconds},
-        }
-        for name, seconds in TIME_BAR_SECONDS.items()
-    },
-    **{
-        name: {
-            "method": "limen.HistoricalData.get_spot_dollar_klines",
-            "params": {"dollar_bar_size": usd},
-        }
-        for name, usd in DOLLAR_BAR_USD.items()
-    },
+    name: {
+        "method": "limen.HistoricalData.get_spot_klines",
+        "params": {"kline_size": seconds},
+    }
+    for name, seconds in TIME_BAR_SECONDS.items()
 }
 _TARGET_CLASSES: dict[str, dict[str, object]] = {
     name: targets.binding(name) for name in targets.NAMES

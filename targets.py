@@ -9,6 +9,9 @@ import polars as pl
 import limen.targets as _LT
 
 
+_EXCLUDED_TARGETS = {"random_binary", "vol_normalized_return"}
+
+
 def _snake_case(class_name: str) -> str:
     stem = class_name[:-len("Target")] if class_name.endswith("Target") else class_name
     return re.sub(r"(?<!^)(?=[A-Z])", "_", stem).lower()
@@ -57,7 +60,11 @@ def _can_apply(cls: type) -> bool:
 _BINDINGS: dict[str, tuple[type, dict[str, object]]] = {
     _snake_case(name): (cls, {})
     for name in _LT.__all__
-    if _is_instantiable(cls := getattr(_LT, name)) and _can_apply(cls)
+    if (
+        _snake_case(name) not in _EXCLUDED_TARGETS
+        and _is_instantiable(cls := getattr(_LT, name))
+        and _can_apply(cls)
+    )
 }
 _BINDINGS["abs_forward_vol_normalized_return"] = (
     _LT.ForwardVolNormalizedReturnTarget, {"absolute": True}
