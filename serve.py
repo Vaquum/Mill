@@ -32,14 +32,14 @@ _TARGETS = ("none", *targets.NAMES)
 _BAR_DATA_SOURCES: dict[str, dict[str, object]] = {
     **{
         name: {
-            "method": "limen.data.HistoricalData.get_spot_klines",
+            "method": "limen.HistoricalData.get_spot_klines",
             "params": {"kline_size": seconds},
         }
         for name, seconds in TIME_BAR_SECONDS.items()
     },
     **{
         name: {
-            "method": "limen.data.HistoricalData.get_spot_dollar_klines",
+            "method": "limen.HistoricalData.get_spot_dollar_klines",
             "params": {"dollar_bar_size": usd},
         }
         for name, usd in DOLLAR_BAR_USD.items()

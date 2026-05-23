@@ -438,3 +438,6 @@ def _decile_metrics(x: np.ndarray, y: np.ndarray) -> tuple[float | None, float |
     overall = 1 if spread >= 0 else -1
     same = int(np.sum(np.sign(diffs) == overall))
     return spread, same / 9.0
+
+
+_warmup_bootstrap()

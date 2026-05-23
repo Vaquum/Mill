@@ -36,6 +36,8 @@ class GetData:
         row_count_limit: int | None = None,
         n_rows: int | None = None,
     ) -> pl.DataFrame:
+        if row_count_limit is not None and n_rows is not None:
+            raise ValueError("row_count_limit and n_rows are mutually exclusive.")
         name = time_bar_name(bar_size)
         seconds = time_bar_seconds(bar_size)
         criteria = {
@@ -68,6 +70,8 @@ class GetData:
         row_count_limit: int | None = None,
         n_rows: int | None = None,
     ) -> pl.DataFrame:
+        if row_count_limit is not None and n_rows is not None:
+            raise ValueError("row_count_limit and n_rows are mutually exclusive.")
         name = dollar_bar_name(bar_size)
         usd = dollar_bar_usd(bar_size)
         criteria = {

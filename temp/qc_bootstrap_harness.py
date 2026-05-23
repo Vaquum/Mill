@@ -110,8 +110,8 @@ def compare_bootstrap_pairs(
             "ref_hi": ref[1],
             "new_lo": new[0],
             "new_hi": new[1],
-            "lo_diff": None if ref[0] is None else abs(ref[0] - new[0]),
-            "hi_diff": None if ref[1] is None else abs(ref[1] - new[1]),
+            "lo_diff": None if ref[0] is None or new[0] is None else abs(ref[0] - new[0]),
+            "hi_diff": None if ref[1] is None or new[1] is None else abs(ref[1] - new[1]),
             "match": _ci_close(ref, new),
         })
     mismatches = [r for r in rows if not r["match"]]

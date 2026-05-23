@@ -1929,6 +1929,13 @@ function closeYml() { closeAllOverlays(); }
 let _qcAbort = null;
 let refreshYml = () => {};
 
+function setQcStatus(text) {
+  const div = document.createElement("div");
+  div.className = "qc-status";
+  div.textContent = text;
+  qcBody.replaceChildren(div);
+}
+
 async function runQc() {
   if (_qcAbort) _qcAbort.abort();
   const ctrl = new AbortController();
@@ -1938,7 +1945,7 @@ async function runQc() {
   const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== currentTarget);
   const cols = colsForQc.join(",");
   qcTitle.textContent = `qc · ${bars} · ${target}`;
-  qcBody.innerHTML = `<div class="qc-status">running quality control…</div>`;
+  setQcStatus("running quality control…");
   qcModal.classList.add("open");
   const t0 = performance.now();
   try {
@@ -1951,7 +1958,7 @@ async function runQc() {
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) {
       const msg = await res.text();
-      qcBody.innerHTML = `<div class="qc-status">qc failed: ${msg}</div>`;
+      setQcStatus(`qc failed: ${msg}`);
       return;
     }
     const report = await res.json();
@@ -1961,7 +1968,7 @@ async function runQc() {
     qcTitle.textContent = `qc · ${bars} · ${target}  ·  ${(dt/1000).toFixed(1)}s`;
   } catch (e) {
     if (e.name === "AbortError") return;
-    qcBody.innerHTML = `<div class="qc-status">qc failed: ${e}</div>`;
+    setQcStatus(`qc failed: ${e}`);
   }
 }
 
