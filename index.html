@@ -6,9 +6,10 @@
 <title>time_bars</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
 <style>
   :root {
+    /* palette — literals; never reference directly in rules */
     --c-near-black: #121212;
     --c-warm-black: #231F20;
     --c-dark-gray:  #444444;
@@ -16,7 +17,6 @@
     --c-light-gray: #D3D3D3;
     --c-pale-gray:  #F3F3F3;
     --c-off-white:  #F8F8F8;
-    --c-cyan:       #C4E8F4;
     --c-pale-pink:  #FCE2EB;
     --c-pink:       #EAA3C8;
     --c-magenta:    #DC65A6;
@@ -24,23 +24,51 @@
     --c-lavender:   #BCABD3;
     --c-yellow:     #DDD941;
 
-    --bg:            var(--c-near-black);
-    --bg-1:          var(--c-warm-black);
-    --panel:         var(--c-warm-black);
+    /* surfaces */
+    --bg:        var(--c-near-black);
+    --highlight: var(--c-warm-black);  /* subtle lift: row/col hover only */
+
+    /* borders */
     --border:        var(--c-dark-gray);
+    --border-subtle: var(--c-warm-black);
     --border-strong: var(--c-mid-gray);
-    --fg:            var(--c-off-white);
-    --fg-1:          var(--c-pale-gray);
-    --fg-2:          var(--c-light-gray);
-    --fg-3:          var(--c-mid-gray);
-    --pos:           var(--c-cyan);
-    --neg:           var(--c-coral);
-    --accent:        var(--c-yellow);
-    --active:        var(--c-cyan);
-    --hot:           var(--c-magenta);
+
+    /* text */
+    --fg:   var(--c-off-white);
+    --fg-1: var(--c-pale-gray);
+    --fg-2: var(--c-light-gray);
+    --fg-3: var(--c-mid-gray);
+
+    /* semantics — one palette hue, one meaning */
+    --accent:   var(--c-yellow);    /* focus, toggles, copy confirm */
+    --pos:      var(--c-lavender);  /* positive values */
+    --neg:      var(--c-coral);     /* negative values */
+    --danger:   var(--c-magenta);   /* destructive actions */
+
+    /* QC grades */
+    --grade-f: var(--c-pink);
+
+    /* syntax — neutral scale only */
+    --syntax-fg:      var(--fg);
+    --syntax-base:    var(--fg-2);
+    --syntax-dim:     var(--fg-3);
+    --syntax-muted:   var(--fg-1);
 
     --font-sans: "IBM Plex Sans", sans-serif;
     --font-mono: "IBM Plex Mono", monospace;
+    --t: 13px;
+    --t-icon: 11px;
+    --leading-tight: 1;
+    --leading-body: 1.4;
+    --track-label: 0.08em;
+
+    --text-body: 400 var(--t)/var(--leading-body) var(--font-sans);
+    --text-ui: 400 var(--t)/var(--leading-tight) var(--font-sans);
+    --text-label: 500 var(--t)/var(--leading-tight) var(--font-sans);
+    --text-data: 400 var(--t)/var(--leading-tight) var(--font-mono);
+    --text-data-em: 500 var(--t)/var(--leading-tight) var(--font-mono);
+    --text-code: 400 var(--t)/var(--leading-body) var(--font-mono);
+    --text-icon: 500 var(--t-icon)/var(--leading-tight) var(--font-sans);
 
     --s-1: 4px;
     --s-2: 8px;
@@ -49,41 +77,119 @@
     --s-5: 24px;
     --s-6: 32px;
 
-    --t-xs: 11px;
-    --t-base: 12.5px;
-    --t-md: 13px;
+    /* rhythm — literals; never reference directly in rules */
+    --row-h:           36px;
+    --col-dt:          184px;
+    --col-metric:      240px;
+    --col-feature:     132px;
+    --col-row-group-min: 220px;
+    --field-w-sm:      56px;
+    --field-w-md:      64px;
+    --tip-max-w:       360px;
+    --radio-size:      14px;
+    --radio-dot:       6px;
+    --scrollbar-w:     10px;
+    --radius:          2px;
+    --border-w:        1px;
+    --border-w-accent: 2px;
+    --dur:             80ms;
+    --ease:            ease;
+    --opacity-drag:    0.4;
+    --opacity-muted:   0.5;
+    --tab-size:        2;
 
-    --row-h: 36px;
-    --col-dt: 184px;
+    /* rhythm — derived */
+    --transition:      var(--dur) var(--ease);
+    --control-h:       var(--row-h);
+    --icon-btn-w:      var(--control-h);
+    --caret-w:         var(--s-2);
+    --chevron-w:       var(--s-2);
+    --radio-inset:     calc((var(--radio-size) - var(--radio-dot)) / 2);
+    --cell-pad-x:      var(--s-4);
+    --cell-pad-label:  var(--s-5);
+    --chrome-pad-y:    var(--s-4);
+    --chrome-pad-x:    var(--s-5);
+    --pane-pad:        var(--s-5);
+    --qc-grade-dots-max: 4;
+    --qc-grade-dot-size: var(--t-icon);
+    --qc-grade-dot-gap:  var(--s-2);
+    --qc-grade-track: calc(
+      var(--qc-grade-dots-max) * var(--qc-grade-dot-size)
+      + (var(--qc-grade-dots-max) - 1) * var(--qc-grade-dot-gap)
+    );
+    --qc-grade-pad: calc(var(--cell-pad-x) + var(--qc-grade-track));
+    --z-modal:             10;
+    --z-popover:           50;
+    --z-qc-sticky-col:     1;
+    --z-qc-sticky-head:    2;
+    --z-qc-sticky-corner:  3;
+    --z-tip:               100;
   }
   * { box-sizing: border-box; }
+
+  /* typography roles — only entry points for font: in rules */
+  .t-body  { font: var(--text-body); }
+  .t-ui    { font: var(--text-ui); }
+  .t-label {
+    font: var(--text-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+  }
+  .t-data {
+    font: var(--text-data);
+    font-variant-numeric: tabular-nums;
+  }
+  .t-code {
+    font: var(--text-code);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  .t-icon  { font: var(--text-icon); }
+
+  .date-presets a,
+  .modal-head,
+  .qc-table thead th,
+  .qc-table tbody tr.qc-group-row td,
+  .row-group-header,
+  .features-pane-header,
+  .chip-tags-label,
+  .paramset-add,
+  .param-row,
+  .head .cell,
+  .yml-col-head,
+  .yml-copy {
+    font: var(--text-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+  }
+
   html, body {
     margin: 0; padding: 0;
     height: 100%; width: 100%;
     background: var(--bg); color: var(--fg);
-    font: 400 13px/1.4 var(--font-sans);
+    font: var(--text-body);
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar { width: var(--scrollbar-w); height: var(--scrollbar-w); }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius); }
   ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
   #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
   header {
     flex: 0 0 auto;
-    padding: var(--s-4) var(--s-5);
-    border-bottom: 1px solid var(--border);
+    padding: var(--chrome-pad-y) var(--chrome-pad-x);
+    border-bottom: var(--border-w) solid var(--border);
     display: flex; justify-content: space-between; align-items: center;
     background: var(--bg);
   }
   header .left { display: flex; align-items: center; gap: var(--s-6); }
   header .right { display: flex; align-items: center; gap: var(--s-5); }
   .control-group { display: flex; align-items: center; gap: var(--s-4); }
-  .button-group { display: flex; align-items: center; gap: var(--s-4); }
+  .control-pair  { display: inline-flex; align-items: center; gap: 0; }
+  .icon-group    { display: inline-flex; align-items: center; gap: var(--s-3); }
   .date-filter {
     display: inline-flex;
     align-items: center;
@@ -94,16 +200,15 @@
     appearance: none; -webkit-appearance: none;
     background: transparent;
     color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    height: 28px;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
+    height: var(--control-h);
     padding: 0 var(--s-2);
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-data);
     font-variant-numeric: tabular-nums;
-    line-height: 1;
     cursor: pointer;
     color-scheme: dark;
-    transition: border-color 80ms ease;
+    transition: border-color var(--transition);
     display: inline-flex;
     align-items: center;
   }
@@ -115,7 +220,7 @@
     margin: 0 0 0 var(--s-1);
     align-self: center;
   }
-  .date-filter input[type="date"]::-webkit-datetime-edit { padding: 0; line-height: 1; }
+  .date-filter input[type="date"]::-webkit-datetime-edit { padding: 0; }
   .date-filter input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
   .date-presets {
     display: inline-flex;
@@ -126,68 +231,74 @@
   .date-presets a {
     cursor: pointer;
     color: var(--fg-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     user-select: none;
-    transition: color 80ms ease;
+    transition: color var(--transition);
   }
   .date-presets a:hover { color: var(--fg); }
   .date-presets a.active { color: var(--accent); }
   .meta {
     color: var(--fg-2);
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-data);
     font-variant-numeric: tabular-nums;
   }
-  .meta b { color: var(--fg); font-weight: 500; }
+  .meta b { color: var(--fg); font: var(--text-data-em); font-variant-numeric: tabular-nums; }
 
-  .control {
-    display: inline-flex; align-items: center; gap: var(--s-3);
-    color: var(--fg-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  .control { display: inline-flex; align-items: center; }
+  .on-sep {
+    color: var(--fg-3);
+    font: var(--text-ui);
+    text-transform: lowercase;
+    user-select: none;
   }
-  .control select {
-    appearance: none; -webkit-appearance: none;
-    background: transparent;
-    color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    height: 28px;
-    padding: 0 var(--s-5) 0 var(--s-3);
-    line-height: 1;
-    font: 400 var(--t-md) var(--font-sans);
-    cursor: pointer;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path fill='%23808080' d='M2 4l3 3 3-3z'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right var(--s-2) center;
-    transition: border-color 80ms ease, color 80ms ease;
-  }
-  .control select:hover { border-color: var(--border-strong); }
-  .control select:focus-visible { outline: none; border-color: var(--fg-2); }
-  .control select option { background: var(--panel); color: var(--fg); }
-  .control select option:disabled { color: var(--fg-3); }
-
-  .button {
+  .icon-button {
     appearance: none; -webkit-appearance: none;
     background: transparent;
     color: var(--fg-2);
     border: none;
     padding: 0;
-    height: 28px;
+    height: var(--control-h);
+    width: var(--icon-btn-w);
     display: inline-flex;
     align-items: center;
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    justify-content: center;
     cursor: pointer;
-    transition: color 80ms ease;
+    font: var(--text-ui);
+    transition: color var(--transition);
   }
-  .button:hover { color: var(--fg); }
-  .button:focus-visible { outline: none; color: var(--fg); }
-  .button.toggle.active { color: var(--accent); }
-  .button.toggle.active:hover { color: var(--accent); }
+  .icon-button:hover { color: var(--fg); }
+  .icon-button:focus-visible { outline: none; color: var(--fg); }
+  .icon-button.active { color: var(--accent); }
+  .cal-wrap { position: relative; display: inline-flex; align-items: center; }
+  .date-popover {
+    position: absolute;
+    top: calc(100% + var(--s-2));
+    right: 0;
+    z-index: var(--z-popover);
+    background: var(--bg);
+    border: var(--border-w) solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: var(--s-3) var(--s-4);
+  }
+  .date-popover[hidden] { display: none; }
+  .control select {
+    appearance: none; -webkit-appearance: none;
+    background: transparent;
+    color: var(--fg);
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
+    height: var(--control-h);
+    padding: 0 var(--s-5) 0 var(--s-3);
+    font: var(--text-ui);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path fill='%23808080' d='M2 4l3 3 3-3z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right var(--s-2) center;
+    transition: border-color var(--transition), color var(--transition);
+  }
+  .control select:hover { border-color: var(--border-strong); }
+  .control select:focus-visible { outline: none; border-color: var(--fg-2); }
+  .control select option { background: var(--bg); color: var(--fg); }
+  .control select option:disabled { color: var(--fg-3); }
 
   .content {
     flex: 1 1 auto;
@@ -201,232 +312,229 @@
     background: var(--bg);
     display: none;
     align-items: stretch; justify-content: stretch;
-    z-index: 10;
+    z-index: var(--z-modal);
   }
   .modal.open { display: flex; }
   .modal-panel {
     flex: 1 1 auto;
     margin: var(--s-6);
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 2px;
+    background: var(--bg);
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
     display: flex; flex-direction: column;
     overflow: hidden;
   }
   .modal-head {
     flex: 0 0 auto;
-    padding: var(--s-4) var(--s-5);
-    border-bottom: 1px solid var(--border);
+    padding: var(--chrome-pad-y) var(--chrome-pad-x);
+    border-bottom: var(--border-w) solid var(--border);
     display: flex; justify-content: space-between; align-items: center;
     color: var(--fg-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em; text-transform: uppercase;
   }
   .modal-head .actions { display: inline-flex; align-items: center; gap: var(--s-1); }
   .modal-head .icon-button {
     background: transparent; border: none; color: var(--fg-2);
-    cursor: pointer; padding: var(--s-1) var(--s-2); line-height: 0;
-    border-radius: 2px;
-    transition: color 80ms ease, background 80ms ease;
+    cursor: pointer; padding: var(--s-1) var(--s-2);
+    border-radius: var(--radius);
+    transition: color var(--transition), background var(--transition);
   }
   .modal-head .icon-button:hover { color: var(--fg); background: var(--bg); }
   .modal-head .icon-button.copied { color: var(--accent); }
   .modal-head .icon-button.active { color: var(--accent); }
   .modal-head .icon-button svg { display: block; }
-  .modal-head .close {
+  .close {
     background: transparent; border: none; color: var(--fg-2);
-    font-size: 20px; line-height: 1; cursor: pointer;
+    font: var(--text-icon);
+    cursor: pointer;
     padding: var(--s-1) var(--s-2);
-    transition: color 80ms ease;
+    transition: color var(--transition);
   }
-  .modal-head .close:hover { color: var(--fg); }
+  .close:hover { color: var(--fg); }
   .modal-body {
     flex: 1 1 auto;
     overflow: auto;
     padding: 0;
-    background: var(--panel);
+    background: var(--bg);
   }
   .qc-table {
     border-collapse: collapse;
     width: 100%;
-    font: 400 var(--t-base) var(--font-mono);
-    font-variant-numeric: tabular-nums;
+    font: var(--text-ui);
   }
   .qc-table thead th {
     position: sticky; top: 0;
-    background: var(--panel);
+    background: var(--bg);
     color: var(--fg-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     text-align: right;
-    padding: var(--s-3) var(--s-4);
-    border-bottom: 1px solid var(--border);
-    border-right: 1px solid var(--border);
+    height: var(--row-h);
+    padding: 0 var(--cell-pad-x);
+    border-bottom: var(--border-w) solid var(--border-subtle);
+    border-right: var(--border-w) solid var(--border);
     white-space: nowrap;
   }
-  .qc-table thead th:first-child { text-align: left; padding-left: var(--s-5); }
+  .qc-table thead th:first-child { text-align: left; padding-left: var(--cell-pad-label); }
   .qc-table thead th:last-child { border-right: none; }
   .qc-table tbody td {
-    padding: var(--s-2) var(--s-4);
+    height: var(--row-h);
+    padding: 0 var(--cell-pad-x);
     text-align: right;
-    border-bottom: 1px solid var(--border);
-    border-right: 1px solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    border-right: var(--border-w) solid var(--border);
     white-space: nowrap;
-    font-variant-numeric: tabular-nums;
   }
   .qc-table tbody td:first-child {
-    text-align: left; padding-left: var(--s-5);
+    text-align: left; padding-left: var(--cell-pad-label);
     color: var(--fg-2);
-    font: 400 var(--t-md) var(--font-sans);
+    font: var(--text-ui);
+  }
+  .qc-table tbody td.num {
+    font: var(--text-data);
+    font-variant-numeric: tabular-nums;
   }
   .qc-table tbody td:last-child { border-right: none; }
-  .qc-table tbody tr:hover td { background: var(--bg); }
   .qc-table .num.pos { color: var(--pos); }
   .qc-table .num.neg { color: var(--neg); }
   .qc-table .num.null { color: var(--fg-3); }
   .qc-status {
     padding: var(--s-6) var(--s-5);
     color: var(--fg-2);
-    font: 400 var(--t-md) var(--font-sans);
+    font: var(--text-body);
   }
   .qc-table {
-    --metric-w: 240px;
-    --feature-w: 132px;
     table-layout: fixed;
   }
   .qc-table thead th:nth-child(1),
   .qc-table tbody td:nth-child(1) {
     position: sticky;
     left: 0;
-    background: var(--panel);
-    width: var(--metric-w);
-    min-width: var(--metric-w);
+    background: var(--bg);
+    width: var(--col-metric);
+    min-width: var(--col-metric);
   }
   .qc-table thead th:nth-child(n+2),
   .qc-table tbody td:nth-child(n+2) {
-    width: var(--feature-w);
-    min-width: var(--feature-w);
-    max-width: var(--feature-w);
+    width: var(--col-feature);
+    min-width: var(--col-feature);
+    max-width: var(--col-feature);
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .qc-table thead th:nth-child(1) { z-index: 3; }
-  .qc-table thead th { z-index: 2; }
-  .qc-table tbody td:nth-child(1) { z-index: 1; }
-  .qc-table tbody tr:hover td:nth-child(1) { background: var(--bg); }
-  .qc-table.with-grades tbody td[data-grade] { position: relative; }
-  .qc-table.with-grades tbody td[data-grade]::before {
-    content: attr(data-grade);
+  .qc-table thead th:nth-child(1) { z-index: var(--z-qc-sticky-corner); }
+  .qc-table thead th { z-index: var(--z-qc-sticky-head); }
+  .qc-table tbody td:nth-child(1) { z-index: var(--z-qc-sticky-col); }
+  .qc-table tbody tr:hover td { background: var(--highlight); }
+  .qc-table tbody tr:hover td:nth-child(1) { background: var(--highlight); }
+  .qc-table.with-grades tbody td:nth-child(n+2) {
+    position: relative;
+    padding-left: var(--qc-grade-pad);
+  }
+  .qc-grade {
     position: absolute;
     left: var(--s-3);
     top: 50%;
     transform: translateY(-50%);
-    font: 500 var(--t-xs) var(--font-sans);
-    color: var(--fg-3);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--qc-grade-dot-gap);
     pointer-events: none;
   }
-  .qc-table.with-grades tbody td[data-grade="F"]::before { color: var(--c-magenta); }
-  .qc-table.with-grades tbody td[data-grade="D"]::before { color: var(--c-pink); }
-  .qc-table.with-grades tbody td[data-grade="B"]::before { color: var(--c-lavender); }
-  .qc-table.with-grades tbody td[data-grade="A"]::before { color: var(--c-pale-pink); }
+  .qc-dot {
+    font: var(--text-icon);
+    line-height: var(--leading-tight);
+    color: var(--fg);
+  }
+  .qc-dot.fail { color: var(--grade-f); }
+  .qc-table tbody td .qc-val { display: block; }
   .qc-table tbody tr.qc-group-row { cursor: pointer; user-select: none; }
   .qc-table tbody tr.qc-group-row td {
     color: var(--fg);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     background: var(--bg);
   }
   .qc-table tbody tr.qc-group-row:hover td { background: var(--bg); }
   .qc-table tbody tr.qc-group-row td:first-child .chevron {
     display: inline-block;
-    width: 10px;
+    width: var(--chevron-w);
+    font: var(--text-icon);
     color: var(--fg-3);
     margin-right: var(--s-2);
-    transition: color 80ms ease;
+    transition: color var(--transition);
   }
   .qc-table tbody tr.qc-group-row:hover td:first-child .chevron { color: var(--fg); }
-  .qc-table.with-grades tbody td[data-grade="NA"]::before { color: var(--fg-3); letter-spacing: 0.04em; }
   .qc-table tbody td.has-tip { cursor: help; }
   .qc-tip {
     position: fixed;
     background: var(--bg);
     color: var(--fg);
-    border: 1px solid var(--border);
-    border-left: 2px solid var(--accent);
-    border-radius: 2px;
+    border: var(--border-w) solid var(--border);
+    border-left: var(--border-w-accent) solid var(--accent);
+    border-radius: var(--radius);
     padding: var(--s-3) var(--s-4);
-    font: 400 var(--t-md) var(--font-sans);
-    line-height: 1.5;
-    max-width: 360px;
-    z-index: 100;
+    font: var(--text-body);
+    max-width: var(--tip-max-w);
+    z-index: var(--z-tip);
     pointer-events: none;
     display: none;
   }
   .qc-tip.open { display: block; }
 
   .row-groups {
-    padding: var(--s-5);
+    padding: var(--pane-pad);
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--col-row-group-min), 1fr));
     gap: var(--s-6);
   }
   .row-group-header {
     color: var(--fg-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     margin-bottom: var(--s-3);
     padding-bottom: var(--s-2);
-    border-bottom: 1px solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
   }
   .row-options { display: flex; flex-direction: column; gap: var(--s-1); }
   .row-option {
     display: flex; align-items: center; gap: var(--s-3);
     cursor: pointer; user-select: none;
     padding: var(--s-1) 0;
-    font: 400 var(--t-md) var(--font-sans);
+    font: var(--text-body);
     color: var(--fg);
   }
   .row-option input[type="radio"] {
     appearance: none; -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border: 1px solid var(--border-strong);
+    width: var(--radio-size); height: var(--radio-size);
+    border: var(--border-w) solid var(--border-strong);
     border-radius: 50%;
     background: transparent;
     cursor: pointer;
     position: relative;
     flex: 0 0 auto;
-    transition: border-color 80ms ease, background 80ms ease;
+    transition: border-color var(--transition), background var(--transition);
   }
   .row-option input[type="radio"]:hover { border-color: var(--fg-2); }
   .row-option input[type="radio"]:checked { background: var(--accent); border-color: var(--accent); }
   .row-option input[type="radio"]:checked::after {
     content: '';
     position: absolute;
-    width: 6px; height: 6px;
+    width: var(--radio-dot); height: var(--radio-dot);
     background: var(--bg);
     border-radius: 50%;
-    left: 3px; top: 3px;
+    left: var(--radio-inset); top: var(--radio-inset);
   }
   .row-option-input {
     appearance: textfield;
     margin-left: var(--s-2);
-    width: 56px;
+    width: var(--field-w-sm);
     background: transparent;
     color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: 2px;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
     padding: var(--s-1) var(--s-2);
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-data);
     font-variant-numeric: tabular-nums;
   }
   .row-option-input::-webkit-outer-spin-button,
   .row-option-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .row-option-input:focus-visible { outline: none; border-color: var(--accent); }
   .row-option-disabled { color: var(--fg-3); cursor: not-allowed; }
-  .row-option-disabled input { cursor: not-allowed; opacity: 0.5; }
+  .row-option-disabled input { cursor: not-allowed; opacity: var(--opacity-muted); }
 
   .features-builder {
     display: grid;
@@ -435,19 +543,16 @@
   }
   .features-pane {
     overflow: auto;
-    padding: var(--s-5);
+    padding: var(--pane-pad);
     display: flex; flex-direction: column;
   }
-  .features-pane.palette { border-right: 1px solid var(--border); }
+  .features-pane.palette { border-right: var(--border-w) solid var(--border); }
   .features-pane-header {
     color: var(--fg-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     margin-bottom: var(--s-3);
     padding-bottom: var(--s-2);
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: var(--panel); z-index: 1;
+    border-bottom: var(--border-w) solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: var(--z-qc-sticky-col);
   }
   .palette-items {
     display: flex;
@@ -458,90 +563,90 @@
   .palette-item {
     display: inline-flex; align-items: center; gap: var(--s-2);
     padding: var(--s-1) var(--s-3);
-    border: 1px solid var(--border);
-    border-radius: 2px;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
     cursor: grab;
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-ui);
     color: var(--fg);
     user-select: none;
     flex: 0 0 auto;
-    transition: border-color 80ms ease, background 80ms ease, color 80ms ease;
+    transition: border-color var(--transition), background var(--transition), color var(--transition);
   }
   .palette-item:hover { border-color: var(--border-strong); background: var(--bg); color: var(--accent); }
   .palette-item:active { cursor: grabbing; }
   .palette-search {
     position: sticky;
     top: 0;
-    z-index: 2;
+    z-index: var(--z-qc-sticky-head);
     width: 100%;
     box-sizing: border-box;
     padding: var(--s-1) var(--s-3);
     margin-bottom: var(--s-3);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: var(--panel);
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
     color: var(--fg);
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-ui);
     outline: none;
   }
-  .palette-search::placeholder {
-    color: var(--fg-2);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font: 500 var(--t-xs) var(--font-sans);
-  }
+  .palette-search::placeholder { color: var(--fg-2); }
   .palette-search:focus { border-color: var(--accent); }
   .features-active {
     position: relative;
-    transition: background 80ms ease;
+    transition: background var(--transition);
+  }
+  .features-active-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
   }
   .features-active.dragover {
-    outline: 2px dashed var(--accent);
+    outline: var(--border-w-accent) dashed var(--accent);
     outline-offset: calc(var(--s-2) * -1);
   }
   .active-empty {
     color: var(--fg-3);
-    font: 400 var(--t-md) var(--font-sans);
+    font: var(--text-body);
     padding: var(--s-6) 0;
     text-align: center;
   }
   .active-chip {
-    border: 1px solid var(--border);
-    border-radius: 2px;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
     background: var(--bg);
-    transition: border-color 80ms ease, opacity 80ms ease;
+    transition: border-color var(--transition), opacity var(--transition);
   }
   .active-chip:hover { border-color: var(--border-strong); }
   .active-chip.open { border-color: var(--accent); }
-  .active-chip.dragging { opacity: 0.4; }
+  .active-chip.dragging { opacity: var(--opacity-drag); }
   .active-chip.drop-target { border-color: var(--accent); border-style: dashed; }
   .active-chip-head {
     display: flex; align-items: center; gap: var(--s-3);
     padding: var(--s-3);
     cursor: grab;
     user-select: none;
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-ui);
   }
   .active-chip.dragging .active-chip-head { cursor: grabbing; }
   .active-chip-name { color: var(--fg); }
   .active-chip-summary {
     color: var(--fg-2);
-    font: 400 var(--t-base) var(--font-mono);
     margin-left: auto;
+    font: var(--text-data);
     font-variant-numeric: tabular-nums;
   }
   .active-chip-remove {
     background: transparent; border: none; color: var(--fg-3);
     cursor: pointer;
-    font-size: 18px; line-height: 1;
+    font: var(--text-icon);
     padding: 0 var(--s-1);
-    transition: color 80ms ease;
+    transition: color var(--transition);
   }
-  .active-chip-remove:hover { color: var(--neg); }
+  .active-chip-remove:hover { color: var(--danger); }
   .active-chip-params {
     display: none;
     flex-direction: column;
-    border-top: 1px solid var(--border);
+    border-top: var(--border-w) solid var(--border);
     padding: var(--s-3);
     gap: var(--s-2);
   }
@@ -554,12 +659,9 @@
   .active-chip-params > .chip-tags:not(:first-child) {
     margin-top: var(--s-2);
     padding-top: var(--s-2);
-    border-top: 1px dashed var(--border);
+    border-top: var(--border-w) dashed var(--border);
   }
   .chip-tags-label {
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--fg-3);
     flex: 0 0 auto;
   }
@@ -567,10 +669,10 @@
     flex: 1 1 auto;
     background: transparent;
     color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: 2px;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
     padding: var(--s-1) var(--s-2);
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-ui);
   }
   .chip-tags-input::placeholder { color: var(--fg-3); }
   .chip-tags-input:focus-visible { outline: none; border-color: var(--accent); }
@@ -584,43 +686,36 @@
   .paramset-remove,
   .paramset-add {
     background: transparent;
-    border: 1px solid var(--border);
+    border: var(--border-w) solid var(--border);
     color: var(--fg-2);
-    border-radius: 2px;
-    height: 24px;
+    border-radius: var(--radius);
+    height: var(--control-h);
     display: inline-flex; align-items: center; justify-content: center;
     cursor: pointer;
-    font: 400 var(--t-md) var(--font-mono);
-    transition: border-color 80ms ease, color 80ms ease;
+    transition: border-color var(--transition), color var(--transition);
     flex: 0 0 auto;
   }
-  .paramset-remove { width: 24px; padding: 0; }
-  .paramset-remove:hover { color: var(--neg); border-color: var(--neg); }
+  .paramset-remove { width: var(--control-h); padding: 0; font: var(--text-icon); }
+  .paramset-remove:hover { color: var(--danger); border-color: var(--danger); }
   .paramset-add {
-    height: 28px;
+    height: var(--control-h);
     padding: 0 var(--s-3);
     align-self: flex-start;
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     margin-top: var(--s-1);
   }
   .paramset-add:hover { color: var(--accent); border-color: var(--accent); }
   .param-row {
     display: inline-flex; align-items: center; gap: var(--s-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--fg-2);
   }
   .param-row input {
     background: transparent;
     color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: 2px;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
     padding: var(--s-1) var(--s-2);
-    font: 400 var(--t-base) var(--font-mono);
-    width: 64px;
+    font: var(--text-data);
+    width: var(--field-w-md);
     appearance: textfield;
     font-variant-numeric: tabular-nums;
     text-transform: none;
@@ -638,7 +733,7 @@
   }
   .head {
     flex: 0 0 auto;
-    border-bottom: 1px solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
     background: var(--bg);
   }
 
@@ -648,34 +743,35 @@
   .row {
     position: absolute; left: 0; right: 0;
     height: var(--row-h);
-    border-bottom: 1px solid var(--panel);
+    border-bottom: var(--border-w) solid var(--border-subtle);
   }
-  .row:hover { background: var(--panel); }
+  .row:hover { background: var(--highlight); }
 
   .cell {
-    padding: 0 var(--s-4);
+    padding: 0 var(--cell-pad-x);
     height: var(--row-h);
     display: flex; align-items: center; justify-content: flex-end;
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-    font: 400 var(--t-base) var(--font-mono);
+    font: var(--text-data);
     font-variant-numeric: tabular-nums;
     position: relative;
-    transition: background 80ms ease;
+    transition: background var(--transition);
   }
   .cell:first-child {
     justify-content: flex-start;
-    padding-left: var(--s-5);
+    padding-left: var(--cell-pad-label);
     color: var(--fg-2);
   }
-  .cell.col-hover { background: var(--panel); }
+  .cell.col-hover { background: var(--highlight); }
   .body.bars-on .cell.has-bar {
     background: linear-gradient(
       to right,
-      var(--border) 0,
-      var(--border) var(--bar-pct, 0%),
+      var(--highlight) 0,
+      var(--highlight) var(--bar-pct, 0%),
       transparent var(--bar-pct, 0%)
     );
   }
+
   .cell.binary-on {
     justify-content: center;
     color: var(--fg-2);
@@ -683,31 +779,119 @@
 
   .head .cell {
     color: var(--fg-2);
-    font: 500 var(--t-xs) var(--font-sans);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     cursor: pointer;
     user-select: none;
     gap: var(--s-2);
-    transition: color 80ms ease;
+    transition: color var(--transition);
   }
   .head .cell:hover { color: var(--fg-1); }
-  .head .cell.active { color: var(--active); }
+  .head .cell.active { color: var(--fg); }
   .head .caret {
     display: inline-block;
-    width: 8px;
-    height: var(--t-xs);
-    line-height: var(--t-xs);
-    font-size: var(--t-xs);
+    width: var(--caret-w);
+    font: var(--text-icon);
     color: var(--fg-2);
     text-align: center;
     flex: 0 0 auto;
   }
-  .head .cell.active .caret { color: var(--active); }
+  .head .cell.active .caret { color: var(--fg-1); }
 
   .row .cell.pos { color: var(--pos); }
   .row .cell.neg { color: var(--neg); }
   .row .cell.null { color: var(--fg-3); }
+
+  /* ---- YML modal: three side-by-side YAML segments rendered by the same
+     gutter+highlight+buffer trio used in experiment_runner's manifest view. */
+  .yml-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--pane-pad);
+    padding: var(--pane-pad);
+    align-items: stretch;
+  }
+  .yml-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: var(--s-2);
+  }
+  .yml-col-head {
+    flex: 0 0 auto;
+    display: flex; justify-content: space-between; align-items: baseline;
+    color: var(--fg-3);
+  }
+  .yml-col-title { color: var(--fg-2); }
+  .yml-copy {
+    background: transparent; border: none;
+    color: var(--fg-3); cursor: pointer;
+    padding: 0;
+    transition: color var(--transition);
+  }
+  .yml-copy:hover { color: var(--fg); }
+  .yml-copy.copied { color: var(--accent); }
+
+  .manifest-editor {
+    flex: 1 1 auto;
+    display: flex;
+    background: var(--bg);
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+  }
+  .manifest-gutter {
+    flex: 0 0 auto;
+    padding: var(--s-3) var(--s-3);
+    text-align: right;
+    color: var(--fg-3);
+    font: var(--text-code);
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+    border-right: var(--border-w) solid var(--border);
+    white-space: pre;
+    overflow: hidden;
+    min-width: 3.5ch;
+  }
+  .manifest-buffer-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .manifest-buffer,
+  .manifest-highlight {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: var(--s-3) var(--s-4);
+    font: var(--text-code);
+    font-variant-numeric: tabular-nums slashed-zero;
+    white-space: pre;
+    tab-size: var(--tab-size);
+    -moz-tab-size: var(--tab-size);
+    border: 0;
+    background: transparent;
+    overflow: auto;
+  }
+  .manifest-buffer {
+    outline: none;
+    resize: none;
+    color: transparent;
+    caret-color: var(--accent);
+  }
+  .manifest-buffer:focus { outline: none; }
+  .manifest-buffer::selection { background: var(--highlight); color: var(--fg); }
+  .manifest-highlight { pointer-events: none; color: var(--syntax-base); }
+
+  .tok-key     { color: var(--syntax-fg); }
+  .tok-punc    { color: var(--syntax-dim); }
+  .tok-plain   { color: var(--syntax-base); }
+  .tok-comment { color: var(--syntax-dim); }
+  .tok-string  { color: var(--syntax-muted); }
+  .tok-number  { color: var(--syntax-base); }
+  .tok-keyword { color: var(--syntax-fg); }
 </style>
 </head>
 <body>
@@ -715,40 +899,95 @@
   <header>
     <div class="left">
       <div class="control-group">
-        <label class="control">
-          <span>bars</span>
-          <select id="bars-select"></select>
-        </label>
-        <label class="control">
-          <span>view</span>
-          <select id="view-select"></select>
-        </label>
-        <label class="control">
-          <span>target</span>
-          <select id="target-select"></select>
-        </label>
-      </div>
-      <div class="button-group">
-        <button class="button toggle" id="norm-button" type="button">NORM</button>
-        <button class="button toggle" id="bar-button" type="button">BAR</button>
-        <button class="button" id="qc-button" type="button">QC</button>
-        <button class="button" id="row-button" type="button">ROW</button>
-        <button class="button" id="col-button" type="button">COL</button>
-        <button class="button" id="save-button" type="button">SAVE</button>
+        <div class="control-pair">
+          <label class="control"><select id="view-select"></select></label>
+          <button class="icon-button" id="save-button" type="button" title="Save view">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+          </button>
+          <button class="icon-button" id="delete-button" type="button" title="Delete view">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
+        </div>
+        <label class="control"><select id="target-select"></select></label>
+        <span class="on-sep">on</span>
+        <label class="control"><select id="bars-select"></select></label>
       </div>
     </div>
     <div class="right">
-      <div class="date-filter">
-        <input type="date" id="date-from" min="2024-01-01" max="2026-05-15">
-        <span class="sep">—</span>
-        <input type="date" id="date-to" min="2024-01-01" max="2026-05-15">
-        <div class="date-presets" id="date-presets">
-          <a data-preset="1d">1d</a>
-          <a data-preset="7d">7d</a>
-          <a data-preset="1m">1m</a>
-          <a data-preset="3m">3m</a>
-          <a data-preset="1y">1y</a>
-          <a data-preset="all">all</a>
+      <div class="icon-group">
+        <button class="icon-button toggle" id="norm-button" type="button" title="Normalize">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 10c2-3 5-3 8 0s6 3 8 0"/>
+            <path d="M4 16c2-3 5-3 8 0s6 3 8 0"/>
+          </svg>
+        </button>
+        <button class="icon-button toggle" id="bar-button" type="button" title="In-cell bars">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="7"  x2="20" y2="7"/>
+            <line x1="4" y1="12" x2="14" y2="12"/>
+            <line x1="4" y1="17" x2="17" y2="17"/>
+          </svg>
+        </button>
+        <button class="icon-button" id="qc-button" type="button" title="Quality control">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5h18l-7 9v6l-4-2v-4z"/>
+          </svg>
+        </button>
+        <button class="icon-button" id="row-button" type="button" title="Rows (X)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6"  y1="6" x2="18" y2="18"/>
+            <line x1="18" y1="6" x2="6"  y2="18"/>
+          </svg>
+        </button>
+        <button class="icon-button" id="col-button" type="button" title="Columns (Y)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6"  y1="5" x2="12" y2="13"/>
+            <line x1="18" y1="5" x2="12" y2="13"/>
+            <line x1="12" y1="13" x2="12" y2="19"/>
+          </svg>
+        </button>
+        <button class="icon-button" id="yml-button" type="button" title="YAML manifest">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+            <polyline points="14 3 14 9 20 9"/>
+            <line x1="8" y1="14" x2="16" y2="14"/>
+            <line x1="8" y1="17" x2="13" y2="17"/>
+          </svg>
+        </button>
+        <div class="cal-wrap">
+          <button class="icon-button" id="cal-button" type="button" title="Date range">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="18" height="16" rx="2"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <line x1="8" y1="3"  x2="8"  y2="7"/>
+              <line x1="16" y1="3" x2="16" y2="7"/>
+            </svg>
+          </button>
+          <div class="date-popover" id="date-popover" hidden>
+            <div class="date-filter">
+              <input type="date" id="date-from" min="2024-01-01" max="2026-05-15">
+              <span class="sep">—</span>
+              <input type="date" id="date-to" min="2024-01-01" max="2026-05-15">
+              <div class="date-presets" id="date-presets">
+                <a data-preset="1d">1d</a>
+                <a data-preset="7d">7d</a>
+                <a data-preset="1m">1m</a>
+                <a data-preset="3m">3m</a>
+                <a data-preset="1y">1y</a>
+                <a data-preset="all">all</a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="meta" id="meta">loading…</div>
@@ -802,6 +1041,59 @@
     </div>
   </div>
 
+  <div class="modal" id="yml-modal">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <span>YML</span>
+        <button class="close" id="yml-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body yml-body" id="yml-body">
+        <div class="yml-col" data-segment="data_source">
+          <div class="yml-col-head">
+            <span class="yml-col-title">data_source</span>
+            <button class="yml-copy" type="button" data-target="yml-buf-data_source">copy</button>
+          </div>
+          <div class="manifest-editor">
+            <div class="manifest-gutter" aria-hidden="true"></div>
+            <div class="manifest-buffer-wrap">
+              <pre class="manifest-highlight" aria-hidden="true"></pre>
+              <textarea class="manifest-buffer" id="yml-buf-data_source" spellcheck="false"
+                        autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="yml-col" data-segment="indicators_features">
+          <div class="yml-col-head">
+            <span class="yml-col-title">indicators / features</span>
+            <button class="yml-copy" type="button" data-target="yml-buf-indicators_features">copy</button>
+          </div>
+          <div class="manifest-editor">
+            <div class="manifest-gutter" aria-hidden="true"></div>
+            <div class="manifest-buffer-wrap">
+              <pre class="manifest-highlight" aria-hidden="true"></pre>
+              <textarea class="manifest-buffer" id="yml-buf-indicators_features" spellcheck="false"
+                        autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="yml-col" data-segment="target">
+          <div class="yml-col-head">
+            <span class="yml-col-title">target</span>
+            <button class="yml-copy" type="button" data-target="yml-buf-target">copy</button>
+          </div>
+          <div class="manifest-editor">
+            <div class="manifest-gutter" aria-hidden="true"></div>
+            <div class="manifest-buffer-wrap">
+              <pre class="manifest-highlight" aria-hidden="true"></pre>
+              <textarea class="manifest-buffer" id="yml-buf-target" spellcheck="false"
+                        autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="table">
     <div class="head" id="head"></div>
     <div class="body" id="body">
@@ -812,7 +1104,7 @@
   </div>
 </div>
 <script>
-const ROW_H = 36;
+const ROW_H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row-h")) || 36;
 const BUFFER = 12;
 const FMT = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -837,7 +1129,6 @@ let sortCol = -1, sortDir = 0;
 let headerCells = [];
 let pool = [];
 let renderedStart = -1, renderedEnd = -1;
-let lastLoadMs = 0;
 let colStats = new Map();
 let normEnabled = false;
 let rowMode = "bar";
@@ -946,8 +1237,14 @@ function shouldNorm(col) {
   return normEnabled && col !== currentTarget && col !== "datetime";
 }
 
+function setCellPlain(cell, text, cls) {
+  cell.replaceChildren();
+  cell.textContent = text;
+  cell.className = cls;
+}
+
 function isTimeColumn(name) {
-  return name === "datetime" || name === "bar_start_datetime" || name === "bar_end_datetime";
+  return name === "datetime";
 }
 
 function timePrefixCount() {
@@ -1083,17 +1380,14 @@ function render() {
       const col = visibleColumns[j];
       const raw = r[visibleIdxs[j]];
       const cell = cells[j];
-      let cls = "cell";
       if (raw === null) {
-        cell.textContent = "—";
-        cls = "cell null";
+        setCellPlain(cell, "—", "cell null");
       } else if (binaryFlags[j]) {
-        cell.textContent = raw === 1 ? "●" : "";
-        cls = raw === 1 ? "cell binary-on" : "cell";
+        setCellPlain(cell, raw === 1 ? "●" : "", raw === 1 ? "cell binary-on" : "cell");
       } else if (typeof raw === "number") {
         const v = shouldNorm(col) ? normValue(raw, col) : raw;
-        cell.textContent = FMT.format(v);
-        cls = v > 0 ? "cell pos" : v < 0 ? "cell neg" : "cell";
+        const text = FMT.format(v);
+        let cls = v > 0 ? "cell pos" : v < 0 ? "cell neg" : "cell";
         const stats = colStats.get(col);
         if (stats && stats.max > stats.min) {
           const pct = ((raw - stats.min) / (stats.max - stats.min)) * 100;
@@ -1102,30 +1396,34 @@ function render() {
         } else {
           cell.style.removeProperty("--bar-pct");
         }
+        setCellPlain(cell, text, cls);
       } else {
-        cell.textContent = String(raw);
+        setCellPlain(cell, String(raw), "cell");
       }
-      if (hoverCol === j) cls += " col-hover";
-      cell.className = cls;
+      cell.classList.toggle("col-hover", hoverCol === j);
     }
   }
 }
 
 let _loadSeq = 0;
+let _loadAbort = null;
 
 async function load() {
+  if (_loadAbort) _loadAbort.abort();
+  const ctrl = new AbortController();
+  _loadAbort = ctrl;
   const seq = ++_loadSeq;
   const bars = barsSelect.value;
   const target = targetSelect.value;
   meta.textContent = "loading…";
-  const t0 = performance.now();
   const url = `/data?bars=${encodeURIComponent(bars)}`
     + `&target=${encodeURIComponent(target)}`
     + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
   let res;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { signal: ctrl.signal });
   } catch (e) {
+    if (e.name === "AbortError") return;
     if (seq === _loadSeq) meta.textContent = `network error: ${e.message}`;
     return;
   }
@@ -1138,22 +1436,22 @@ async function load() {
   try {
     data = await res.json();
   } catch (e) {
+    if (e.name === "AbortError") return;
     meta.textContent = `bad json: ${e.message}`;
     return;
   }
   if (seq !== _loadSeq) return;
-  const t1 = performance.now();
 
   try {
     allColumns = data.columns;
     originalAllRows = data.rows;
     currentTarget = target;
-    lastLoadMs = t1 - t0;
 
     applyDateFilter();
     applyRowGrouping();
     computeColStats();
     applyVisibility();
+    refreshQcIfOpen();
   } catch (e) {
     console.error("render failed", e, {
       cols: data && data.columns,
@@ -1192,7 +1490,7 @@ function applyVisibility() {
   const visCount = Math.max(visibleColumns.length - 1, 0);
   const totalCount = Math.max(allColumns.length - 1, 0);
   meta.innerHTML =
-    `<b>${allRows.length.toLocaleString()}</b> rows · <b>${visCount}</b>/<b>${totalCount}</b> cols · <b>${lastLoadMs.toFixed(0)}</b> ms`;
+    `<b>${allRows.length.toLocaleString()}</b> rows · <b>${visCount}</b>/<b>${totalCount}</b> cols`;
 
   render();
 }
@@ -1404,6 +1702,7 @@ function applyAfterDateChange() {
   applyRowGrouping();
   computeColStats();
   applyVisibility();
+  refreshQcIfOpen();
 }
 
 function fillSelect(el, values) {
@@ -1417,6 +1716,7 @@ function fillSelect(el, values) {
 }
 
 const qcModal = document.getElementById("qc-modal");
+const ymlModal = document.getElementById("yml-modal");
 const qcBody = document.getElementById("qc-body");
 const qcTitle = document.getElementById("qc-title");
 const qcButton = document.getElementById("qc-button");
@@ -1441,12 +1741,6 @@ function fmtCell(v) {
 const QC_META = {
   missing_rate:           {tip: "Fraction of bar values missing (Polars nulls + NaN/failed casts after Float64 cast). High values mean cold-start warmup or data gaps; <0.01 is healthy."},
   n_unique:               {tip: "Distinct non-NaN values. 1 = constant (drop); 2 = binary; 3-50 = clean categorical; large = continuous. Combined with row count to grade cardinality."},
-  unique_fraction:        {tip: "Distinct values / row count. Near 1.0 = continuous numeric; near 0 = constant or near-binary."},
-  min:                    {tip: "Minimum non-NaN value. Sanity-check scale and outliers."},
-  max:                    {tip: "Maximum non-NaN value. Sanity-check scale and outliers."},
-  median:                 {tip: "50th percentile. Robust central tendency."},
-  p01:                    {tip: "1st percentile. Lower-tail bound for the bulk of the distribution."},
-  p99:                    {tip: "99th percentile. Upper-tail bound for the bulk of the distribution."},
   skew:                   {tip: "Distribution asymmetry. Heavy positive skew is normal for vol; large |skew| flags a log-transform candidate."},
   adf_p:                  {tip: "Augmented Dickey–Fuller p-value. Low p rejects a unit root, i.e. the series is stationary."},
   kpss_p:                 {tip: "KPSS p-value. High p fails to reject strict stationarity. Long-memory series often reject both ADF and KPSS — that's expected, not a defect."},
@@ -1468,14 +1762,45 @@ let qcGradesOn = true;
 let qcTip = null;
 
 const QC_GROUPS = [
-  {name: "HEALTH",       rows: ["missing_rate", "n_unique", "unique_fraction", "min", "max", "median", "p01", "p99", "skew"]},
+  {name: "HEALTH",       rows: ["missing_rate", "n_unique", "skew"]},
   {name: "STATIONARITY", rows: ["adf_p", "kpss_p"]},
   {name: "REDUNDANCY",   rows: ["max_pairwise_spearman", "mean_pairwise_spearman", "redundancy_penalty", "max_pairwise_mi"]},
   {name: "EDGE",         rows: ["spearman", "spearman_ci_lo", "spearman_ci_hi", "mutual_information", "decile_spread", "monotonic_fraction"]},
   {name: "REGIME",       rows: ["regime_sign_agreement", "regime_spearman_std"]},
 ];
 const GRADE_RANK = {F: 0, D: 1, B: 2, A: 3};
+const QC_GRADE_DOTS = { A: 4, B: 3, D: 2, F: 1 };
 let qcGroupsExpanded = new Set();
+
+function qcGradeEl(grade) {
+  const n = QC_GRADE_DOTS[grade];
+  if (!n) return null;
+  const wrap = document.createElement("span");
+  wrap.className = "qc-grade";
+  wrap.title = grade;
+  for (let i = 0; i < n; i++) {
+    const dot = document.createElement("span");
+    dot.className = "qc-dot" + (grade === "F" ? " fail" : "");
+    dot.textContent = "●";
+    wrap.appendChild(dot);
+  }
+  return wrap;
+}
+
+function setQcFeatureCell(td, text, cls, grade) {
+  td.replaceChildren();
+  if (qcGradesOn && grade && grade !== "NA") {
+    const g = qcGradeEl(grade);
+    if (g) td.appendChild(g);
+  }
+  if (text != null && text !== "") {
+    const val = document.createElement("span");
+    val.className = "qc-val";
+    val.textContent = text;
+    td.appendChild(val);
+  }
+  td.className = cls || "";
+}
 
 function aggregateGroupGrade(groupRows, featureName, grades) {
   let worst = null;
@@ -1546,13 +1871,10 @@ function renderQc(report) {
         td.appendChild(document.createTextNode(group.name));
       } else {
         const featureName = report.columns[i];
-        td.textContent = "";
-        if (featureName === targetCol) {
-          td.dataset.grade = "NA";
-        } else {
-          const agg = aggregateGroupGrade(group.rows, featureName, grades);
-          if (agg) td.dataset.grade = agg;
-        }
+        const agg = featureName === targetCol
+          ? null
+          : aggregateGroupGrade(group.rows, featureName, grades);
+        setQcFeatureCell(td, "", "", agg);
       }
       headerTr.appendChild(td);
     }
@@ -1579,15 +1901,11 @@ function renderQc(report) {
           }
         } else {
           const { text, cls } = fmtCell(row[i]);
-          td.textContent = text;
-          td.className = cls;
           const featureName = report.columns[i];
-          if (featureName === targetCol) {
-            td.dataset.grade = "NA";
-          } else {
-            const g = grades[metric] && grades[metric][featureName];
-            if (g) td.dataset.grade = g;
-          }
+          const grade = featureName === targetCol
+            ? null
+            : ((grades[metric] || {})[featureName] || null);
+          setQcFeatureCell(td, text, cls, grade);
         }
         tr.appendChild(td);
       }
@@ -1606,24 +1924,41 @@ function renderQc(report) {
   qcBody.replaceChildren(tbl);
 }
 
+function closeYml() { closeAllOverlays(); }
+
+let _qcAbort = null;
+let refreshYml = () => {};
+
+function setQcStatus(text) {
+  const div = document.createElement("div");
+  div.className = "qc-status";
+  div.textContent = text;
+  qcBody.replaceChildren(div);
+}
+
 async function runQc() {
+  if (_qcAbort) _qcAbort.abort();
+  const ctrl = new AbortController();
+  _qcAbort = ctrl;
   const bars = barsSelect.value;
   const target = targetSelect.value;
   const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== currentTarget);
   const cols = colsForQc.join(",");
   qcTitle.textContent = `qc · ${bars} · ${target}`;
-  qcBody.innerHTML = `<div class="qc-status">running quality control…</div>`;
+  setQcStatus("running quality control…");
   qcModal.classList.add("open");
   const t0 = performance.now();
   try {
     const url = `/qc?bars=${encodeURIComponent(bars)}`
       + `&target=${encodeURIComponent(target)}`
       + `&cols=${encodeURIComponent(cols)}`
+      + `&from=${encodeURIComponent(dateFrom)}`
+      + `&to=${encodeURIComponent(dateTo)}`
       + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) {
       const msg = await res.text();
-      qcBody.innerHTML = `<div class="qc-status">qc failed: ${msg}</div>`;
+      setQcStatus(`qc failed: ${msg}`);
       return;
     }
     const report = await res.json();
@@ -1632,8 +1967,13 @@ async function runQc() {
     const dt = performance.now() - t0;
     qcTitle.textContent = `qc · ${bars} · ${target}  ·  ${(dt/1000).toFixed(1)}s`;
   } catch (e) {
-    qcBody.innerHTML = `<div class="qc-status">qc failed: ${e}</div>`;
+    if (e.name === "AbortError") return;
+    setQcStatus(`qc failed: ${e}`);
   }
+}
+
+function refreshQcIfOpen() {
+  if (_openOverlay === "qc") runQc();
 }
 
 function formatCellForCopy(v) {
@@ -1683,10 +2023,7 @@ async function copyQcAsTsv() {
   }
 }
 
-function closeQc() {
-  qcModal.classList.remove("open");
-  hideQcTip();
-}
+function closeQc() { closeAllOverlays(); }
 
 function syncViewOptions() {
   const bar = barsSelect.value;
@@ -1790,9 +2127,7 @@ function buildActivePane() {
   pane.appendChild(hdr);
   const list = document.createElement("div");
   list.id = "features-active-list";
-  list.style.display = "flex";
-  list.style.flexDirection = "column";
-  list.style.gap = "4px";
+  list.className = "features-active-list";
   pane.appendChild(list);
 
   pane.addEventListener("dragover", e => {
@@ -1971,20 +2306,43 @@ function renderActivePane() {
           const lbl = document.createElement("span");
           lbl.textContent = p.name;
           row.appendChild(lbl);
+          const initial = ps[p.name] ?? p.default ?? "";
           const inp = document.createElement("input");
-          inp.type = "number";
-          if (p.min !== undefined) inp.min = String(p.min);
-          if (p.type === "int") inp.step = "1";
-          inp.value = String(ps[p.name] ?? p.default);
-          inp.addEventListener("input", () => {
-            let v = p.type === "int" ? parseInt(inp.value, 10) : parseFloat(inp.value);
-            if (!Number.isFinite(v)) return;
-            if (p.min !== undefined && v < p.min) v = p.min;
-            ps[p.name] = v;
-            summary.textContent = chipSummary(g);
-            rebuildActiveSpec();
-            scheduleRefetch();
-          });
+          if (p.type === "str") {
+            inp.type = "text";
+            inp.value = String(initial);
+            inp.addEventListener("input", () => {
+              const v = inp.value.trim();
+              if (!v) return;
+              ps[p.name] = v;
+              summary.textContent = chipSummary(g);
+              rebuildActiveSpec();
+              scheduleRefetch();
+            });
+          } else if (p.type === "bool") {
+            inp.type = "checkbox";
+            inp.checked = Boolean(initial);
+            inp.addEventListener("change", () => {
+              ps[p.name] = inp.checked;
+              summary.textContent = chipSummary(g);
+              rebuildActiveSpec();
+              scheduleRefetch();
+            });
+          } else {
+            inp.type = "number";
+            if (p.min !== undefined) inp.min = String(p.min);
+            if (p.type === "int") inp.step = "1";
+            inp.value = String(initial);
+            inp.addEventListener("input", () => {
+              let v = p.type === "int" ? parseInt(inp.value, 10) : parseFloat(inp.value);
+              if (!Number.isFinite(v)) return;
+              if (p.min !== undefined && v < p.min) v = p.min;
+              ps[p.name] = v;
+              summary.textContent = chipSummary(g);
+              rebuildActiveSpec();
+              scheduleRefetch();
+            });
+          }
           row.appendChild(inp);
           psRow.appendChild(row);
         }
@@ -2049,9 +2407,10 @@ function openColModal() {
   colModal.classList.add("open");
 }
 
-function closeCol() { colModal.classList.remove("open"); }
+function closeCol() { closeAllOverlays(); }
 
 const saveButton = document.getElementById("save-button");
+const deleteButton = document.getElementById("delete-button");
 
 async function saveView() {
   if (activeSpec.length === 0) {
@@ -2079,10 +2438,65 @@ async function saveView() {
   syncViewOptions();
 }
 
+async function deleteView() {
+  const name = viewSelect.value;
+  if (!name) return;
+  if (!confirm(`Delete view "${name}"? This cannot be undone.`)) return;
+  const res = await fetch("/delete_view", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({name}),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.ok) {
+    alert(`delete failed: ${body.msg || res.statusText}`);
+    return;
+  }
+  manifest = await (await fetch("/manifest")).json();
+  fillSelect(viewSelect, manifest.views);
+  syncViewOptions();
+  loadSpecFromView(viewSelect.value);
+  load();
+}
+
 const rowButton = document.getElementById("row-button");
 const rowModal = document.getElementById("row-modal");
 const rowBody = document.getElementById("row-body");
 const rowClose = document.getElementById("row-close");
+
+let _openOverlay = null;
+
+function syncOverlayButtons() {
+  document.getElementById("qc-button")?.classList.toggle("active", _openOverlay === "qc");
+  document.getElementById("col-button")?.classList.toggle("active", _openOverlay === "col");
+  document.getElementById("row-button")?.classList.toggle("active", _openOverlay === "row");
+  document.getElementById("yml-button")?.classList.toggle("active", _openOverlay === "yml");
+  document.getElementById("cal-button")?.classList.toggle("active", _openOverlay === "cal");
+}
+
+function closeAllOverlays() {
+  if (_qcAbort) _qcAbort.abort();
+  qcModal.classList.remove("open");
+  hideQcTip();
+  colModal.classList.remove("open");
+  rowModal.classList.remove("open");
+  ymlModal.classList.remove("open");
+  const pop = document.getElementById("date-popover");
+  if (pop) pop.hidden = true;
+  _openOverlay = null;
+  syncOverlayButtons();
+}
+
+function toggleOverlay(id, openFn) {
+  if (_openOverlay === id) {
+    closeAllOverlays();
+    return;
+  }
+  closeAllOverlays();
+  openFn();
+  _openOverlay = id;
+  syncOverlayButtons();
+}
 
 function openRowModal() {
   const container = document.createElement("div");
@@ -2143,7 +2557,7 @@ function openRowModal() {
   rowModal.classList.add("open");
 }
 
-function closeRow() { rowModal.classList.remove("open"); }
+function closeRow() { closeAllOverlays(); }
 
 function loadSpecFromView(name) {
   const preset = (manifest.view_specs || {})[name] || [];
@@ -2186,7 +2600,7 @@ async function init() {
     load();
   });
   targetSelect.addEventListener("change", load);
-  qcButton.addEventListener("click", runQc);
+  qcButton.addEventListener("click", () => toggleOverlay("qc", () => runQc()));
   qcClose.addEventListener("click", closeQc);
   qcCopy.addEventListener("click", copyQcAsTsv);
   const qcGradesBtn = document.getElementById("qc-grades");
@@ -2194,15 +2608,15 @@ async function init() {
   qcGradesBtn.addEventListener("click", () => {
     qcGradesOn = !qcGradesOn;
     qcGradesBtn.classList.toggle("active", qcGradesOn);
-    const tbl = qcBody.querySelector(".qc-table");
-    if (tbl) tbl.classList.toggle("with-grades", qcGradesOn);
+    if (qcReport) renderQc(qcReport);
   });
   qcModal.addEventListener("click", e => { if (e.target === qcModal) closeQc(); });
-  colButton.addEventListener("click", openColModal);
+  colButton.addEventListener("click", () => toggleOverlay("col", openColModal));
   colClose.addEventListener("click", closeCol);
   colModal.addEventListener("click", e => { if (e.target === colModal) closeCol(); });
   saveButton.addEventListener("click", saveView);
-  rowButton.addEventListener("click", openRowModal);
+  deleteButton.addEventListener("click", deleteView);
+  rowButton.addEventListener("click", () => toggleOverlay("row", openRowModal));
   rowClose.addEventListener("click", closeRow);
   rowModal.addEventListener("click", e => { if (e.target === rowModal) closeRow(); });
   const normButton = document.getElementById("norm-button");
@@ -2218,7 +2632,7 @@ async function init() {
     barButton.classList.toggle("active", body.classList.contains("bars-on"));
   });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { closeQc(); closeCol(); closeRow(); }
+    if (e.key === "Escape") closeAllOverlays();
   });
   body.addEventListener("scroll", render, { passive: true });
   body.addEventListener("mouseleave", () => setHoverCol(-1));
@@ -2265,8 +2679,199 @@ async function init() {
     setActivePreset(preset);
     applyAfterDateChange();
   });
+  const calButton = document.getElementById("cal-button");
+  const datePopover = document.getElementById("date-popover");
+  const calWrap = calButton.parentElement;
+  calButton.addEventListener("click", e => {
+    e.stopPropagation();
+    toggleOverlay("cal", () => { datePopover.hidden = false; });
+  });
+  document.addEventListener("click", e => {
+    if (_openOverlay !== "cal") return;
+    if (!calWrap.contains(e.target)) closeAllOverlays();
+  });
+  document.getElementById("yml-button").addEventListener("click", () => {
+    toggleOverlay("yml", () => {
+      refreshYml();
+      ymlModal.classList.add("open");
+    });
+  });
+  document.getElementById("yml-close").addEventListener("click", closeYml);
+  ymlModal.addEventListener("click", e => { if (e.target === ymlModal) closeYml(); });
   await load();
 }
+
+/* ---- YML modal — three side-by-side YAML segments mirroring
+   experiment_runner's manifest editor. Highlighter is a per-line
+   single-pass YAML tokenizer (no cross-line state). ---- */
+(() => {
+  const YAML_KEYWORDS = new Set(["true", "false", "null", "yes", "no"]);
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function highlightLine(line) {
+    let out = "";
+    let i = 0;
+    const n = line.length;
+    let colonSeen = false;
+    while (i < n) {
+      const c = line[i];
+      if (c === "#" && (i === 0 || /\s/.test(line[i - 1]))) {
+        out += '<span class="tok-comment">' + escapeHtml(line.slice(i)) + "</span>";
+        break;
+      }
+      if (c === '"' || c === "'") {
+        let j = i + 1;
+        while (j < n && line[j] !== c) j++;
+        out += '<span class="tok-string">' + escapeHtml(line.slice(i, Math.min(j + 1, n))) + "</span>";
+        i = j + 1;
+        continue;
+      }
+      if (/\s/.test(c)) { out += c; i++; continue; }
+      if ("-:{}[],".indexOf(c) !== -1) {
+        out += '<span class="tok-punc">' + c + "</span>";
+        if (c === ":") colonSeen = true;
+        i++;
+        continue;
+      }
+      let j = i;
+      while (j < n && /[^\s:{}[\],"'#]/.test(line[j])) j++;
+      const word = line.slice(i, j);
+      const isKey = !colonSeen && /^\s*:/.test(line.slice(j));
+      let cls;
+      if (isKey) cls = "tok-key";
+      else if (YAML_KEYWORDS.has(word.toLowerCase())) cls = "tok-keyword";
+      else if (/^-?\d[\d._]*$/.test(word)) cls = "tok-number";
+      else cls = "tok-plain";
+      out += '<span class="' + cls + '">' + escapeHtml(word) + "</span>";
+      i = j;
+    }
+    return out;
+  }
+
+  function highlight(text) { return text.split("\n").map(highlightLine).join("\n"); }
+
+  function attachEditor(root) {
+    const buffer = root.querySelector(".manifest-buffer");
+    const pre = root.querySelector(".manifest-highlight");
+    const gutter = root.querySelector(".manifest-gutter");
+    if (!buffer || !pre) return;
+    function paint() {
+      pre.innerHTML = highlight(buffer.value) + "\u200B";
+      if (gutter) {
+        const count = buffer.value.split("\n").length;
+        let g = "";
+        for (let k = 1; k <= count; k++) g += k + "\n";
+        gutter.textContent = g;
+      }
+    }
+    function syncScroll() {
+      pre.scrollTop = buffer.scrollTop;
+      pre.scrollLeft = buffer.scrollLeft;
+      if (gutter) gutter.scrollTop = buffer.scrollTop;
+    }
+    buffer.addEventListener("input", paint);
+    buffer.addEventListener("scroll", syncScroll);
+    paint();
+    syncScroll();
+  }
+
+  function yamlScalar(v) {
+    if (v === null || v === undefined) return "~";
+    if (typeof v === "boolean") return v ? "true" : "false";
+    if (typeof v === "number") return Number.isFinite(v) ? String(v) : "~";
+    if (Array.isArray(v)) return "[" + v.map(yamlScalar).join(", ") + "]";
+    const s = String(v);
+    if (/^[A-Za-z_][A-Za-z0-9_.]*$/.test(s)) return s;
+    return '"' + s.replace(/"/g, '\\"') + '"';
+  }
+
+  function emitParams(params, indent) {
+    const keys = Object.keys(params || {});
+    if (!keys.length) return "";
+    const pad = " ".repeat(indent);
+    return keys.map(k => `\n${pad}${k}: ${yamlScalar(params[k])}`).join("");
+  }
+
+  function emitDataSource() {
+    const bar = barsSelect.value;
+    const src = manifest && manifest.bar_data_sources && manifest.bar_data_sources[bar];
+    if (!src) return "data_source: ~";
+    const params = { ...(src.params || {}) };
+    if (dateFrom) params.start_date_limit = dateFrom;
+    if (dateTo)   params.end_date_limit   = dateTo;
+    return `data_source:\n  method: ${src.method}\n  params:${emitParams(params, 4)}`;
+  }
+
+  function emitFuncList(label, source) {
+    const items = activeSpec
+      .filter(s => {
+        const m = factoriesByName.get(s.factory);
+        return m && m.source === source;
+      });
+    if (!items.length) return `${label}: []`;
+    let out = `${label}:`;
+    for (const it of items) {
+      out += `\n  - func: ${source}.${it.factory}`;
+      const ps = it.params || {};
+      const keys = Object.keys(ps);
+      if (keys.length) {
+        out += `\n    params:` + emitParams(ps, 6);
+      }
+    }
+    return out;
+  }
+
+  function emitIndicatorsFeatures() {
+    return emitFuncList("indicators", "limen.indicators") + "\n\n" +
+           emitFuncList("features",   "limen.features");
+  }
+
+  function emitTarget() {
+    const t = currentTarget;
+    if (!t || t === "none") return "target: ~";
+    const cls = manifest && manifest.target_classes && manifest.target_classes[t];
+    if (!cls) return `target:\n  name: ${t}`;
+    let out = `target:\n  name: ${t}\n  class: ${cls.class}`;
+    const keys = Object.keys(cls.params || {});
+    if (keys.length) out += `\n  params:` + emitParams(cls.params, 4);
+    return out;
+  }
+
+  function setBuf(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = text;
+    el.dispatchEvent(new Event("input"));
+  }
+
+  function refresh() {
+    setBuf("yml-buf-data_source",         emitDataSource());
+    setBuf("yml-buf-indicators_features", emitIndicatorsFeatures());
+    setBuf("yml-buf-target",              emitTarget());
+  }
+  refreshYml = refresh;
+
+  document.querySelectorAll("#yml-modal .manifest-editor").forEach(attachEditor);
+  document.querySelectorAll(".yml-copy").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const tgt = document.getElementById(btn.dataset.target);
+      if (!tgt) return;
+      try {
+        await navigator.clipboard.writeText(tgt.value);
+        btn.classList.add("copied");
+        const prev = btn.textContent;
+        btn.textContent = "copied";
+        setTimeout(() => { btn.classList.remove("copied"); btn.textContent = prev; }, 1100);
+      } catch (_) {
+        tgt.select();
+        document.execCommand("copy");
+      }
+    });
+  });
+})();
 
 init();
 </script>

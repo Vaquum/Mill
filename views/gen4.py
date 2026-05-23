@@ -6,19 +6,17 @@ from table import build_from_spec
 
 NAME = 'gen4'
 
-TARGET = 'abs_vol_normalized_return'
+TARGET = 'abs_forward_vol_normalized_return'
 
 SPEC = (
-    {"factory": 'parkinson_volatility', "params": {'n': 1}},
-    {"factory": 'parkinson_volatility', "params": {'n': 4}},
-    {"factory": 'liquidity_z', "params": {'n': 96}},
-    {"factory": 'is_weekend', "params": {}},
-    {"factory": 'nth_hour', "params": {}},
-    # New edge features
-    {"factory": 'abs_price_z', "params": {'n': 96}},
-    {"factory": 'taker_imbalance_abs_z', "params": {'n': 96}},
-    {"factory": 'high_low_range_trend', "params": {'n': 24}},
-    {"factory": 'volatility_ratio', "params": {'short_n': 4, 'long_n': 96}},
+    {"factory": 'parkinson_volatility', "params": {'window': 1}},
+    {"factory": 'parkinson_volatility', "params": {'window': 4}},
+    {"factory": 'rolling_zscore', "params": {'column': 'liquidity_sum', 'window': 96, 'transform': 'log1p'}},
+    {"factory": 'calendar_time_features', "params": {}},
+    {"factory": 'rolling_zscore', "params": {'column': 'close', 'window': 96, 'transform': 'abs'}},
+    {"factory": 'taker_imbalance_ratio', "params": {'window': 96}},
+    {"factory": 'narrow_range', "params": {'window': 24}},
+    {"factory": 'volatility_ratio', "params": {'short_window': 4, 'long_window': 96}},
 )
 
 def build(raw: pl.DataFrame) -> pl.DataFrame:

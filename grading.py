@@ -340,7 +340,6 @@ def grade_report(
                 return None
             return vals[_idx]
 
-        unique_fraction = get("unique_fraction")
         n_unique = get("n_unique")
         if not isinstance(n_unique, int):
             try:
@@ -351,14 +350,8 @@ def grade_report(
         raw = {
             "feature_name": feature,
             "missing_rate": get("missing_rate"),
-            "unique_fraction": unique_fraction,
             "n_unique": n_unique,
             "skew": get("skew"),
-            "min": get("min"),
-            "max": get("max"),
-            "median": get("median"),
-            "p01": get("p01"),
-            "p99": get("p99"),
             "adf_p": get("adf_p"),
             "kpss_p": get("kpss_p"),
             "acf_lag_1": get("acf_lag_1"),

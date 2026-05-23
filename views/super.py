@@ -6,18 +6,18 @@ from table import build_from_spec
 
 NAME = 'super'
 
-TARGET = 'abs_vol_normalized_return'
+TARGET = 'abs_forward_vol_normalized_return'
 
 SPEC = (
-    {"factory": 'abs_price_z', "params": {'n': 96}},
+    {"factory": 'rolling_zscore', "params": {'column': 'close', 'window': 96, 'transform': 'abs'}},
     {"factory": 'atr_sma', "params": {'period': 14}},
-    {"factory": 'is_weekend', "params": {}},
-    {"factory": 'liquidity_z', "params": {'n': 96}},
-    {"factory": 'narrow_range', "params": {'n': 24}},
-    {"factory": 'trades_z', "params": {'n': 96}},
+    {"factory": 'calendar_time_features', "params": {}},
+    {"factory": 'rolling_zscore', "params": {'column': 'liquidity_sum', 'window': 96, 'transform': 'log1p'}},
+    {"factory": 'narrow_range', "params": {'window': 24}},
+    {"factory": 'rolling_zscore', "params": {'column': 'no_of_trades', 'window': 96, 'transform': 'log1p'}},
     {"factory": 'volatility_term_structure', "params": {'short_window': 12, 'medium_window': 48, 'long_window': 168}},
     {"factory": 'volume_regime', "params": {'lookback': 48}},
-    {"factory": 'volume_z', "params": {'n': 96}},
+    {"factory": 'rolling_zscore', "params": {'column': 'volume', 'window': 96, 'transform': 'log1p'}},
 )
 
 

@@ -16,7 +16,7 @@ import feature_registry
 import grading
 import qc
 import targets
-from bars import FIXED_DOLLAR_BAR_THRESHOLDS, TIME_BAR_SECONDS
+from bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
 from table import build_from_spec, klines
 from views import ALL as VIEWS
 
@@ -27,8 +27,27 @@ _VIEWS_DIR = Path(__file__).with_name("views")
 _TAGS_PATH = Path(__file__).with_name("feature_tags.json")
 _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-_BARS = tuple(TIME_BAR_SECONDS) + tuple(FIXED_DOLLAR_BAR_THRESHOLDS)
+_BARS = tuple(TIME_BAR_SECONDS) + tuple(DOLLAR_BAR_USD)
 _TARGETS = ("none", *targets.NAMES)
+_BAR_DATA_SOURCES: dict[str, dict[str, object]] = {
+    **{
+        name: {
+            "method": "limen.HistoricalData.get_spot_klines",
+            "params": {"kline_size": seconds},
+        }
+        for name, seconds in TIME_BAR_SECONDS.items()
+    },
+    **{
+        name: {
+            "method": "limen.HistoricalData.get_spot_dollar_klines",
+            "params": {"dollar_bar_size": usd},
+        }
+        for name, usd in DOLLAR_BAR_USD.items()
+    },
+}
+_TARGET_CLASSES: dict[str, dict[str, object]] = {
+    name: targets.binding(name) for name in targets.NAMES
+}
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 _VIEW_TEMPLATE = '''from __future__ import annotations
 
@@ -50,7 +69,7 @@ def build(raw: pl.DataFrame) -> pl.DataFrame:
 
 _PAYLOADS: dict[tuple[str, str, str], bytes] = {}
 _FRAMES: dict[tuple[str, str, str], pl.DataFrame] = {}
-_QC_CACHE: dict[tuple[str, str, str, tuple[str, ...]], bytes] = {}
+_QC_CACHE: dict[tuple[str, str, str, tuple[str, ...], str, str], bytes] = {}
 _RAW_CACHE: dict[str, pl.DataFrame] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
@@ -111,24 +130,16 @@ def _finite_round(name: str) -> pl.Expr:
 
 
 def _serialize(df: pl.DataFrame) -> bytes:
-    has_end = "bar_end_datetime" in df.columns
-    feat_cols = [c for c in df.columns if c not in ("datetime", "bar_end_datetime")]
+    feat_cols = [c for c in df.columns if c != "datetime"]
     numeric = {c for c, dt in df.schema.items() if dt.is_float()}
     feat_exprs = [
         _finite_round(c) if c in numeric else pl.col(c)
         for c in feat_cols
     ]
-    if has_end:
-        out = df.select(
-            pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("bar_start_datetime"),
-            pl.col("bar_end_datetime").dt.to_string("%Y-%m-%d %H:%M").alias("bar_end_datetime"),
-            *feat_exprs,
-        )
-    else:
-        out = df.select(
-            pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("datetime"),
-            *feat_exprs,
-        )
+    out = df.select(
+        pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("datetime"),
+        *feat_exprs,
+    )
     return json.dumps(
         {"columns": out.columns, "rows": out.rows()},
         allow_nan=False,
@@ -141,6 +152,17 @@ def _raw_for(bar: str) -> pl.DataFrame:
         raw = klines(bar)
         _RAW_CACHE[bar] = raw
     return raw
+
+
+def _date_filter(df: pl.DataFrame, date_from: str, date_to: str) -> pl.DataFrame:
+    if "datetime" not in df.columns or not (date_from or date_to):
+        return df
+    day = pl.col("datetime").dt.date()
+    if date_from:
+        df = df.filter(day >= pl.lit(date_from).str.to_date())
+    if date_to:
+        df = df.filter(day <= pl.lit(date_to).str.to_date())
+    return df
 
 
 def _ensure(
@@ -162,12 +184,6 @@ def _ensure(
             features = build_from_spec(raw, spec)
         else:
             features = raw.select(pl.col("datetime"))
-        if "bar_end_datetime" in raw.columns:
-            features = features.join(
-                raw.select(pl.col("datetime"), pl.col("bar_end_datetime")),
-                on="datetime",
-                how="left",
-            )
         if target == "none":
             result = features
         else:
@@ -240,6 +256,21 @@ def _save_view(
     return 200, "ok"
 
 
+def _delete_view(name: str) -> tuple[int, str]:
+    if not _NAME_RE.fullmatch(name):
+        return 400, "invalid view name"
+    with _REGISTRY_LOCK:
+        if name not in _VIEW_SPECS:
+            return 404, f"unknown view: {name!r}"
+        _VIEW_SPECS.pop(name, None)
+        _VIEW_TARGETS.pop(name, None)
+        _VIEW_BARS.pop(name, None)
+    path = _VIEWS_DIR / f"{name}.py"
+    if path.exists():
+        path.unlink()
+    return 200, "ok"
+
+
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         url = urlsplit(self.path)
@@ -257,6 +288,8 @@ class _Handler(BaseHTTPRequestHandler):
                         "targets": list(_TARGETS),
                         "factories": feature_registry.manifest(),
                         "factory_tags": _FACTORY_TAGS,
+                        "bar_data_sources": _BAR_DATA_SOURCES,
+                        "target_classes": _TARGET_CLASSES,
                     }
                 ).encode()
             self._send(200, "application/json", body)
@@ -288,8 +321,10 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             cols_str = q.get("cols", [""])[0]
             cols = tuple(c for c in cols_str.split(",") if c)
+            date_from = q.get("from", [""])[0]
+            date_to = q.get("to", [""])[0]
             sh = _spec_hash(spec)
-            cache_key = (bar, target, sh, cols)
+            cache_key = (bar, target, sh, cols, date_from, date_to)
             cached = _QC_CACHE.get(cache_key)
             if cached is not None:
                 self._send(200, "application/json", cached)
@@ -303,6 +338,7 @@ class _Handler(BaseHTTPRequestHandler):
                     sub = frame.select(sel)
                 else:
                     sub = frame
+                sub = _date_filter(sub, date_from, date_to)
                 report = qc.report(sub, target if target != "none" else None)
                 report["grades"] = grading.grade_map(
                     report, target=target if target != "none" else None
@@ -343,6 +379,16 @@ class _Handler(BaseHTTPRequestHandler):
                     self._send(400, "text/plain", f"unknown factory: {item.get('factory')!r}".encode())
                     return
             status, msg = _save_view(name, spec, target)
+            self._send(status, "application/json", json.dumps({"ok": status == 200, "msg": msg, "name": name}).encode())
+        elif url.path == "/delete_view":
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                body = json.loads(self.rfile.read(length).decode() or "{}")
+            except json.JSONDecodeError as exc:
+                self._send(400, "text/plain", f"bad json: {exc}".encode())
+                return
+            name = body.get("name", "")
+            status, msg = _delete_view(name)
             self._send(status, "application/json", json.dumps({"ok": status == 200, "msg": msg, "name": name}).encode())
         elif url.path == "/save_tags":
             length = int(self.headers.get("Content-Length") or 0)

@@ -1,118 +1,80 @@
 from __future__ import annotations
 
-import math
+import inspect
+import re
 from collections.abc import Callable
 
 import polars as pl
 
-from limen.targets import NextBarDownTarget, NextBarUpTarget
+import limen.targets as _LT
 
 
-_PARKINSON_SCALE = 4.0 * math.log(2.0)
-_HALFLIFE = 50
-_MIN_PERIODS = 150
-_SIGMA_RATIO_MIN = 0.9
-_SIGMA_RATIO_MAX = 1.1
+def _snake_case(class_name: str) -> str:
+    stem = class_name[:-len("Target")] if class_name.endswith("Target") else class_name
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", stem).lower()
 
 
-def _from_limen(cls: type) -> Callable[[pl.DataFrame, str], pl.DataFrame]:
-    def fn(raw: pl.DataFrame, name: str) -> pl.DataFrame:
-        return cls(train_data=raw, target_name=name).transform(raw)
-    return fn
+def _is_instantiable(cls: type) -> bool:
+    sig = inspect.signature(cls.__init__)
+    for name, p in sig.parameters.items():
+        if name in {"self", "train_data", "target_name"}:
+            continue
+        if p.default is inspect.Parameter.empty and p.kind not in {
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        }:
+            return False
+    return True
 
 
-def _validate_ohlc(df: pl.DataFrame) -> None:
-    dirty = df.filter(
-        (pl.col("high") < pl.max_horizontal("open", "close"))
-        | (pl.col("low") > pl.min_horizontal("open", "close"))
-    ).height
-    if dirty:
-        raise ValueError(
-            f"vol_normalized_return: {dirty} bar(s) violate OHLC invariants; "
-            "refusing to silently filter."
-        )
+_PROBE = pl.DataFrame({
+    "datetime": pl.datetime_range(
+        pl.datetime(2024, 1, 1), pl.datetime(2024, 1, 8), interval="1h", eager=True
+    ),
+    "open": [100.0] * 169,
+    "high": [101.0] * 169,
+    "low": [99.0] * 169,
+    "close": [100.5] * 169,
+    "volume": [10.0] * 169,
+    "maker_ratio": [0.5] * 169,
+    "no_of_trades": [100] * 169,
+    "liquidity_sum": [1.0e6] * 169,
+    "maker_volume": [5.0] * 169,
+    "maker_liquidity": [5.0e5] * 169,
+    "high_liquidity": [1.1e6] * 169,
+    "low_liquidity": [9.0e5] * 169,
+})
 
 
-def _validate_sanity(df: pl.DataFrame) -> None:
-    close_var = (pl.col("close").log() - pl.col("close").shift(1).log()) ** 2
-    parkinson_var = (
-        (pl.col("high").log() - pl.col("low").log()) ** 2 / _PARKINSON_SCALE
-    )
-    ratio = (
-        df.with_columns([close_var.alias("_cv"), parkinson_var.alias("_pv")])
-        .with_columns([
-            pl.col("_cv")
-                .ewm_mean(half_life=_HALFLIFE, min_samples=_MIN_PERIODS)
-                .clip(lower_bound=0.0).sqrt().alias("_cs"),
-            pl.col("_pv")
-                .ewm_mean(half_life=_HALFLIFE, min_samples=_MIN_PERIODS)
-                .clip(lower_bound=0.0).sqrt().alias("_ps"),
-        ])
-        .with_columns(
-            pl.when(pl.col("_cs") == 0.0)
-                .then(None)
-                .otherwise(pl.col("_ps") / pl.col("_cs"))
-                .alias("_ratio")
-        )
-        .select(pl.col("_ratio").drop_nulls().median())
-        .item()
-    )
-    if ratio is None:
-        return
-    if not (_SIGMA_RATIO_MIN <= ratio <= _SIGMA_RATIO_MAX):
-        raise ValueError(
-            f"vol_normalized_return: median Parkinson/close-σ ratio {ratio:.6f} "
-            f"outside [{_SIGMA_RATIO_MIN}, {_SIGMA_RATIO_MAX}]."
-        )
+def _can_apply(cls: type) -> bool:
+    try:
+        cls(train_data=_PROBE, target_name="_probe").transform(_PROBE)
+    except Exception:
+        return False
+    return True
 
 
-def _vol_scaled_forward(
-    raw: pl.DataFrame, name: str, *, absolute: bool
-) -> pl.DataFrame:
-    _validate_ohlc(raw)
-    _validate_sanity(raw)
-
-    parkinson_var = (
-        (pl.col("high").log() - pl.col("low").log()) ** 2 / _PARKINSON_SCALE
-    )
-    df = raw.with_columns(parkinson_var.alias("_p_var"))
-    df = df.with_columns(
-        pl.col("_p_var")
-            .ewm_mean(half_life=_HALFLIFE, min_samples=_MIN_PERIODS)
-            .clip(lower_bound=0.0)
-            .sqrt()
-            .alias("_sigma")
-    )
-    fwd = pl.col("close").shift(-1).log() - pl.col("close").log()
-    df = df.with_columns((fwd.abs() if absolute else fwd).alias("_fwd"))
-    df = df.with_columns(
-        pl.when(pl.col("_sigma") == 0.0)
-            .then(None)
-            .otherwise(pl.col("_fwd") / pl.col("_sigma"))
-            .alias(name)
-    )
-    return df.drop("_p_var", "_sigma", "_fwd")
-
-
-def _vol_normalized_return(raw: pl.DataFrame, name: str) -> pl.DataFrame:
-    return _vol_scaled_forward(raw, name, absolute=False)
-
-
-def _abs_vol_normalized_return(raw: pl.DataFrame, name: str) -> pl.DataFrame:
-    return _vol_scaled_forward(raw, name, absolute=True)
-
-
-_FACTORIES: dict[str, Callable[[pl.DataFrame, str], pl.DataFrame]] = {
-    "next_bar_up": _from_limen(NextBarUpTarget),
-    "next_bar_down": _from_limen(NextBarDownTarget),
-    "vol_normalized_return": _vol_normalized_return,
-    "abs_vol_normalized_return": _abs_vol_normalized_return,
+_BINDINGS: dict[str, tuple[type, dict[str, object]]] = {
+    _snake_case(name): (cls, {})
+    for name in _LT.__all__
+    if _is_instantiable(cls := getattr(_LT, name)) and _can_apply(cls)
 }
+_BINDINGS["abs_forward_vol_normalized_return"] = (
+    _LT.ForwardVolNormalizedReturnTarget, {"absolute": True}
+)
 
-NAMES: tuple[str, ...] = tuple(_FACTORIES)
+NAMES: tuple[str, ...] = tuple(_BINDINGS)
 
 
 def apply(raw: pl.DataFrame, name: str) -> pl.DataFrame:
-    if name not in _FACTORIES:
+    if name not in _BINDINGS:
         raise ValueError(f"Unknown target: {name!r}.")
-    return _FACTORIES[name](raw, name)
+    cls, kwargs = _BINDINGS[name]
+    return cls(train_data=raw, target_name=name, **kwargs).transform(raw)
+
+
+def binding(name: str) -> dict[str, object]:
+    if name not in _BINDINGS:
+        raise ValueError(f"Unknown target: {name!r}.")
+    cls, kwargs = _BINDINGS[name]
+    return {"class": f"limen.targets.{cls.__name__}", "params": dict(kwargs)}
