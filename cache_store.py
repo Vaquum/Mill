@@ -44,13 +44,13 @@ def write_cache(
     tmp = path.with_suffix(path.suffix + ".tmp")
     write_parquet(data, tmp)
     os.replace(tmp, path)
-    manifest = {
+    metadata = {
         "wrote_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "criteria": criteria,
         "rows": data.height,
         "columns": data.columns,
     }
     path.with_suffix(".json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n"
     )
     return path

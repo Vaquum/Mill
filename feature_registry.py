@@ -123,7 +123,7 @@ def producer_for(factory_name: str) -> Producer:
     return REGISTRY[factory_name]["producer"]
 
 
-def manifest() -> list[dict[str, Any]]:
+def catalog() -> list[dict[str, Any]]:
     return [
         {
             "name": name,

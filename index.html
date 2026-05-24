@@ -801,7 +801,7 @@
   .row .cell.null { color: var(--fg-3); }
 
   /* ---- YML modal: three side-by-side YAML segments rendered by the same
-     gutter+highlight+buffer trio used in experiment_runner's manifest view. */
+     gutter+highlight+buffer trio used in experiment_runner's config view. */
   .yml-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
@@ -830,7 +830,7 @@
   .yml-copy:hover { color: var(--fg); }
   .yml-copy.copied { color: var(--accent); }
 
-  .manifest-editor {
+  .config-editor {
     flex: 1 1 auto;
     display: flex;
     background: var(--bg);
@@ -840,7 +840,7 @@
     position: relative;
     min-height: 0;
   }
-  .manifest-gutter {
+  .config-gutter {
     flex: 0 0 auto;
     padding: var(--s-3) var(--s-3);
     text-align: right;
@@ -853,13 +853,13 @@
     overflow: hidden;
     min-width: 3.5ch;
   }
-  .manifest-buffer-wrap {
+  .config-buffer-wrap {
     flex: 1 1 auto;
     position: relative;
     overflow: hidden;
   }
-  .manifest-buffer,
-  .manifest-highlight {
+  .config-buffer,
+  .config-highlight {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -875,15 +875,15 @@
     background: transparent;
     overflow: auto;
   }
-  .manifest-buffer {
+  .config-buffer {
     outline: none;
     resize: none;
     color: transparent;
     caret-color: var(--accent);
   }
-  .manifest-buffer:focus { outline: none; }
-  .manifest-buffer::selection { background: var(--highlight); color: var(--fg); }
-  .manifest-highlight { pointer-events: none; color: var(--syntax-base); }
+  .config-buffer:focus { outline: none; }
+  .config-buffer::selection { background: var(--highlight); color: var(--fg); }
+  .config-highlight { pointer-events: none; color: var(--syntax-base); }
 
   .tok-key     { color: var(--syntax-fg); }
   .tok-punc    { color: var(--syntax-dim); }
@@ -956,7 +956,7 @@
             <line x1="12" y1="13" x2="12" y2="19"/>
           </svg>
         </button>
-        <button class="icon-button" id="yml-button" type="button" title="YAML manifest">
+        <button class="icon-button" id="yml-button" type="button" title="YAML config">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
             <polyline points="14 3 14 9 20 9"/>
@@ -1053,11 +1053,11 @@
             <span class="yml-col-title">data_source</span>
             <button class="yml-copy" type="button" data-target="yml-buf-data_source">copy</button>
           </div>
-          <div class="manifest-editor">
-            <div class="manifest-gutter" aria-hidden="true"></div>
-            <div class="manifest-buffer-wrap">
-              <pre class="manifest-highlight" aria-hidden="true"></pre>
-              <textarea class="manifest-buffer" id="yml-buf-data_source" spellcheck="false"
+          <div class="config-editor">
+            <div class="config-gutter" aria-hidden="true"></div>
+            <div class="config-buffer-wrap">
+              <pre class="config-highlight" aria-hidden="true"></pre>
+              <textarea class="config-buffer" id="yml-buf-data_source" spellcheck="false"
                         autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
             </div>
           </div>
@@ -1067,11 +1067,11 @@
             <span class="yml-col-title">indicators / features</span>
             <button class="yml-copy" type="button" data-target="yml-buf-indicators_features">copy</button>
           </div>
-          <div class="manifest-editor">
-            <div class="manifest-gutter" aria-hidden="true"></div>
-            <div class="manifest-buffer-wrap">
-              <pre class="manifest-highlight" aria-hidden="true"></pre>
-              <textarea class="manifest-buffer" id="yml-buf-indicators_features" spellcheck="false"
+          <div class="config-editor">
+            <div class="config-gutter" aria-hidden="true"></div>
+            <div class="config-buffer-wrap">
+              <pre class="config-highlight" aria-hidden="true"></pre>
+              <textarea class="config-buffer" id="yml-buf-indicators_features" spellcheck="false"
                         autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
             </div>
           </div>
@@ -1081,11 +1081,11 @@
             <span class="yml-col-title">target</span>
             <button class="yml-copy" type="button" data-target="yml-buf-target">copy</button>
           </div>
-          <div class="manifest-editor">
-            <div class="manifest-gutter" aria-hidden="true"></div>
-            <div class="manifest-buffer-wrap">
-              <pre class="manifest-highlight" aria-hidden="true"></pre>
-              <textarea class="manifest-buffer" id="yml-buf-target" spellcheck="false"
+          <div class="config-editor">
+            <div class="config-gutter" aria-hidden="true"></div>
+            <div class="config-buffer-wrap">
+              <pre class="config-highlight" aria-hidden="true"></pre>
+              <textarea class="config-buffer" id="yml-buf-target" spellcheck="false"
                         autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
             </div>
           </div>
@@ -1116,7 +1116,7 @@ const barsSelect = document.getElementById("bars-select");
 const viewSelect = document.getElementById("view-select");
 const targetSelect = document.getElementById("target-select");
 
-let manifest = null;
+let appConfig = null;
 let allColumns = [], allRows = [];
 let originalAllRows = [];
 let filteredAllRows = [];
@@ -2027,7 +2027,7 @@ function closeQc() { closeAllOverlays(); }
 
 function syncViewOptions() {
   const bar = barsSelect.value;
-  const viewBars = manifest.view_bars || {};
+  const viewBars = appConfig.view_bars || {};
   for (const opt of viewSelect.options) {
     const allowed = viewBars[opt.value] || [];
     opt.disabled = !allowed.includes(bar);
@@ -2429,11 +2429,11 @@ async function saveView() {
     alert(`save failed: ${body.msg || res.statusText}`);
     return;
   }
-  manifest = await (await fetch("/manifest")).json();
-  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  appConfig = await (await fetch("/app-config")).json();
+  factories = (appConfig.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   factoriesByName = new Map(factories.map(f => [f.name, f]));
-  factoryTags = manifest.factory_tags || {};
-  fillSelect(viewSelect, manifest.views);
+  factoryTags = appConfig.factory_tags || {};
+  fillSelect(viewSelect, appConfig.views);
   viewSelect.value = name;
   syncViewOptions();
 }
@@ -2452,8 +2452,8 @@ async function deleteView() {
     alert(`delete failed: ${body.msg || res.statusText}`);
     return;
   }
-  manifest = await (await fetch("/manifest")).json();
-  fillSelect(viewSelect, manifest.views);
+  appConfig = await (await fetch("/app-config")).json();
+  fillSelect(viewSelect, appConfig.views);
   syncViewOptions();
   loadSpecFromView(viewSelect.value);
   load();
@@ -2560,7 +2560,7 @@ function openRowModal() {
 function closeRow() { closeAllOverlays(); }
 
 function loadSpecFromView(name) {
-  const preset = (manifest.view_specs || {})[name] || [];
+  const preset = (appConfig.view_specs || {})[name] || [];
   const groups = new Map();
   for (const item of preset) {
     if (!groups.has(item.factory)) groups.set(item.factory, []);
@@ -2569,7 +2569,7 @@ function loadSpecFromView(name) {
   activeFactories = Array.from(groups, ([factory, paramSets]) => ({ factory, paramSets }));
   rebuildActiveSpec();
   openChipIdx = -1;
-  const tgt = (manifest.view_targets || {})[name];
+  const tgt = (appConfig.view_targets || {})[name];
   if (tgt && Array.from(targetSelect.options).some(o => o.value === tgt)) {
     targetSelect.value = tgt;
   }
@@ -2577,13 +2577,13 @@ function loadSpecFromView(name) {
 }
 
 async function init() {
-  manifest = await (await fetch("/manifest")).json();
-  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  appConfig = await (await fetch("/app-config")).json();
+  factories = (appConfig.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   factoriesByName = new Map(factories.map(f => [f.name, f]));
-  factoryTags = manifest.factory_tags || {};
-  fillSelect(barsSelect, manifest.bars);
-  fillSelect(viewSelect, manifest.views);
-  fillSelect(targetSelect, manifest.targets);
+  factoryTags = appConfig.factory_tags || {};
+  fillSelect(barsSelect, appConfig.bars);
+  fillSelect(viewSelect, appConfig.views);
+  fillSelect(targetSelect, appConfig.targets);
   barsSelect.value = "1h_time_bars";
   targetSelect.value = "none";
   syncViewOptions();
@@ -2702,7 +2702,7 @@ async function init() {
 }
 
 /* ---- YML modal — three side-by-side YAML segments mirroring
-   experiment_runner's manifest editor. Highlighter is a per-line
+   experiment_runner's config editor. Highlighter is a per-line
    single-pass YAML tokenizer (no cross-line state). ---- */
 (() => {
   const YAML_KEYWORDS = new Set(["true", "false", "null", "yes", "no"]);
@@ -2754,9 +2754,9 @@ async function init() {
   function highlight(text) { return text.split("\n").map(highlightLine).join("\n"); }
 
   function attachEditor(root) {
-    const buffer = root.querySelector(".manifest-buffer");
-    const pre = root.querySelector(".manifest-highlight");
-    const gutter = root.querySelector(".manifest-gutter");
+    const buffer = root.querySelector(".config-buffer");
+    const pre = root.querySelector(".config-highlight");
+    const gutter = root.querySelector(".config-gutter");
     if (!buffer || !pre) return;
     function paint() {
       pre.innerHTML = highlight(buffer.value) + "\u200B";
@@ -2797,7 +2797,7 @@ async function init() {
 
   function emitDataSource() {
     const bar = barsSelect.value;
-    const src = manifest && manifest.bar_data_sources && manifest.bar_data_sources[bar];
+    const src = appConfig && appConfig.bar_data_sources && appConfig.bar_data_sources[bar];
     if (!src) return "data_source: ~";
     const params = { ...(src.params || {}) };
     if (dateFrom) params.start_date_limit = dateFrom;
@@ -2832,7 +2832,7 @@ async function init() {
   function emitTarget() {
     const t = currentTarget;
     if (!t || t === "none") return "target: ~";
-    const cls = manifest && manifest.target_classes && manifest.target_classes[t];
+    const cls = appConfig && appConfig.target_classes && appConfig.target_classes[t];
     if (!cls) return `target:\n  name: ${t}`;
     let out = `target:\n  name: ${t}\n  class: ${cls.class}`;
     const keys = Object.keys(cls.params || {});
@@ -2854,7 +2854,7 @@ async function init() {
   }
   refreshYml = refresh;
 
-  document.querySelectorAll("#yml-modal .manifest-editor").forEach(attachEditor);
+  document.querySelectorAll("#yml-modal .config-editor").forEach(attachEditor);
   document.querySelectorAll(".yml-copy").forEach(btn => {
     btn.addEventListener("click", async () => {
       const tgt = document.getElementById(btn.dataset.target);

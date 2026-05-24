@@ -276,7 +276,7 @@ class _Handler(BaseHTTPRequestHandler):
         url = urlsplit(self.path)
         if url.path == "/":
             self._send(200, "text/html; charset=utf-8", _INDEX.read_bytes())
-        elif url.path == "/manifest":
+        elif url.path == "/app-config":
             with _REGISTRY_LOCK:
                 body = json.dumps(
                     {
@@ -286,7 +286,7 @@ class _Handler(BaseHTTPRequestHandler):
                         "view_targets": _VIEW_TARGETS,
                         "view_bars": _VIEW_BARS,
                         "targets": list(_TARGETS),
-                        "factories": feature_registry.manifest(),
+                        "factories": feature_registry.catalog(),
                         "factory_tags": _FACTORY_TAGS,
                         "bar_data_sources": _BAR_DATA_SOURCES,
                         "target_classes": _TARGET_CLASSES,
