@@ -24,4 +24,4 @@ mill-qc = "mill.run_qc:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-mill = ["index.html", "py.typed"]
+mill = ["assets/*.html", "py.typed"]

@@ -2,18 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 import polars as pl
 
 from .frames import read_parquet, write_parquet
-
-
-def cache_root() -> Path:
-    override = os.environ.get("MILL_CACHE_DIR")
-    return Path(override) if override else Path.home() / ".cache" / "mill"
+from .settings import cache_root
 
 
 def cache_path(label: str, criteria: dict[str, object]) -> Path:
@@ -43,7 +38,7 @@ def write_cache(
 ) -> Path:
     tmp = path.with_suffix(path.suffix + ".tmp")
     write_parquet(data, tmp)
-    os.replace(tmp, path)
+    tmp.replace(path)
     metadata = {
         "wrote_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "criteria": criteria,

@@ -6,7 +6,7 @@ import re
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
+from importlib.resources import files
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -14,14 +14,21 @@ import polars as pl
 
 from . import feature_registry, grading, qc, targets
 from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
+from .settings import (
+    APP_NAME,
+    DEFAULT_BAR,
+    PROJECT_END_STR,
+    PROJECT_START_STR,
+    config_root,
+    host,
+    port,
+)
 from .table import build_from_spec, klines
 from .views import ALL as VIEWS
 
-_HOST = "127.0.0.1"
-_PORT = 8765
-_INDEX = Path(__file__).with_name("index.html")
-_VIEWS_DIR = Path(__file__).with_name("views")
-_TAGS_PATH = Path(__file__).with_name("feature_tags.json")
+_INDEX = files("mill").joinpath("assets", "index.html")
+_TAGS_PATH = config_root() / "feature_tags.json"
+_SAVED_VIEWS_PATH = config_root() / "views.json"
 _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
 _BARS = tuple(TIME_BAR_SECONDS) + tuple(DOLLAR_BAR_USD)
@@ -29,39 +36,31 @@ _TARGETS = ("none", *targets.NAMES)
 _BAR_DATA_SOURCES: dict[str, dict[str, object]] = {
     **{
         name: {
-            "method": "limen.HistoricalData.get_spot_klines",
-            "params": {"kline_size": seconds},
+            "method": "GetData.get_time_bars",
+            "params": {
+                "bar_size": name,
+                "start_date_limit": PROJECT_START_STR,
+                "end_date_limit": PROJECT_END_STR,
+            },
         }
-        for name, seconds in TIME_BAR_SECONDS.items()
+        for name in TIME_BAR_SECONDS
     },
     **{
         name: {
-            "method": "limen.HistoricalData.get_spot_dollar_klines",
-            "params": {"dollar_bar_size": usd},
+            "method": "GetData.get_dollar_bars",
+            "params": {
+                "bar_size": name,
+                "start_date_limit": PROJECT_START_STR,
+                "end_date_limit": PROJECT_END_STR,
+            },
         }
-        for name, usd in DOLLAR_BAR_USD.items()
+        for name in DOLLAR_BAR_USD
     },
 }
 _TARGET_CLASSES: dict[str, dict[str, object]] = {
     name: targets.binding(name) for name in targets.NAMES
 }
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
-_VIEW_TEMPLATE = '''from __future__ import annotations
-
-import polars as pl
-
-from ..table import build_from_spec
-
-NAME = {name!r}
-
-TARGET = {target!r}
-
-SPEC = {spec_repr}
-
-
-def build(raw: pl.DataFrame) -> pl.DataFrame:
-    return build_from_spec(raw, SPEC)
-'''
 
 
 _PAYLOADS: dict[tuple[str, str, str], bytes] = {}
@@ -75,6 +74,8 @@ _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
 _VIEW_TARGETS: dict[str, str] = {}
 _VIEW_BARS: dict[str, list[str]] = {}
 _FACTORY_TAGS: dict[str, list[str]] = {}
+_BUILTIN_VIEW_NAMES: set[str] = set()
+_SAVED_VIEWS: dict[str, dict[str, Any]] = {}
 
 
 def _load_factory_tags() -> dict[str, list[str]]:
@@ -94,8 +95,43 @@ def _load_factory_tags() -> dict[str, list[str]]:
 
 
 def _save_factory_tags() -> None:
+    _TAGS_PATH.parent.mkdir(parents=True, exist_ok=True)
     _TAGS_PATH.write_text(
         json.dumps(_FACTORY_TAGS, indent=2, sort_keys=True) + "\n"
+    )
+
+
+def _load_saved_views() -> dict[str, dict[str, Any]]:
+    if not _SAVED_VIEWS_PATH.exists():
+        return {}
+    try:
+        data = json.loads(_SAVED_VIEWS_PATH.read_text())
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for name, item in data.items():
+        if not _NAME_RE.fullmatch(name) or not isinstance(item, dict):
+            continue
+        spec = item.get("spec")
+        target = item.get("target", "none")
+        bars = item.get("bars", list(_BARS))
+        if (
+            isinstance(spec, list)
+            and _valid_spec(spec)
+            and target in _TARGETS
+            and isinstance(bars, list)
+            and all(isinstance(b, str) and b in _BARS for b in bars)
+        ):
+            out[name] = {"spec": spec, "target": target, "bars": bars}
+    return out
+
+
+def _save_saved_views() -> None:
+    _SAVED_VIEWS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _SAVED_VIEWS_PATH.write_text(
+        json.dumps(_SAVED_VIEWS, indent=2, sort_keys=True) + "\n"
     )
 
 
@@ -216,6 +252,17 @@ def _parse_features(q: dict[str, list[str]]) -> tuple[list[dict[str, Any]], str 
     return out, None
 
 
+def _valid_spec(spec: list[Any]) -> bool:
+    for item in spec:
+        if not isinstance(item, dict):
+            return False
+        factory = item.get("factory")
+        params = item.get("params") or {}
+        if factory not in feature_registry.REGISTRY or not isinstance(params, dict):
+            return False
+    return True
+
+
 def _parse_selectors(
     q: dict[str, list[str]],
 ) -> tuple[str, str, bytes | None]:
@@ -226,27 +273,21 @@ def _parse_selectors(
     return bar, target, None
 
 
-def _spec_repr(spec: list[dict[str, Any]]) -> str:
-    if not spec:
-        return "()"
-    lines = ["("]
-    for item in spec:
-        lines.append(f"    {{\"factory\": {item['factory']!r}, \"params\": {item['params']!r}}},")
-    lines.append(")")
-    return "\n".join(lines)
-
-
 def _save_view(
     name: str, spec: list[dict[str, Any]], target: str
 ) -> tuple[int, str]:
     if not _NAME_RE.fullmatch(name):
-        return 400, "name must be lowercase letters, digits, underscores; start with a letter; max 41 chars"
+        return 400, (
+            "name must be lowercase letters, digits, underscores; "
+            "start with a letter; max 41 chars"
+        )
     if target not in _TARGETS:
         return 400, f"unknown target: {target!r}"
-    path = _VIEWS_DIR / f"{name}.py"
-    body = _VIEW_TEMPLATE.format(name=name, target=target, spec_repr=_spec_repr(spec))
-    path.write_text(body)
+    if name in _BUILTIN_VIEW_NAMES:
+        return 409, f"cannot overwrite built-in view: {name!r}"
     with _REGISTRY_LOCK:
+        _SAVED_VIEWS[name] = {"spec": spec, "target": target, "bars": list(_BARS)}
+        _save_saved_views()
         _VIEW_SPECS[name] = spec
         _VIEW_TARGETS[name] = target
         _VIEW_BARS[name] = list(_BARS)
@@ -257,14 +298,15 @@ def _delete_view(name: str) -> tuple[int, str]:
     if not _NAME_RE.fullmatch(name):
         return 400, "invalid view name"
     with _REGISTRY_LOCK:
-        if name not in _VIEW_SPECS:
+        if name in _BUILTIN_VIEW_NAMES:
+            return 409, f"cannot delete built-in view: {name!r}"
+        if name not in _SAVED_VIEWS:
             return 404, f"unknown view: {name!r}"
+        _SAVED_VIEWS.pop(name, None)
+        _save_saved_views()
         _VIEW_SPECS.pop(name, None)
         _VIEW_TARGETS.pop(name, None)
         _VIEW_BARS.pop(name, None)
-    path = _VIEWS_DIR / f"{name}.py"
-    if path.exists():
-        path.unlink()
     return 200, "ok"
 
 
@@ -278,6 +320,12 @@ class _Handler(BaseHTTPRequestHandler):
                 body = json.dumps(
                     {
                         "bars": list(_BARS),
+                        "default_bar": DEFAULT_BAR,
+                        "app_name": APP_NAME,
+                        "data_window": {
+                            "start": PROJECT_START_STR,
+                            "end": PROJECT_END_STR,
+                        },
                         "views": list(_VIEW_SPECS.keys()),
                         "view_specs": _VIEW_SPECS,
                         "view_targets": _VIEW_TARGETS,
@@ -368,15 +416,12 @@ class _Handler(BaseHTTPRequestHandler):
             if not isinstance(spec, list):
                 self._send(400, "text/plain", b"spec must be a list")
                 return
-            for item in spec:
-                if not isinstance(item, dict):
-                    self._send(400, "text/plain", b"each spec item must be an object")
-                    return
-                if item.get("factory") not in feature_registry.REGISTRY:
-                    self._send(400, "text/plain", f"unknown factory: {item.get('factory')!r}".encode())
-                    return
+            if not _valid_spec(spec):
+                self._send(400, "text/plain", b"invalid spec")
+                return
             status, msg = _save_view(name, spec, target)
-            self._send(status, "application/json", json.dumps({"ok": status == 200, "msg": msg, "name": name}).encode())
+            body = {"ok": status == 200, "msg": msg, "name": name}
+            self._send(status, "application/json", json.dumps(body).encode())
         elif url.path == "/delete_view":
             length = int(self.headers.get("Content-Length") or 0)
             try:
@@ -386,7 +431,8 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             name = body.get("name", "")
             status, msg = _delete_view(name)
-            self._send(status, "application/json", json.dumps({"ok": status == 200, "msg": msg, "name": name}).encode())
+            body = {"ok": status == 200, "msg": msg, "name": name}
+            self._send(status, "application/json", json.dumps(body).encode())
         elif url.path == "/save_tags":
             length = int(self.headers.get("Content-Length") or 0)
             try:
@@ -426,18 +472,31 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    global _VIEW_SPECS, _VIEW_TARGETS, _VIEW_BARS, _FACTORY_TAGS
+    global _BUILTIN_VIEW_NAMES, _FACTORY_TAGS, _SAVED_VIEWS
+    global _VIEW_SPECS, _VIEW_TARGETS, _VIEW_BARS
+    _BUILTIN_VIEW_NAMES = {v.NAME for v in VIEWS}
     _VIEW_SPECS = {v.NAME: list(v.SPEC) for v in VIEWS}
     _VIEW_TARGETS = {v.NAME: getattr(v, "TARGET", "none") for v in VIEWS}
     _VIEW_BARS = {v.NAME: list(getattr(v, "BARS", _BARS)) for v in VIEWS}
+    _SAVED_VIEWS = {
+        name: item
+        for name, item in _load_saved_views().items()
+        if name not in _BUILTIN_VIEW_NAMES
+    }
+    for name, item in _SAVED_VIEWS.items():
+        _VIEW_SPECS[name] = item["spec"]
+        _VIEW_TARGETS[name] = item["target"]
+        _VIEW_BARS[name] = item["bars"]
     _FACTORY_TAGS = _load_factory_tags()
-    url = f"http://{_HOST}:{_PORT}"
+    bind_host = host()
+    bind_port = port()
+    url = f"http://{bind_host}:{bind_port}"
     print(
         f"{len(_BARS)} bars x {len(_VIEW_SPECS)} views x {len(_TARGETS)} targets"
         f"  ->  {url}",
         flush=True,
     )
-    server = ThreadingHTTPServer((_HOST, _PORT), _Handler)
+    server = ThreadingHTTPServer((bind_host, bind_port), _Handler)
     webbrowser.open(url)
     server.serve_forever()
 

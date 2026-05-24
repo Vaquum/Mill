@@ -11,13 +11,10 @@ from limen import HistoricalData
 from .bars import dollar_bar_name, dollar_bar_usd, time_bar_name, time_bar_seconds
 from .cache_store import cache_path, read_fresh, write_cache
 from .frames import read_parquet, write_parquet
+from .settings import PROJECT_END, PROJECT_END_STR, PROJECT_START, PROJECT_START_STR
 
 
 _LIMEN_LOCK = threading.Lock()
-_PROJECT_START = date(2024, 1, 1)
-_PROJECT_END = date(2026, 5, 15)
-_PROJECT_START_STR = _PROJECT_START.isoformat()
-_PROJECT_END_STR = _PROJECT_END.isoformat()
 
 
 def _date_part(value: str | None, default: date) -> date:
@@ -33,22 +30,22 @@ def _bounded_dates(
     start_date_limit: str | None,
     end_date_limit: str | None,
 ) -> tuple[str, str]:
-    start = _date_part(start_date_limit, _PROJECT_START)
-    end = _date_part(end_date_limit, _PROJECT_END)
-    if start < _PROJECT_START:
-        raise ValueError(f"start_date_limit cannot be before {_PROJECT_START_STR}.")
-    if end > _PROJECT_END:
-        raise ValueError(f"end_date_limit cannot be after {_PROJECT_END_STR}.")
+    start = _date_part(start_date_limit, PROJECT_START)
+    end = _date_part(end_date_limit, PROJECT_END)
+    if start < PROJECT_START:
+        raise ValueError(f"start_date_limit cannot be before {PROJECT_START_STR}.")
+    if end > PROJECT_END:
+        raise ValueError(f"end_date_limit cannot be after {PROJECT_END_STR}.")
     if start > end:
         raise ValueError("start_date_limit cannot be after end_date_limit.")
-    return start_date_limit or _PROJECT_START_STR, end_date_limit or _PROJECT_END_STR
+    return start_date_limit or PROJECT_START_STR, end_date_limit or PROJECT_END_STR
 
 
 def _project_window(data: pl.DataFrame) -> pl.DataFrame:
     if "datetime" not in data.columns:
         raise ValueError("Data must contain datetime to enforce project date bounds.")
     day = pl.col("datetime").dt.date()
-    return data.filter((day >= pl.lit(_PROJECT_START)) & (day <= pl.lit(_PROJECT_END)))
+    return data.filter((day >= pl.lit(PROJECT_START)) & (day <= pl.lit(PROJECT_END)))
 
 
 def _limit_rows(data: pl.DataFrame, limit: int | None) -> pl.DataFrame:

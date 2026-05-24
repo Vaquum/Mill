@@ -985,9 +985,9 @@
           </button>
           <div class="date-popover" id="date-popover" hidden>
             <div class="date-filter">
-              <input type="date" id="date-from" min="2024-01-01" max="2026-05-15">
+              <input type="date" id="date-from">
               <span class="sep">—</span>
-              <input type="date" id="date-to" min="2024-01-01" max="2026-05-15">
+              <input type="date" id="date-to">
               <div class="date-presets" id="date-presets">
                 <a data-preset="1d">1d</a>
                 <a data-preset="7d">7d</a>
@@ -2616,7 +2616,7 @@ async function init() {
   fillSelect(barsSelect, appConfig.bars);
   fillSelect(viewSelect, appConfig.views);
   fillSelect(targetSelect, appConfig.targets);
-  barsSelect.value = "1h_time_bars";
+  barsSelect.value = appConfig.default_bar || appConfig.bars[0] || "";
   targetSelect.value = "none";
   syncViewOptions();
   loadSpecFromView(viewSelect.value);
@@ -2673,7 +2673,16 @@ async function init() {
   const dateFromInput = document.getElementById("date-from");
   const dateToInput = document.getElementById("date-to");
   const datePresets = document.getElementById("date-presets");
-  const DATA_END = "2026-05-15";
+  const dataWindow = appConfig.data_window || {};
+  if (dataWindow.start) {
+    dateFromInput.min = dataWindow.start;
+    dateToInput.min = dataWindow.start;
+  }
+  if (dataWindow.end) {
+    dateFromInput.max = dataWindow.end;
+    dateToInput.max = dataWindow.end;
+  }
+  const DATA_END = dataWindow.end || dateToInput.max;
   const PRESET_DAYS = { "1d": 1, "7d": 7, "1m": 30, "3m": 90, "1y": 365 };
   function shiftDate(s, days) {
     const d = new Date(s + "T00:00:00Z");
