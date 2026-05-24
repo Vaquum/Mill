@@ -268,6 +268,12 @@
   .icon-button:hover { color: var(--fg); }
   .icon-button:focus-visible { outline: none; color: var(--fg); }
   .icon-button.active { color: var(--accent); }
+  .icon-button:disabled {
+    color: var(--fg-3);
+    cursor: not-allowed;
+    opacity: var(--opacity-muted);
+  }
+  .icon-button:disabled:hover { color: var(--fg-3); }
   .cal-wrap { position: relative; display: inline-flex; align-items: center; }
   .date-popover {
     position: absolute;
@@ -918,7 +924,7 @@
               <polyline points="7 3 7 8 15 8"/>
             </svg>
           </button>
-          <button class="icon-button" id="delete-button" type="button" title="Delete view">
+          <button class="icon-button" id="delete-button" type="button" title="Only saved views can be deleted" disabled>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -1149,6 +1155,7 @@ let activeSpec = [];
 let factories = [];
 let factoriesByName = new Map();
 let factoryTags = {};
+let savedViews = new Set();
 let refetchTimer = null;
 let hoverCol = -1;
 
@@ -1733,6 +1740,24 @@ function fillSelect(el, values) {
   }
 }
 
+function syncAppConfigState() {
+  factories = (appConfig.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  factoriesByName = new Map(factories.map(f => [f.name, f]));
+  factoryTags = appConfig.factory_tags || {};
+  savedViews = new Set(appConfig.saved_views || []);
+}
+
+async function fetchAppConfig() {
+  appConfig = await (await fetch("/app-config")).json();
+  syncAppConfigState();
+}
+
+function updateDeleteButton() {
+  const canDelete = savedViews.has(viewSelect.value);
+  deleteButton.disabled = !canDelete;
+  deleteButton.title = canDelete ? "Delete saved view" : "Only saved views can be deleted";
+}
+
 const qcModal = document.getElementById("qc-modal");
 const ymlModal = document.getElementById("yml-modal");
 const qcBody = document.getElementById("qc-body");
@@ -2062,6 +2087,7 @@ function syncViewOptions() {
       if (!opt.disabled) { viewSelect.value = opt.value; break; }
     }
   }
+  updateDeleteButton();
   return viewSelect.value !== before;
 }
 
@@ -2482,10 +2508,7 @@ async function saveView() {
     alert(`save failed: ${body.msg || res.statusText}`);
     return;
   }
-  appConfig = await (await fetch("/app-config")).json();
-  factories = (appConfig.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
-  factoriesByName = new Map(factories.map(f => [f.name, f]));
-  factoryTags = appConfig.factory_tags || {};
+  await fetchAppConfig();
   fillSelect(viewSelect, appConfig.views);
   viewSelect.value = name;
   syncViewOptions();
@@ -2494,6 +2517,7 @@ async function saveView() {
 async function deleteView() {
   const name = viewSelect.value;
   if (!name) return;
+  if (!savedViews.has(name)) return;
   if (!confirm(`Delete view "${name}"? This cannot be undone.`)) return;
   const res = await fetch("/delete_view", {
     method: "POST",
@@ -2505,7 +2529,7 @@ async function deleteView() {
     alert(`delete failed: ${body.msg || res.statusText}`);
     return;
   }
-  appConfig = await (await fetch("/app-config")).json();
+  await fetchAppConfig();
   fillSelect(viewSelect, appConfig.views);
   syncViewOptions();
   loadSpecFromView(viewSelect.value);
@@ -2634,10 +2658,7 @@ function loadSpecFromView(name) {
 }
 
 async function init() {
-  appConfig = await (await fetch("/app-config")).json();
-  factories = (appConfig.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
-  factoriesByName = new Map(factories.map(f => [f.name, f]));
-  factoryTags = appConfig.factory_tags || {};
+  await fetchAppConfig();
   fillSelect(barsSelect, appConfig.bars);
   fillSelect(viewSelect, appConfig.views);
   fillSelect(targetSelect, appConfig.targets);
@@ -2655,6 +2676,7 @@ async function init() {
   });
   viewSelect.addEventListener("change", () => {
     loadSpecFromView(viewSelect.value);
+    updateDeleteButton();
     load();
   });
   targetSelect.addEventListener("change", load);

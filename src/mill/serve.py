@@ -81,6 +81,7 @@ _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
 _VIEW_TARGETS: dict[str, str] = {}
 _VIEW_BARS: dict[str, list[str]] = {}
 _FACTORY_TAGS: dict[str, list[str]] = {}
+_BUILTIN_VIEWS: tuple[str, ...] = ()
 _BUILTIN_VIEW_NAMES: set[str] = set()
 _SAVED_VIEWS: dict[str, dict[str, Any]] = {}
 
@@ -523,6 +524,8 @@ class _Handler(BaseHTTPRequestHandler):
                             "end": PROJECT_END_STR,
                         },
                         "views": list(_VIEW_SPECS.keys()),
+                        "saved_views": list(_SAVED_VIEWS.keys()),
+                        "builtin_views": list(_BUILTIN_VIEWS),
                         "view_specs": _VIEW_SPECS,
                         "view_targets": _VIEW_TARGETS,
                         "view_bars": _VIEW_BARS,
@@ -685,9 +688,10 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    global _BUILTIN_VIEW_NAMES, _FACTORY_TAGS, _SAVED_VIEWS
+    global _BUILTIN_VIEWS, _BUILTIN_VIEW_NAMES, _FACTORY_TAGS, _SAVED_VIEWS
     global _VIEW_SPECS, _VIEW_TARGETS, _VIEW_BARS
-    _BUILTIN_VIEW_NAMES = {v.NAME for v in VIEWS}
+    _BUILTIN_VIEWS = tuple(v.NAME for v in VIEWS)
+    _BUILTIN_VIEW_NAMES = set(_BUILTIN_VIEWS)
     _VIEW_SPECS = {v.NAME: list(v.SPEC) for v in VIEWS}
     _VIEW_TARGETS = {v.NAME: getattr(v, "TARGET", "none") for v in VIEWS}
     _VIEW_BARS = {v.NAME: list(getattr(v, "BARS", _BARS)) for v in VIEWS}
