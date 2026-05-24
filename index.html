@@ -560,6 +560,16 @@
     align-content: flex-start;
     gap: var(--s-2);
   }
+  .palette-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    margin-bottom: var(--s-4);
+  }
+  .palette-section-title {
+    color: var(--fg-2);
+    font: var(--text-label);
+  }
   .palette-item {
     display: inline-flex; align-items: center; gap: var(--s-2);
     padding: var(--s-1) var(--s-3);
@@ -1024,7 +1034,7 @@
   <div class="modal" id="col-modal">
     <div class="modal-panel">
       <div class="modal-head">
-        <span id="col-title">features</span>
+        <span id="col-title">columns</span>
         <button class="close" id="col-close" type="button">&times;</button>
       </div>
       <div class="modal-body" id="col-body"></div>
@@ -2066,10 +2076,11 @@ function defaultParamsFor(name) {
 let openChipIdx = -1;
 let _paletteSearch = "";
 
-function _paletteItemVisible(name) {
+function _paletteItemVisible(row) {
   const activeNames = new Set(activeFactories.map(g => g.factory));
+  const name = row.dataset.factory;
   if (activeNames.has(name)) return false;
-  if (_paletteSearch && !name.includes(_paletteSearch)) return false;
+  if (_paletteSearch && !(row.dataset.search || "").includes(_paletteSearch)) return false;
   return true;
 }
 
@@ -2077,7 +2088,11 @@ function syncPaletteVisibility() {
   const wrapper = colBody.querySelector(".features-builder");
   if (!wrapper) return;
   for (const row of wrapper.querySelectorAll(".palette-item")) {
-    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
+    row.style.display = _paletteItemVisible(row) ? "" : "none";
+  }
+  for (const section of wrapper.querySelectorAll(".palette-section")) {
+    section.hidden = !Array.from(section.querySelectorAll(".palette-item"))
+      .some(row => row.style.display !== "none");
   }
 }
 
@@ -2086,34 +2101,51 @@ function buildPalette() {
   pane.className = "features-pane palette";
   const search = document.createElement("input");
   search.type = "text";
-  search.placeholder = "factories";
+  search.placeholder = "raw signal / features";
   search.className = "palette-search";
   search.spellcheck = false;
   search.autocomplete = "off";
   search.value = _paletteSearch;
   pane.appendChild(search);
-  const items = document.createElement("div");
-  items.className = "palette-items";
-  for (const f of factories) {
-    const row = document.createElement("div");
-    row.className = "palette-item";
-    row.draggable = true;
-    row.dataset.factory = f.name;
-    row.dataset.name = f.name.toLowerCase();
-    row.textContent = f.name;
-    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
-    row.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("text/factory", f.name);
-      e.dataTransfer.effectAllowed = "copy";
-    });
-    row.addEventListener("click", () => addFactory(f.name));
-    items.appendChild(row);
+  const groups = [
+    ["raw", "raw signal columns"],
+    ["limen.features", "features"],
+    ["limen.indicators", "indicators"],
+  ];
+  for (const [source, label] of groups) {
+    const entries = factories.filter(f => f.source === source);
+    if (entries.length === 0) continue;
+    const section = document.createElement("div");
+    section.className = "palette-section";
+    const title = document.createElement("div");
+    title.className = "palette-section-title";
+    title.textContent = label;
+    section.appendChild(title);
+    const items = document.createElement("div");
+    items.className = "palette-items";
+    for (const f of entries) {
+      const row = document.createElement("div");
+      row.className = "palette-item";
+      row.draggable = true;
+      row.dataset.factory = f.name;
+      row.dataset.search = `${f.name} ${f.source} ${label}`.toLowerCase();
+      row.textContent = f.name;
+      row.style.display = _paletteItemVisible(row) ? "" : "none";
+      row.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("text/factory", f.name);
+        e.dataTransfer.effectAllowed = "copy";
+      });
+      row.addEventListener("click", () => addFactory(f.name));
+      items.appendChild(row);
+    }
+    section.appendChild(items);
+    pane.appendChild(section);
   }
   search.addEventListener("input", () => {
     _paletteSearch = search.value.trim().toLowerCase();
     syncPaletteVisibility();
   });
-  pane.appendChild(items);
+  syncPaletteVisibility();
   return pane;
 }
 
@@ -2123,7 +2155,7 @@ function buildActivePane() {
   pane.id = "features-active";
   const hdr = document.createElement("div");
   hdr.className = "features-pane-header";
-  hdr.textContent = "active set";
+  hdr.textContent = "active columns";
   pane.appendChild(hdr);
   const list = document.createElement("div");
   list.id = "features-active-list";
@@ -2220,7 +2252,7 @@ function renderActivePane() {
   if (activeFactories.length === 0) {
     const empty = document.createElement("div");
     empty.className = "active-empty";
-    empty.textContent = "drag factories from the left to compose your view";
+    empty.textContent = "drag raw signal columns or features from the left";
     list.appendChild(empty);
     if (pane) pane.scrollTop = prevScroll;
     return;
@@ -2280,7 +2312,7 @@ function renderActivePane() {
     remove.className = "active-chip-remove";
     remove.type = "button";
     remove.textContent = "×";
-    remove.title = "remove factory";
+    remove.title = "remove column";
     remove.addEventListener("click", e => {
       e.stopPropagation();
       removeFactory(idx);
@@ -2403,6 +2435,7 @@ function openColModal() {
   wrapper.appendChild(buildPalette());
   wrapper.appendChild(buildActivePane());
   colBody.replaceChildren(wrapper);
+  syncPaletteVisibility();
   renderActivePane();
   colModal.classList.add("open");
 }
@@ -2414,7 +2447,7 @@ const deleteButton = document.getElementById("delete-button");
 
 async function saveView() {
   if (activeSpec.length === 0) {
-    alert("active set is empty; add at least one feature first");
+    alert("active set is empty; add at least one column first");
     return;
   }
   const name = (prompt("save view as:") || "").trim().toLowerCase();
