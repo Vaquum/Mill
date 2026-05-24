@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import polars as pl
 
-from table import build_from_spec
+from ..table import build_from_spec
 
 NAME = "jolt"
 

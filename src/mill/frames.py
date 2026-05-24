@@ -5,14 +5,27 @@ from pathlib import Path
 import polars as pl
 
 
+_EPOCH_SECONDS_LIMIT = 10_000_000_000
+
+
 def normalize_datetime(data: pl.DataFrame) -> pl.DataFrame:
     if "datetime" not in data.columns:
         return data
     dtype = data.schema["datetime"]
     if dtype in (pl.UInt32, pl.UInt64, pl.Int32, pl.Int64):
+        epoch = pl.col("datetime").cast(pl.Int64)
         return data.with_columns(
-            (pl.col("datetime").cast(pl.Int64) * 1000)
+            pl.when(epoch.abs() < _EPOCH_SECONDS_LIMIT)
+            .then(epoch * 1000)
+            .otherwise(epoch)
             .cast(pl.Datetime("ms", time_zone="UTC"))
+            .alias("datetime")
+        )
+    if dtype == pl.Date:
+        return data.with_columns(
+            pl.col("datetime")
+            .cast(pl.Datetime("ms"))
+            .dt.replace_time_zone("UTC")
             .alias("datetime")
         )
     if isinstance(dtype, pl.Datetime):

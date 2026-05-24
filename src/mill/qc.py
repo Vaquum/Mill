@@ -32,6 +32,10 @@ def _seed_for(label: str) -> int:
     return zlib.crc32(label.encode()) & 0xFFFFFFFF
 
 
+def _joint_block(blocks: dict[str, int | None], left: str, right: str) -> int:
+    return max(_resolve_block(blocks.get(left)), _resolve_block(blocks.get(right)))
+
+
 def report(df: pl.DataFrame, target: str | None) -> dict:
     if "datetime" in df.columns:
         df = df.sort("datetime")
@@ -113,7 +117,7 @@ def _edge_rows(
 
         spearman[col] = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
         lo, hi = _bootstrap_spearman_ci(
-            xc, yc, _resolve_block(blocks.get(col)), seed=_seed_for(col),
+            xc, yc, _joint_block(blocks, col, target_label), seed=_seed_for(col),
         )
         spear_lo[col] = lo
         spear_hi[col] = hi
@@ -188,31 +192,40 @@ def _pairwise_rows(
             ("max_pairwise_mi", dict(empty)),
         ]
 
-    mat = np.column_stack([arrays[c] for c in feature_cols])
-    finite = ~np.isnan(mat).any(axis=1)
-    sub = mat[finite]
-    if sub.shape[0] < _PAIRWISE_MIN_N:
-        return [
-            ("max_pairwise_spearman", dict(empty)),
-            ("mean_pairwise_spearman", dict(empty)),
-            ("redundancy_penalty", dict(empty)),
-            ("max_pairwise_mi", dict(empty)),
-        ]
+    abs_rho = np.full((n, n), np.nan, dtype=np.float64)
+    max_mi_values: list[float | None] = [None] * n
 
-    if sub.shape[0] > _PAIRWISE_MAX_N:
-        idx = np.linspace(0, sub.shape[0] - 1, _PAIRWISE_MAX_N).astype(np.int64)
-        sub = sub[idx]
-
-    rho = stats.spearmanr(sub, axis=0).statistic
-    rho_arr = np.atleast_2d(np.asarray(rho, dtype=np.float64))
-    if rho_arr.shape != (n, n):
-        rho_arr = np.array([[1.0, float(rho)], [float(rho), 1.0]])
-    abs_rho = np.abs(rho_arr)
-    np.fill_diagonal(abs_rho, np.nan)
+    for i in range(n):
+        xi = arrays[feature_cols[i]]
+        for j in range(i + 1, n):
+            xj = arrays[feature_cols[j]]
+            mask = ~np.isnan(xi) & ~np.isnan(xj)
+            if int(mask.sum()) < _PAIRWISE_MIN_N:
+                continue
+            left = xi[mask]
+            right = xj[mask]
+            sp_left, sp_right = _downsample_pair(left, right, _PAIRWISE_MAX_N)
+            rho = _safe(
+                lambda a, b: float(stats.spearmanr(a, b).statistic),
+                sp_left,
+                sp_right,
+            )
+            if rho is not None:
+                abs_rho[i, j] = abs_rho[j, i] = abs(float(rho))
+            mi_left, mi_right = _downsample_pair(left, right, _PAIRWISE_MI_MAX_N)
+            mi = _pairwise_mi(mi_left, mi_right)
+            if mi is not None:
+                max_mi_values[i] = (
+                    mi if max_mi_values[i] is None else max(max_mi_values[i], mi)
+                )
+                max_mi_values[j] = (
+                    mi if max_mi_values[j] is None else max(max_mi_values[j], mi)
+                )
 
     max_sp: dict[str, object] = {}
     mean_sp: dict[str, object] = {}
     redundancy: dict[str, object] = {}
+    max_mi: dict[str, object] = {}
     for i, c in enumerate(feature_cols):
         row = abs_rho[i]
         valid = row[~np.isnan(row)]
@@ -223,29 +236,7 @@ def _pairwise_rows(
             max_sp[c] = mx
             mean_sp[c] = float(np.mean(valid))
             redundancy[c] = float(1.0 - mx)
-
-    if sub.shape[0] > _PAIRWISE_MI_MAX_N:
-        idx = np.linspace(0, sub.shape[0] - 1, _PAIRWISE_MI_MAX_N).astype(np.int64)
-        sub_mi = sub[idx]
-    else:
-        sub_mi = sub
-
-    max_mi: dict[str, object] = {}
-    for i in range(n):
-        best: float | None = None
-        xi = sub_mi[:, i:i + 1]
-        for j in range(n):
-            if i == j:
-                continue
-            try:
-                v = float(mutual_info_regression(xi, sub_mi[:, j], random_state=0)[0])
-            except Exception:
-                continue
-            if not np.isfinite(v):
-                continue
-            if best is None or v > best:
-                best = v
-        max_mi[feature_cols[i]] = best
+        max_mi[c] = max_mi_values[i]
 
     return [
         ("max_pairwise_spearman", max_sp),
@@ -253,6 +244,27 @@ def _pairwise_rows(
         ("redundancy_penalty", redundancy),
         ("max_pairwise_mi", max_mi),
     ]
+
+
+def _downsample_pair(
+    left: np.ndarray,
+    right: np.ndarray,
+    max_n: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    if left.size <= max_n:
+        return left, right
+    idx = np.linspace(0, left.size - 1, max_n).astype(np.int64)
+    return left[idx], right[idx]
+
+
+def _pairwise_mi(left: np.ndarray, right: np.ndarray) -> float | None:
+    try:
+        value = mutual_info_regression(
+            left.reshape(-1, 1), right, random_state=0
+        )[0]
+    except Exception:
+        return None
+    return float(value) if np.isfinite(value) else None
 
 
 def _drop_nan(arr: np.ndarray) -> np.ndarray:
@@ -409,9 +421,13 @@ def _mutual_info(x: np.ndarray, y: np.ndarray) -> float | None:
         idx = np.linspace(0, n - 1, _MI_MAX_N).astype(np.int64)
         x, y = x[idx], y[idx]
     try:
-        if np.unique(y).size <= 10:
+        values = np.unique(y)
+        if values.size < 2:
+            return 0.0
+        if values.size <= 10 and np.all(values == np.round(values)):
+            labels = np.unique(y, return_inverse=True)[1]
             mi = mutual_info_classif(
-                x.reshape(-1, 1), y.astype(int), random_state=0
+                x.reshape(-1, 1), labels, random_state=0
             )[0]
         else:
             mi = mutual_info_regression(x.reshape(-1, 1), y, random_state=0)[0]

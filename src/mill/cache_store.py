@@ -2,18 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 import polars as pl
 
-from frames import read_parquet, write_parquet
-
-
-def cache_root() -> Path:
-    override = os.environ.get("THE_LAB_CACHE_DIR")
-    return Path(override) if override else Path.home() / ".cache" / "the-lab"
+from .frames import read_parquet, write_parquet
+from .settings import cache_root
 
 
 def cache_path(label: str, criteria: dict[str, object]) -> Path:
@@ -43,14 +38,14 @@ def write_cache(
 ) -> Path:
     tmp = path.with_suffix(path.suffix + ".tmp")
     write_parquet(data, tmp)
-    os.replace(tmp, path)
-    manifest = {
+    tmp.replace(path)
+    metadata = {
         "wrote_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "criteria": criteria,
         "rows": data.height,
         "columns": data.columns,
     }
     path.with_suffix(".json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n"
     )
     return path

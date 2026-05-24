@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>time_bars</title>
+<title>Mill</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
@@ -268,6 +268,12 @@
   .icon-button:hover { color: var(--fg); }
   .icon-button:focus-visible { outline: none; color: var(--fg); }
   .icon-button.active { color: var(--accent); }
+  .icon-button:disabled {
+    color: var(--fg-3);
+    cursor: not-allowed;
+    opacity: var(--opacity-muted);
+  }
+  .icon-button:disabled:hover { color: var(--fg-3); }
   .cal-wrap { position: relative; display: inline-flex; align-items: center; }
   .date-popover {
     position: absolute;
@@ -560,6 +566,16 @@
     align-content: flex-start;
     gap: var(--s-2);
   }
+  .palette-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    margin-bottom: var(--s-4);
+  }
+  .palette-section-title {
+    color: var(--fg-2);
+    font: var(--text-label);
+  }
   .palette-item {
     display: inline-flex; align-items: center; gap: var(--s-2);
     padding: var(--s-1) var(--s-3);
@@ -801,7 +817,7 @@
   .row .cell.null { color: var(--fg-3); }
 
   /* ---- YML modal: three side-by-side YAML segments rendered by the same
-     gutter+highlight+buffer trio used in experiment_runner's manifest view. */
+     gutter+highlight+buffer trio used in experiment_runner's config view. */
   .yml-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
@@ -830,7 +846,7 @@
   .yml-copy:hover { color: var(--fg); }
   .yml-copy.copied { color: var(--accent); }
 
-  .manifest-editor {
+  .config-editor {
     flex: 1 1 auto;
     display: flex;
     background: var(--bg);
@@ -840,7 +856,7 @@
     position: relative;
     min-height: 0;
   }
-  .manifest-gutter {
+  .config-gutter {
     flex: 0 0 auto;
     padding: var(--s-3) var(--s-3);
     text-align: right;
@@ -853,13 +869,13 @@
     overflow: hidden;
     min-width: 3.5ch;
   }
-  .manifest-buffer-wrap {
+  .config-buffer-wrap {
     flex: 1 1 auto;
     position: relative;
     overflow: hidden;
   }
-  .manifest-buffer,
-  .manifest-highlight {
+  .config-buffer,
+  .config-highlight {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -875,15 +891,15 @@
     background: transparent;
     overflow: auto;
   }
-  .manifest-buffer {
+  .config-buffer {
     outline: none;
     resize: none;
     color: transparent;
     caret-color: var(--accent);
   }
-  .manifest-buffer:focus { outline: none; }
-  .manifest-buffer::selection { background: var(--highlight); color: var(--fg); }
-  .manifest-highlight { pointer-events: none; color: var(--syntax-base); }
+  .config-buffer:focus { outline: none; }
+  .config-buffer::selection { background: var(--highlight); color: var(--fg); }
+  .config-highlight { pointer-events: none; color: var(--syntax-base); }
 
   .tok-key     { color: var(--syntax-fg); }
   .tok-punc    { color: var(--syntax-dim); }
@@ -908,7 +924,7 @@
               <polyline points="7 3 7 8 15 8"/>
             </svg>
           </button>
-          <button class="icon-button" id="delete-button" type="button" title="Delete view">
+          <button class="icon-button" id="delete-button" type="button" title="Only saved views can be deleted" disabled>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -956,7 +972,7 @@
             <line x1="12" y1="13" x2="12" y2="19"/>
           </svg>
         </button>
-        <button class="icon-button" id="yml-button" type="button" title="YAML manifest">
+        <button class="icon-button" id="yml-button" type="button" title="YAML config">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
             <polyline points="14 3 14 9 20 9"/>
@@ -975,9 +991,9 @@
           </button>
           <div class="date-popover" id="date-popover" hidden>
             <div class="date-filter">
-              <input type="date" id="date-from" min="2024-01-01" max="2026-05-15">
+              <input type="date" id="date-from">
               <span class="sep">—</span>
-              <input type="date" id="date-to" min="2024-01-01" max="2026-05-15">
+              <input type="date" id="date-to">
               <div class="date-presets" id="date-presets">
                 <a data-preset="1d">1d</a>
                 <a data-preset="7d">7d</a>
@@ -1024,7 +1040,7 @@
   <div class="modal" id="col-modal">
     <div class="modal-panel">
       <div class="modal-head">
-        <span id="col-title">features</span>
+        <span id="col-title">columns</span>
         <button class="close" id="col-close" type="button">&times;</button>
       </div>
       <div class="modal-body" id="col-body"></div>
@@ -1053,11 +1069,11 @@
             <span class="yml-col-title">data_source</span>
             <button class="yml-copy" type="button" data-target="yml-buf-data_source">copy</button>
           </div>
-          <div class="manifest-editor">
-            <div class="manifest-gutter" aria-hidden="true"></div>
-            <div class="manifest-buffer-wrap">
-              <pre class="manifest-highlight" aria-hidden="true"></pre>
-              <textarea class="manifest-buffer" id="yml-buf-data_source" spellcheck="false"
+          <div class="config-editor">
+            <div class="config-gutter" aria-hidden="true"></div>
+            <div class="config-buffer-wrap">
+              <pre class="config-highlight" aria-hidden="true"></pre>
+              <textarea class="config-buffer" id="yml-buf-data_source" spellcheck="false"
                         autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
             </div>
           </div>
@@ -1067,11 +1083,11 @@
             <span class="yml-col-title">indicators / features</span>
             <button class="yml-copy" type="button" data-target="yml-buf-indicators_features">copy</button>
           </div>
-          <div class="manifest-editor">
-            <div class="manifest-gutter" aria-hidden="true"></div>
-            <div class="manifest-buffer-wrap">
-              <pre class="manifest-highlight" aria-hidden="true"></pre>
-              <textarea class="manifest-buffer" id="yml-buf-indicators_features" spellcheck="false"
+          <div class="config-editor">
+            <div class="config-gutter" aria-hidden="true"></div>
+            <div class="config-buffer-wrap">
+              <pre class="config-highlight" aria-hidden="true"></pre>
+              <textarea class="config-buffer" id="yml-buf-indicators_features" spellcheck="false"
                         autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
             </div>
           </div>
@@ -1081,11 +1097,11 @@
             <span class="yml-col-title">target</span>
             <button class="yml-copy" type="button" data-target="yml-buf-target">copy</button>
           </div>
-          <div class="manifest-editor">
-            <div class="manifest-gutter" aria-hidden="true"></div>
-            <div class="manifest-buffer-wrap">
-              <pre class="manifest-highlight" aria-hidden="true"></pre>
-              <textarea class="manifest-buffer" id="yml-buf-target" spellcheck="false"
+          <div class="config-editor">
+            <div class="config-gutter" aria-hidden="true"></div>
+            <div class="config-buffer-wrap">
+              <pre class="config-highlight" aria-hidden="true"></pre>
+              <textarea class="config-buffer" id="yml-buf-target" spellcheck="false"
                         autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" readonly></textarea>
             </div>
           </div>
@@ -1116,7 +1132,7 @@ const barsSelect = document.getElementById("bars-select");
 const viewSelect = document.getElementById("view-select");
 const targetSelect = document.getElementById("target-select");
 
-let manifest = null;
+let appConfig = null;
 let allColumns = [], allRows = [];
 let originalAllRows = [];
 let filteredAllRows = [];
@@ -1139,6 +1155,7 @@ let activeSpec = [];
 let factories = [];
 let factoriesByName = new Map();
 let factoryTags = {};
+let savedViews = new Set();
 let refetchTimer = null;
 let hoverCol = -1;
 
@@ -1156,14 +1173,17 @@ async function persistTags(factory, raw) {
   const dedup = [];
   const seen = new Set();
   for (const t of parsed) if (!seen.has(t)) { seen.add(t); dedup.push(t); }
-  factoryTags[factory] = dedup;
   try {
-    await fetch("/save_tags", {
+    const res = await fetch("/save_tags", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({factory, tags: dedup}),
     });
-  } catch {}
+    if (!res.ok) throw new Error(await res.text());
+    factoryTags[factory] = dedup;
+  } catch (e) {
+    console.error("tag save failed", e);
+  }
 }
 
 function scheduleTagSave(factory, value) {
@@ -1415,6 +1435,7 @@ async function load() {
   const seq = ++_loadSeq;
   const bars = barsSelect.value;
   const target = targetSelect.value;
+  refreshYmlIfOpen();
   meta.textContent = "loading…";
   const url = `/data?bars=${encodeURIComponent(bars)}`
     + `&target=${encodeURIComponent(target)}`
@@ -1462,6 +1483,7 @@ async function load() {
 }
 
 function scheduleRefetch() {
+  refreshYmlIfOpen();
   clearTimeout(refetchTimer);
   refetchTimer = setTimeout(load, 300);
 }
@@ -1695,6 +1717,8 @@ function applyAfterRowChange() {
   applyRowGrouping();
   computeColStats();
   applyVisibility();
+  refreshQcIfOpen();
+  refreshYmlIfOpen();
 }
 
 function applyAfterDateChange() {
@@ -1703,6 +1727,7 @@ function applyAfterDateChange() {
   computeColStats();
   applyVisibility();
   refreshQcIfOpen();
+  refreshYmlIfOpen();
 }
 
 function fillSelect(el, values) {
@@ -1713,6 +1738,24 @@ function fillSelect(el, values) {
     opt.textContent = v;
     el.appendChild(opt);
   }
+}
+
+function syncAppConfigState() {
+  factories = (appConfig.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  factoriesByName = new Map(factories.map(f => [f.name, f]));
+  factoryTags = appConfig.factory_tags || {};
+  savedViews = new Set(appConfig.saved_views || []);
+}
+
+async function fetchAppConfig() {
+  appConfig = await (await fetch("/app-config")).json();
+  syncAppConfigState();
+}
+
+function updateDeleteButton() {
+  const canDelete = savedViews.has(viewSelect.value);
+  deleteButton.disabled = !canDelete;
+  deleteButton.title = canDelete ? "Delete saved view" : "Only saved views can be deleted";
 }
 
 const qcModal = document.getElementById("qc-modal");
@@ -1929,6 +1972,10 @@ function closeYml() { closeAllOverlays(); }
 let _qcAbort = null;
 let refreshYml = () => {};
 
+function refreshYmlIfOpen() {
+  if (_openOverlay === "yml") refreshYml();
+}
+
 function setQcStatus(text) {
   const div = document.createElement("div");
   div.className = "qc-status";
@@ -1942,7 +1989,7 @@ async function runQc() {
   _qcAbort = ctrl;
   const bars = barsSelect.value;
   const target = targetSelect.value;
-  const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== currentTarget);
+  const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== target);
   const cols = colsForQc.join(",");
   qcTitle.textContent = `qc · ${bars} · ${target}`;
   setQcStatus("running quality control…");
@@ -1954,6 +2001,8 @@ async function runQc() {
       + `&cols=${encodeURIComponent(cols)}`
       + `&from=${encodeURIComponent(dateFrom)}`
       + `&to=${encodeURIComponent(dateTo)}`
+      + `&row_mode=${encodeURIComponent(rowMode)}`
+      + `&cut_n=${encodeURIComponent(cutN)}`
       + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) {
@@ -2027,16 +2076,19 @@ function closeQc() { closeAllOverlays(); }
 
 function syncViewOptions() {
   const bar = barsSelect.value;
-  const viewBars = manifest.view_bars || {};
+  const viewBars = appConfig.view_bars || {};
+  const before = viewSelect.value;
   for (const opt of viewSelect.options) {
     const allowed = viewBars[opt.value] || [];
     opt.disabled = !allowed.includes(bar);
   }
-  if (viewSelect.options[viewSelect.selectedIndex].disabled) {
+  if (viewSelect.selectedIndex >= 0 && viewSelect.options[viewSelect.selectedIndex].disabled) {
     for (const opt of viewSelect.options) {
       if (!opt.disabled) { viewSelect.value = opt.value; break; }
     }
   }
+  updateDeleteButton();
+  return viewSelect.value !== before;
 }
 
 const colButton = document.getElementById("col-button");
@@ -2066,10 +2118,11 @@ function defaultParamsFor(name) {
 let openChipIdx = -1;
 let _paletteSearch = "";
 
-function _paletteItemVisible(name) {
+function _paletteItemVisible(row) {
   const activeNames = new Set(activeFactories.map(g => g.factory));
+  const name = row.dataset.factory;
   if (activeNames.has(name)) return false;
-  if (_paletteSearch && !name.includes(_paletteSearch)) return false;
+  if (_paletteSearch && !(row.dataset.search || "").includes(_paletteSearch)) return false;
   return true;
 }
 
@@ -2077,7 +2130,11 @@ function syncPaletteVisibility() {
   const wrapper = colBody.querySelector(".features-builder");
   if (!wrapper) return;
   for (const row of wrapper.querySelectorAll(".palette-item")) {
-    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
+    row.style.display = _paletteItemVisible(row) ? "" : "none";
+  }
+  for (const section of wrapper.querySelectorAll(".palette-section")) {
+    section.hidden = !Array.from(section.querySelectorAll(".palette-item"))
+      .some(row => row.style.display !== "none");
   }
 }
 
@@ -2086,34 +2143,50 @@ function buildPalette() {
   pane.className = "features-pane palette";
   const search = document.createElement("input");
   search.type = "text";
-  search.placeholder = "factories";
+  search.placeholder = "raw signal / factories";
   search.className = "palette-search";
   search.spellcheck = false;
   search.autocomplete = "off";
   search.value = _paletteSearch;
   pane.appendChild(search);
-  const items = document.createElement("div");
-  items.className = "palette-items";
-  for (const f of factories) {
-    const row = document.createElement("div");
-    row.className = "palette-item";
-    row.draggable = true;
-    row.dataset.factory = f.name;
-    row.dataset.name = f.name.toLowerCase();
-    row.textContent = f.name;
-    row.style.display = _paletteItemVisible(row.dataset.name) ? "" : "none";
-    row.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("text/factory", f.name);
-      e.dataTransfer.effectAllowed = "copy";
-    });
-    row.addEventListener("click", () => addFactory(f.name));
-    items.appendChild(row);
+  const groups = [
+    ["raw", "raw signal", f => f.source === "raw"],
+    ["factory", "factories", f => f.source !== "raw"],
+  ];
+  for (const [_key, label, include] of groups) {
+    const entries = factories.filter(include);
+    if (entries.length === 0) continue;
+    const section = document.createElement("div");
+    section.className = "palette-section";
+    const title = document.createElement("div");
+    title.className = "palette-section-title";
+    title.textContent = label;
+    section.appendChild(title);
+    const items = document.createElement("div");
+    items.className = "palette-items";
+    for (const f of entries) {
+      const row = document.createElement("div");
+      row.className = "palette-item";
+      row.draggable = true;
+      row.dataset.factory = f.name;
+      row.dataset.search = `${f.name} ${f.source} ${label}`.toLowerCase();
+      row.textContent = f.name;
+      row.style.display = _paletteItemVisible(row) ? "" : "none";
+      row.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("text/factory", f.name);
+        e.dataTransfer.effectAllowed = "copy";
+      });
+      row.addEventListener("click", () => addFactory(f.name));
+      items.appendChild(row);
+    }
+    section.appendChild(items);
+    pane.appendChild(section);
   }
   search.addEventListener("input", () => {
     _paletteSearch = search.value.trim().toLowerCase();
     syncPaletteVisibility();
   });
-  pane.appendChild(items);
+  syncPaletteVisibility();
   return pane;
 }
 
@@ -2123,7 +2196,7 @@ function buildActivePane() {
   pane.id = "features-active";
   const hdr = document.createElement("div");
   hdr.className = "features-pane-header";
-  hdr.textContent = "active set";
+  hdr.textContent = "active columns";
   pane.appendChild(hdr);
   const list = document.createElement("div");
   list.id = "features-active-list";
@@ -2220,7 +2293,7 @@ function renderActivePane() {
   if (activeFactories.length === 0) {
     const empty = document.createElement("div");
     empty.className = "active-empty";
-    empty.textContent = "drag factories from the left to compose your view";
+    empty.textContent = "drag raw signal or factories from the left";
     list.appendChild(empty);
     if (pane) pane.scrollTop = prevScroll;
     return;
@@ -2280,7 +2353,7 @@ function renderActivePane() {
     remove.className = "active-chip-remove";
     remove.type = "button";
     remove.textContent = "×";
-    remove.title = "remove factory";
+    remove.title = "remove column";
     remove.addEventListener("click", e => {
       e.stopPropagation();
       removeFactory(idx);
@@ -2313,8 +2386,8 @@ function renderActivePane() {
             inp.value = String(initial);
             inp.addEventListener("input", () => {
               const v = inp.value.trim();
-              if (!v) return;
-              ps[p.name] = v;
+              if (v) ps[p.name] = v;
+              else delete ps[p.name];
               summary.textContent = chipSummary(g);
               rebuildActiveSpec();
               scheduleRefetch();
@@ -2335,7 +2408,13 @@ function renderActivePane() {
             inp.value = String(initial);
             inp.addEventListener("input", () => {
               let v = p.type === "int" ? parseInt(inp.value, 10) : parseFloat(inp.value);
-              if (!Number.isFinite(v)) return;
+              if (!Number.isFinite(v)) {
+                delete ps[p.name];
+                summary.textContent = chipSummary(g);
+                rebuildActiveSpec();
+                scheduleRefetch();
+                return;
+              }
               if (p.min !== undefined && v < p.min) v = p.min;
               ps[p.name] = v;
               summary.textContent = chipSummary(g);
@@ -2403,6 +2482,7 @@ function openColModal() {
   wrapper.appendChild(buildPalette());
   wrapper.appendChild(buildActivePane());
   colBody.replaceChildren(wrapper);
+  syncPaletteVisibility();
   renderActivePane();
   colModal.classList.add("open");
 }
@@ -2414,7 +2494,7 @@ const deleteButton = document.getElementById("delete-button");
 
 async function saveView() {
   if (activeSpec.length === 0) {
-    alert("active set is empty; add at least one feature first");
+    alert("active set is empty; add at least one column first");
     return;
   }
   const name = (prompt("save view as:") || "").trim().toLowerCase();
@@ -2429,11 +2509,8 @@ async function saveView() {
     alert(`save failed: ${body.msg || res.statusText}`);
     return;
   }
-  manifest = await (await fetch("/manifest")).json();
-  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
-  factoriesByName = new Map(factories.map(f => [f.name, f]));
-  factoryTags = manifest.factory_tags || {};
-  fillSelect(viewSelect, manifest.views);
+  await fetchAppConfig();
+  fillSelect(viewSelect, appConfig.views);
   viewSelect.value = name;
   syncViewOptions();
 }
@@ -2441,6 +2518,7 @@ async function saveView() {
 async function deleteView() {
   const name = viewSelect.value;
   if (!name) return;
+  if (!savedViews.has(name)) return;
   if (!confirm(`Delete view "${name}"? This cannot be undone.`)) return;
   const res = await fetch("/delete_view", {
     method: "POST",
@@ -2452,8 +2530,8 @@ async function deleteView() {
     alert(`delete failed: ${body.msg || res.statusText}`);
     return;
   }
-  manifest = await (await fetch("/manifest")).json();
-  fillSelect(viewSelect, manifest.views);
+  await fetchAppConfig();
+  fillSelect(viewSelect, appConfig.views);
   syncViewOptions();
   loadSpecFromView(viewSelect.value);
   load();
@@ -2560,31 +2638,32 @@ function openRowModal() {
 function closeRow() { closeAllOverlays(); }
 
 function loadSpecFromView(name) {
-  const preset = (manifest.view_specs || {})[name] || [];
+  const preset = (appConfig.view_specs || {})[name] || [];
   const groups = new Map();
   for (const item of preset) {
     if (!groups.has(item.factory)) groups.set(item.factory, []);
-    groups.get(item.factory).push(item.params ? { ...item.params } : {});
+    groups.get(item.factory).push({
+      ...defaultParamsFor(item.factory),
+      ...(item.params || {}),
+    });
   }
   activeFactories = Array.from(groups, ([factory, paramSets]) => ({ factory, paramSets }));
   rebuildActiveSpec();
   openChipIdx = -1;
-  const tgt = (manifest.view_targets || {})[name];
+  const tgt = (appConfig.view_targets || {})[name];
   if (tgt && Array.from(targetSelect.options).some(o => o.value === tgt)) {
     targetSelect.value = tgt;
   }
   if (colModal.classList.contains("open")) refreshFeaturesModal();
+  refreshYmlIfOpen();
 }
 
 async function init() {
-  manifest = await (await fetch("/manifest")).json();
-  factories = (manifest.factories || []).slice().sort((a, b) => a.name.localeCompare(b.name));
-  factoriesByName = new Map(factories.map(f => [f.name, f]));
-  factoryTags = manifest.factory_tags || {};
-  fillSelect(barsSelect, manifest.bars);
-  fillSelect(viewSelect, manifest.views);
-  fillSelect(targetSelect, manifest.targets);
-  barsSelect.value = "1h_time_bars";
+  await fetchAppConfig();
+  fillSelect(barsSelect, appConfig.bars);
+  fillSelect(viewSelect, appConfig.views);
+  fillSelect(targetSelect, appConfig.targets);
+  barsSelect.value = appConfig.default_bar || appConfig.bars[0] || "";
   targetSelect.value = "none";
   syncViewOptions();
   loadSpecFromView(viewSelect.value);
@@ -2592,11 +2671,13 @@ async function init() {
     if (isDollarBar(barsSelect.value) && TIME_PERIOD_MODES.has(rowMode)) {
       rowMode = "bar";
     }
-    syncViewOptions();
+    const viewChanged = syncViewOptions();
+    if (viewChanged) loadSpecFromView(viewSelect.value);
     load();
   });
   viewSelect.addEventListener("change", () => {
     loadSpecFromView(viewSelect.value);
+    updateDeleteButton();
     load();
   });
   targetSelect.addEventListener("change", load);
@@ -2641,7 +2722,16 @@ async function init() {
   const dateFromInput = document.getElementById("date-from");
   const dateToInput = document.getElementById("date-to");
   const datePresets = document.getElementById("date-presets");
-  const DATA_END = "2026-05-15";
+  const dataWindow = appConfig.data_window || {};
+  if (dataWindow.start) {
+    dateFromInput.min = dataWindow.start;
+    dateToInput.min = dataWindow.start;
+  }
+  if (dataWindow.end) {
+    dateFromInput.max = dataWindow.end;
+    dateToInput.max = dataWindow.end;
+  }
+  const DATA_END = dataWindow.end || dateToInput.max;
   const PRESET_DAYS = { "1d": 1, "7d": 7, "1m": 30, "3m": 90, "1y": 365 };
   function shiftDate(s, days) {
     const d = new Date(s + "T00:00:00Z");
@@ -2702,7 +2792,7 @@ async function init() {
 }
 
 /* ---- YML modal — three side-by-side YAML segments mirroring
-   experiment_runner's manifest editor. Highlighter is a per-line
+   experiment_runner's config editor. Highlighter is a per-line
    single-pass YAML tokenizer (no cross-line state). ---- */
 (() => {
   const YAML_KEYWORDS = new Set(["true", "false", "null", "yes", "no"]);
@@ -2754,9 +2844,9 @@ async function init() {
   function highlight(text) { return text.split("\n").map(highlightLine).join("\n"); }
 
   function attachEditor(root) {
-    const buffer = root.querySelector(".manifest-buffer");
-    const pre = root.querySelector(".manifest-highlight");
-    const gutter = root.querySelector(".manifest-gutter");
+    const buffer = root.querySelector(".config-buffer");
+    const pre = root.querySelector(".config-highlight");
+    const gutter = root.querySelector(".config-gutter");
     if (!buffer || !pre) return;
     function paint() {
       pre.innerHTML = highlight(buffer.value) + "\u200B";
@@ -2797,12 +2887,27 @@ async function init() {
 
   function emitDataSource() {
     const bar = barsSelect.value;
-    const src = manifest && manifest.bar_data_sources && manifest.bar_data_sources[bar];
+    const src = appConfig && appConfig.bar_data_sources && appConfig.bar_data_sources[bar];
     if (!src) return "data_source: ~";
     const params = { ...(src.params || {}) };
-    if (dateFrom) params.start_date_limit = dateFrom;
-    if (dateTo)   params.end_date_limit   = dateTo;
-    return `data_source:\n  method: ${src.method}\n  params:${emitParams(params, 4)}`;
+    let out = `data_source:\n  method: ${src.method}\n  params:${emitParams(params, 4)}`;
+    const view = {};
+    if (dateFrom) view.start_date = dateFrom;
+    if (dateTo) view.end_date = dateTo;
+    if (rowMode !== "bar") view.row_mode = rowMode;
+    if (rowMode === "cut") view.cut_n = cutN;
+    if (Object.keys(view).length) out += `\n\nview_filter:${emitParams(view, 2)}`;
+    return out;
+  }
+
+  function emitRawSignals() {
+    const items = activeSpec
+      .filter(s => {
+        const m = factoriesByName.get(s.factory);
+        return m && m.source === "raw";
+      });
+    if (!items.length) return "raw_signal: []";
+    return "raw_signal:" + items.map(it => `\n  - column: ${it.factory}`).join("");
   }
 
   function emitFuncList(label, source) {
@@ -2825,14 +2930,15 @@ async function init() {
   }
 
   function emitIndicatorsFeatures() {
-    return emitFuncList("indicators", "limen.indicators") + "\n\n" +
+    return emitRawSignals() + "\n\n" +
+           emitFuncList("indicators", "limen.indicators") + "\n\n" +
            emitFuncList("features",   "limen.features");
   }
 
   function emitTarget() {
-    const t = currentTarget;
+    const t = targetSelect.value;
     if (!t || t === "none") return "target: ~";
-    const cls = manifest && manifest.target_classes && manifest.target_classes[t];
+    const cls = appConfig && appConfig.target_classes && appConfig.target_classes[t];
     if (!cls) return `target:\n  name: ${t}`;
     let out = `target:\n  name: ${t}\n  class: ${cls.class}`;
     const keys = Object.keys(cls.params || {});
@@ -2854,7 +2960,7 @@ async function init() {
   }
   refreshYml = refresh;
 
-  document.querySelectorAll("#yml-modal .manifest-editor").forEach(attachEditor);
+  document.querySelectorAll("#yml-modal .config-editor").forEach(attachEditor);
   document.querySelectorAll(".yml-copy").forEach(btn => {
     btn.addEventListener("click", async () => {
       const tgt = document.getElementById(btn.dataset.target);

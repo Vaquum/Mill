@@ -87,7 +87,7 @@ Default: `color: var(--fg)` on `html, body`. Icons/controls idle at `--fg-2`, ho
 --syntax-muted: var(--fg-1);
 ```
 
-YAML/JSON/manifest blocks use **grey ramp only** — no lavender/coral/yellow/pink in code.
+YAML/JSON/config blocks use **grey ramp only** — no lavender/coral/yellow/pink in code.
 
 ### QC grades (dot system)
 
@@ -162,7 +162,7 @@ No bare `font-weight`, `font-size`, or `line-height` in rules.
 | `.t-ui` | `--text-ui` | sans — controls, selects, chrome |
 | `.t-label` | `--text-label` + uppercase + `--track-label` | sans — section headers, column headers, actions |
 | `.t-data` | `--text-data` + `tabular-nums` | mono — grid values, dates, numeric inputs, stats |
-| `.t-code` | `--text-code` + `tabular-nums slashed-zero` | mono — YAML/JSON/manifest blocks |
+| `.t-code` | `--text-code` + `tabular-nums slashed-zero` | mono — YAML/JSON/config blocks |
 | `.t-icon` | `--text-icon` | sans — ×, ▲, ▼, ▶ glyphs |
 
 Emphasis inside data (e.g. bold counts): `--text-data-em`, still mono.
@@ -325,6 +325,6 @@ html, body {
 - [ ] No direct `--c-*` in rules
 - [ ] Hover/selection uses `--highlight`, not `--border`
 - [ ] Only data cells get `--pos` / `--neg`
-- [ ] Code/manifest uses `--syntax-*` only
+- [ ] Code/config uses `--syntax-*` only
 - [ ] QC and main grid share `--row-h` and cell padding
 - [ ] No bare `px` / `font-size` / `line-height` in component rules

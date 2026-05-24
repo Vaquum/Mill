@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Mill"
+version = "0.1.0"
+description = "Raw signal and feature workbench."
+requires-python = ">=3.12"
+dependencies = [
+    "numba",
+    "numpy",
+    "polars",
+    "scikit-learn",
+    "scipy",
+    "statsmodels",
+]
+
+[project.scripts]
+mill = "mill.serve:main"
+mill-qc = "mill.run_qc:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mill = ["assets/*.html", "py.typed"]

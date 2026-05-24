@@ -77,7 +77,7 @@ def _limen_param_specs(fn: Callable[..., Any]) -> tuple[dict[str, Any], ...]:
     for p in sig.parameters.values():
         if p.name in {"data", "df"}:
             continue
-        if p.name == "output_col" or p.name.endswith("_col"):
+        if p.name == "output_col":
             continue
         type_ = _param_type(p)
         if type_ is None:
@@ -123,7 +123,13 @@ def producer_for(factory_name: str) -> Producer:
     return REGISTRY[factory_name]["producer"]
 
 
-def manifest() -> list[dict[str, Any]]:
+def params_for(factory_name: str) -> tuple[dict[str, Any], ...]:
+    if factory_name not in REGISTRY:
+        raise ValueError(f"Unknown factory: {factory_name!r}.")
+    return REGISTRY[factory_name]["params"]
+
+
+def catalog() -> list[dict[str, Any]]:
     return [
         {
             "name": name,

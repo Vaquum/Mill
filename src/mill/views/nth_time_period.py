@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import polars as pl
 
-from bars import TIME_BAR_SECONDS
-from table import build_from_spec
+from ..bars import TIME_BAR_SECONDS
+from ..table import build_from_spec
 
 NAME = "nth_time_period"
 BARS = tuple(TIME_BAR_SECONDS)
