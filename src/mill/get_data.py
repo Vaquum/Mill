@@ -38,7 +38,7 @@ def _bounded_dates(
         raise ValueError(f"end_date_limit cannot be after {PROJECT_END_STR}.")
     if start > end:
         raise ValueError("start_date_limit cannot be after end_date_limit.")
-    return start_date_limit or PROJECT_START_STR, end_date_limit or PROJECT_END_STR
+    return start.isoformat(), end.isoformat()
 
 
 def _project_window(data: pl.DataFrame) -> pl.DataFrame:

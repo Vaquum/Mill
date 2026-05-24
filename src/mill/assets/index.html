@@ -2386,7 +2386,8 @@ function renderActivePane() {
             inp.value = String(initial);
             inp.addEventListener("input", () => {
               const v = inp.value.trim();
-              ps[p.name] = v;
+              if (v) ps[p.name] = v;
+              else delete ps[p.name];
               summary.textContent = chipSummary(g);
               rebuildActiveSpec();
               scheduleRefetch();
@@ -2408,7 +2409,7 @@ function renderActivePane() {
             inp.addEventListener("input", () => {
               let v = p.type === "int" ? parseInt(inp.value, 10) : parseFloat(inp.value);
               if (!Number.isFinite(v)) {
-                ps[p.name] = null;
+                delete ps[p.name];
                 summary.textContent = chipSummary(g);
                 rebuildActiveSpec();
                 scheduleRefetch();
