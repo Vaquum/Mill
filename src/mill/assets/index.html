@@ -1166,14 +1166,17 @@ async function persistTags(factory, raw) {
   const dedup = [];
   const seen = new Set();
   for (const t of parsed) if (!seen.has(t)) { seen.add(t); dedup.push(t); }
-  factoryTags[factory] = dedup;
   try {
-    await fetch("/save_tags", {
+    const res = await fetch("/save_tags", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({factory, tags: dedup}),
     });
-  } catch {}
+    if (!res.ok) throw new Error(await res.text());
+    factoryTags[factory] = dedup;
+  } catch (e) {
+    console.error("tag save failed", e);
+  }
 }
 
 function scheduleTagSave(factory, value) {
@@ -1425,6 +1428,7 @@ async function load() {
   const seq = ++_loadSeq;
   const bars = barsSelect.value;
   const target = targetSelect.value;
+  refreshYmlIfOpen();
   meta.textContent = "loading…";
   const url = `/data?bars=${encodeURIComponent(bars)}`
     + `&target=${encodeURIComponent(target)}`
@@ -1472,6 +1476,7 @@ async function load() {
 }
 
 function scheduleRefetch() {
+  refreshYmlIfOpen();
   clearTimeout(refetchTimer);
   refetchTimer = setTimeout(load, 300);
 }
@@ -1705,6 +1710,8 @@ function applyAfterRowChange() {
   applyRowGrouping();
   computeColStats();
   applyVisibility();
+  refreshQcIfOpen();
+  refreshYmlIfOpen();
 }
 
 function applyAfterDateChange() {
@@ -1713,6 +1720,7 @@ function applyAfterDateChange() {
   computeColStats();
   applyVisibility();
   refreshQcIfOpen();
+  refreshYmlIfOpen();
 }
 
 function fillSelect(el, values) {
@@ -1939,6 +1947,10 @@ function closeYml() { closeAllOverlays(); }
 let _qcAbort = null;
 let refreshYml = () => {};
 
+function refreshYmlIfOpen() {
+  if (_openOverlay === "yml") refreshYml();
+}
+
 function setQcStatus(text) {
   const div = document.createElement("div");
   div.className = "qc-status";
@@ -1952,7 +1964,7 @@ async function runQc() {
   _qcAbort = ctrl;
   const bars = barsSelect.value;
   const target = targetSelect.value;
-  const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== currentTarget);
+  const colsForQc = visibleColumns.filter(c => !isTimeColumn(c) && c !== target);
   const cols = colsForQc.join(",");
   qcTitle.textContent = `qc · ${bars} · ${target}`;
   setQcStatus("running quality control…");
@@ -1964,6 +1976,8 @@ async function runQc() {
       + `&cols=${encodeURIComponent(cols)}`
       + `&from=${encodeURIComponent(dateFrom)}`
       + `&to=${encodeURIComponent(dateTo)}`
+      + `&row_mode=${encodeURIComponent(rowMode)}`
+      + `&cut_n=${encodeURIComponent(cutN)}`
       + `&features=${encodeURIComponent(JSON.stringify(activeSpec))}`;
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) {
@@ -2038,15 +2052,17 @@ function closeQc() { closeAllOverlays(); }
 function syncViewOptions() {
   const bar = barsSelect.value;
   const viewBars = appConfig.view_bars || {};
+  const before = viewSelect.value;
   for (const opt of viewSelect.options) {
     const allowed = viewBars[opt.value] || [];
     opt.disabled = !allowed.includes(bar);
   }
-  if (viewSelect.options[viewSelect.selectedIndex].disabled) {
+  if (viewSelect.selectedIndex >= 0 && viewSelect.options[viewSelect.selectedIndex].disabled) {
     for (const opt of viewSelect.options) {
       if (!opt.disabled) { viewSelect.value = opt.value; break; }
     }
   }
+  return viewSelect.value !== before;
 }
 
 const colButton = document.getElementById("col-button");
@@ -2344,7 +2360,6 @@ function renderActivePane() {
             inp.value = String(initial);
             inp.addEventListener("input", () => {
               const v = inp.value.trim();
-              if (!v) return;
               ps[p.name] = v;
               summary.textContent = chipSummary(g);
               rebuildActiveSpec();
@@ -2366,7 +2381,13 @@ function renderActivePane() {
             inp.value = String(initial);
             inp.addEventListener("input", () => {
               let v = p.type === "int" ? parseInt(inp.value, 10) : parseFloat(inp.value);
-              if (!Number.isFinite(v)) return;
+              if (!Number.isFinite(v)) {
+                ps[p.name] = null;
+                summary.textContent = chipSummary(g);
+                rebuildActiveSpec();
+                scheduleRefetch();
+                return;
+              }
               if (p.min !== undefined && v < p.min) v = p.min;
               ps[p.name] = v;
               summary.textContent = chipSummary(g);
@@ -2596,7 +2617,10 @@ function loadSpecFromView(name) {
   const groups = new Map();
   for (const item of preset) {
     if (!groups.has(item.factory)) groups.set(item.factory, []);
-    groups.get(item.factory).push(item.params ? { ...item.params } : {});
+    groups.get(item.factory).push({
+      ...defaultParamsFor(item.factory),
+      ...(item.params || {}),
+    });
   }
   activeFactories = Array.from(groups, ([factory, paramSets]) => ({ factory, paramSets }));
   rebuildActiveSpec();
@@ -2606,6 +2630,7 @@ function loadSpecFromView(name) {
     targetSelect.value = tgt;
   }
   if (colModal.classList.contains("open")) refreshFeaturesModal();
+  refreshYmlIfOpen();
 }
 
 async function init() {
@@ -2624,7 +2649,8 @@ async function init() {
     if (isDollarBar(barsSelect.value) && TIME_PERIOD_MODES.has(rowMode)) {
       rowMode = "bar";
     }
-    syncViewOptions();
+    const viewChanged = syncViewOptions();
+    if (viewChanged) loadSpecFromView(viewSelect.value);
     load();
   });
   viewSelect.addEventListener("change", () => {
@@ -2841,9 +2867,24 @@ async function init() {
     const src = appConfig && appConfig.bar_data_sources && appConfig.bar_data_sources[bar];
     if (!src) return "data_source: ~";
     const params = { ...(src.params || {}) };
-    if (dateFrom) params.start_date_limit = dateFrom;
-    if (dateTo)   params.end_date_limit   = dateTo;
-    return `data_source:\n  method: ${src.method}\n  params:${emitParams(params, 4)}`;
+    let out = `data_source:\n  method: ${src.method}\n  params:${emitParams(params, 4)}`;
+    const view = {};
+    if (dateFrom) view.start_date = dateFrom;
+    if (dateTo) view.end_date = dateTo;
+    if (rowMode !== "bar") view.row_mode = rowMode;
+    if (rowMode === "cut") view.cut_n = cutN;
+    if (Object.keys(view).length) out += `\n\nview_filter:${emitParams(view, 2)}`;
+    return out;
+  }
+
+  function emitRawSignals() {
+    const items = activeSpec
+      .filter(s => {
+        const m = factoriesByName.get(s.factory);
+        return m && m.source === "raw";
+      });
+    if (!items.length) return "raw_signal: []";
+    return "raw_signal:" + items.map(it => `\n  - column: ${it.factory}`).join("");
   }
 
   function emitFuncList(label, source) {
@@ -2866,12 +2907,13 @@ async function init() {
   }
 
   function emitIndicatorsFeatures() {
-    return emitFuncList("indicators", "limen.indicators") + "\n\n" +
+    return emitRawSignals() + "\n\n" +
+           emitFuncList("indicators", "limen.indicators") + "\n\n" +
            emitFuncList("features",   "limen.features");
   }
 
   function emitTarget() {
-    const t = currentTarget;
+    const t = targetSelect.value;
     if (!t || t === "none") return "target: ~";
     const cls = appConfig && appConfig.target_classes && appConfig.target_classes[t];
     if (!cls) return `target:\n  name: ${t}`;

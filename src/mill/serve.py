@@ -10,6 +10,7 @@ from importlib.resources import files
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+import numpy as np
 import polars as pl
 
 from . import feature_registry, grading, qc, targets
@@ -30,6 +31,12 @@ _INDEX = files("mill").joinpath("assets", "index.html")
 _TAGS_PATH = config_root() / "feature_tags.json"
 _SAVED_VIEWS_PATH = config_root() / "views.json"
 _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+_ROW_MODES = {
+    "bar", "all", "day", "week", "month", "quarter", "year",
+    "dow", "dom", "woy", "cut", "quantile", "decile",
+}
+_STAT_ROW_MODES = {"cut", "quantile", "decile"}
+_QUANTILE_PCTS = (0.01, 5, 25, 50, 75, 95, 99.9)
 
 _BARS = tuple(TIME_BAR_SECONDS) + tuple(DOLLAR_BAR_USD)
 _TARGETS = ("none", *targets.NAMES)
@@ -65,7 +72,7 @@ _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 
 _PAYLOADS: dict[tuple[str, str, str], bytes] = {}
 _FRAMES: dict[tuple[str, str, str], pl.DataFrame] = {}
-_QC_CACHE: dict[tuple[str, str, str, tuple[str, ...], str, str], bytes] = {}
+_QC_CACHE: dict[tuple[str, str, str, tuple[str, ...], str, str, str, str], bytes] = {}
 _RAW_CACHE: dict[str, pl.DataFrame] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
@@ -198,6 +205,161 @@ def _date_filter(df: pl.DataFrame, date_from: str, date_to: str) -> pl.DataFrame
     return df
 
 
+def _median_exprs(df: pl.DataFrame) -> list[pl.Expr]:
+    return [
+        pl.col(c).median().alias(c)
+        for c, dtype in df.schema.items()
+        if c not in {"datetime", "_bucket"} and dtype.is_numeric()
+    ]
+
+
+def _group_for_qc(
+    df: pl.DataFrame,
+    mode: str,
+    cut_n: int,
+    target: str | None,
+) -> pl.DataFrame:
+    if mode == "bar":
+        return df
+    exprs = _median_exprs(df)
+    if not exprs:
+        return df
+    if mode == "all":
+        return df.select(pl.lit("all").alias("datetime"), *exprs)
+    if mode in _STAT_ROW_MODES:
+        return _stat_group_for_qc(df, mode, cut_n, target)
+    bucket = _time_bucket(mode)
+    if bucket is None:
+        return df
+    return (
+        df.with_columns(bucket.alias("_bucket"))
+        .group_by("_bucket")
+        .agg(exprs)
+        .sort("_bucket")
+        .rename({"_bucket": "datetime"})
+    )
+
+
+def _time_bucket(mode: str) -> pl.Expr | None:
+    dt = pl.col("datetime")
+    if mode == "day":
+        return dt.dt.strftime("%Y-%m-%d")
+    if mode == "week":
+        return dt.dt.strftime("%G-W%V")
+    if mode == "month":
+        return dt.dt.strftime("%Y-%m")
+    if mode == "quarter":
+        return (
+            dt.dt.year().cast(pl.Utf8)
+            + "-Q"
+            + dt.dt.quarter().cast(pl.Utf8)
+        )
+    if mode == "year":
+        return dt.dt.year().cast(pl.Utf8)
+    if mode == "dow":
+        return dt.dt.weekday().cast(pl.Utf8)
+    if mode == "dom":
+        return dt.dt.day().cast(pl.Utf8).str.zfill(2)
+    if mode == "woy":
+        return dt.dt.week().cast(pl.Utf8).str.zfill(2)
+    return None
+
+
+def _stat_group_for_qc(
+    df: pl.DataFrame,
+    mode: str,
+    cut_n: int,
+    target: str | None,
+) -> pl.DataFrame:
+    anchor = target if target and target in df.columns else _first_value_col(df)
+    if anchor is None:
+        return df
+    values = df[anchor].cast(pl.Float64, strict=False).to_numpy()
+    finite = values[np.isfinite(values)]
+    if finite.size < 2:
+        return df.clear()
+    sorted_values = np.sort(finite)
+    cuts, labels = _stat_cuts(mode, sorted_values, cut_n)
+    if not labels:
+        return df.clear()
+    bucket, order = _bucket_labels(values, cuts, labels)
+    exprs = _median_exprs(df)
+    return (
+        df.with_columns(
+            pl.Series("_bucket", bucket),
+            pl.Series("_bucket_order", order),
+        )
+        .filter(pl.col("_bucket").is_not_null())
+        .group_by("_bucket_order", "_bucket")
+        .agg(exprs)
+        .sort("_bucket_order")
+        .drop("_bucket_order")
+        .rename({"_bucket": "datetime"})
+    )
+
+
+def _first_value_col(df: pl.DataFrame) -> str | None:
+    for c, dtype in df.schema.items():
+        if c != "datetime" and dtype.is_numeric():
+            return c
+    return None
+
+
+def _stat_cuts(
+    mode: str,
+    sorted_values: np.ndarray,
+    cut_n: int,
+) -> tuple[list[float], list[str]]:
+    if mode == "decile":
+        cuts = [
+            float(sorted_values[int(k * sorted_values.size / 10)])
+            for k in range(1, 10)
+        ]
+        labels = [f"d{i:02d}" for i in range(1, 11)]
+        return cuts, labels
+    if mode == "quantile":
+        centers = [
+            float(sorted_values[min(int(p * sorted_values.size / 100), sorted_values.size - 1)])
+            for p in _QUANTILE_PCTS
+        ]
+        cuts = [
+            (centers[i] + centers[i + 1]) / 2
+            for i in range(len(centers) - 1)
+        ]
+        labels = [f"p{p:g}" for p in _QUANTILE_PCTS]
+        return cuts, labels
+    n = max(2, int(cut_n))
+    low = float(sorted_values[0])
+    high = float(sorted_values[-1])
+    if low == high:
+        return [], []
+    width = (high - low) / n
+    cuts = [low + k * width for k in range(1, n)]
+    labels = [
+        f"[{low + i * width:.2f},{low + (i + 1) * width:.2f})"
+        for i in range(n)
+    ]
+    return cuts, labels
+
+
+def _bucket_labels(
+    values: np.ndarray,
+    cuts: list[float],
+    labels: list[str],
+) -> tuple[list[str | None], list[int | None]]:
+    bucket: list[str | None] = []
+    order: list[int | None] = []
+    for value in values:
+        if not np.isfinite(value):
+            bucket.append(None)
+            order.append(None)
+            continue
+        idx = int(np.searchsorted(cuts, value, side="right"))
+        bucket.append(labels[idx])
+        order.append(idx)
+    return bucket, order
+
+
 def _ensure(
     bar: str, target: str, spec: list[dict[str, Any]]
 ) -> tuple[bytes, pl.DataFrame]:
@@ -248,8 +410,40 @@ def _parse_features(q: dict[str, list[str]]) -> tuple[list[dict[str, Any]], str 
         params = item.get("params") or {}
         if not isinstance(params, dict):
             return [], "params must be an object"
+        err = _validate_params(factory, params)
+        if err is not None:
+            return [], err
         out.append({"factory": factory, "params": params})
     return out, None
+
+
+def _valid_param_value(value: object, type_: str) -> bool:
+    if type_ == "bool":
+        return isinstance(value, bool)
+    if type_ == "int":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if type_ == "float":
+        return (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and np.isfinite(float(value))
+        )
+    if type_ == "str":
+        return isinstance(value, str) and bool(value)
+    return False
+
+
+def _validate_params(factory: str, params: dict[str, object]) -> str | None:
+    specs = {
+        spec["name"]: spec["type"]
+        for spec in feature_registry.params_for(factory)
+    }
+    for name, value in params.items():
+        if name not in specs:
+            return f"unknown param for {factory}: {name!r}"
+        if not _valid_param_value(value, specs[name]):
+            return f"invalid {specs[name]} param for {factory}: {name!r}"
+    return None
 
 
 def _valid_spec(spec: list[Any]) -> bool:
@@ -259,6 +453,8 @@ def _valid_spec(spec: list[Any]) -> bool:
         factory = item.get("factory")
         params = item.get("params") or {}
         if factory not in feature_registry.REGISTRY or not isinstance(params, dict):
+            return False
+        if _validate_params(factory, params) is not None:
             return False
     return True
 
@@ -368,8 +564,19 @@ class _Handler(BaseHTTPRequestHandler):
             cols = tuple(c for c in cols_str.split(",") if c)
             date_from = q.get("from", [""])[0]
             date_to = q.get("to", [""])[0]
+            row_mode = q.get("row_mode", ["bar"])[0]
+            if row_mode not in _ROW_MODES:
+                self._send(400, "text/plain", b"bad row_mode")
+                return
+            try:
+                cut_n = max(2, int(q.get("cut_n", ["5"])[0]))
+            except ValueError:
+                self._send(400, "text/plain", b"bad cut_n")
+                return
             sh = _spec_hash(spec)
-            cache_key = (bar, target, sh, cols, date_from, date_to)
+            cache_key = (
+                bar, target, sh, cols, date_from, date_to, row_mode, str(cut_n)
+            )
             cached = _QC_CACHE.get(cache_key)
             if cached is not None:
                 self._send(200, "application/json", cached)
@@ -384,6 +591,12 @@ class _Handler(BaseHTTPRequestHandler):
                 else:
                     sub = frame
                 sub = _date_filter(sub, date_from, date_to)
+                sub = _group_for_qc(
+                    sub,
+                    row_mode,
+                    cut_n,
+                    target if target != "none" else None,
+                )
                 report = qc.report(sub, target if target != "none" else None)
                 report["grades"] = grading.grade_map(
                     report, target=target if target != "none" else None

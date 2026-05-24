@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 import polars as pl
 
 import limen.targets as _LT
@@ -21,6 +23,17 @@ _BINDINGS: dict[str, tuple[type, dict[str, object]]] = {
 NAMES: tuple[str, ...] = tuple(_BINDINGS)
 
 
+def _default_params(cls: type) -> dict[str, object]:
+    out: dict[str, object] = {}
+    for name, p in inspect.signature(cls.__init__).parameters.items():
+        if name in {"self", "train_data", "target_name"}:
+            continue
+        if p.default is inspect.Parameter.empty:
+            continue
+        out[name] = p.default
+    return out
+
+
 def apply(raw: pl.DataFrame, name: str) -> pl.DataFrame:
     if name not in _BINDINGS:
         raise ValueError(f"Unknown target: {name!r}.")
@@ -32,4 +45,6 @@ def binding(name: str) -> dict[str, object]:
     if name not in _BINDINGS:
         raise ValueError(f"Unknown target: {name!r}.")
     cls, kwargs = _BINDINGS[name]
-    return {"class": f"limen.targets.{cls.__name__}", "params": dict(kwargs)}
+    params = _default_params(cls)
+    params.update(kwargs)
+    return {"class": f"limen.targets.{cls.__name__}", "params": params}
