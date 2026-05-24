@@ -12,7 +12,9 @@ Disclosures:
    qc.report() output (qc.py emits an "n_unique" row and a top-level
    "n_rows" field). Caller may still override n_rows via parameter.
 
-2. Spearman CI grade: spec writes the B case as "CI off zero, OR (min(...)
+2. Spearman grade requires a finite Spearman value and finite CI. Missing CI
+   returns None rather than grading magnitude alone. For finite CI, the spec
+   writes the B case as "CI off zero, OR (min(...)
    >= 0.05) → B" which is internally redundant. I treat B as the default
    "not-F, not-D, not-A" case; the explicit A path checks tightness AND
    off-zero ≥ 0.10. The 0.05 boundary in the spec is not used as a hard
@@ -148,9 +150,11 @@ def _grade_spearman_ci(ci_low: Any, ci_high: Any) -> str | None:
 def grade_spearman(spearman: Any, ci_low: Any, ci_high: Any) -> str | None:
     if not _finite(spearman):
         return None
-    mag_grade = _apply_ladder(abs(float(spearman)), R.ABS_SPEARMAN_MAGNITUDE)
     ci_grade = _grade_spearman_ci(ci_low, ci_high)
-    if mag_grade is None and ci_grade is None:
+    if ci_grade is None:
+        return None
+    mag_grade = _apply_ladder(abs(float(spearman)), R.ABS_SPEARMAN_MAGNITUDE)
+    if mag_grade is None:
         return None
     return _grade_min(mag_grade, ci_grade)
 

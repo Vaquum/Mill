@@ -32,6 +32,10 @@ def _seed_for(label: str) -> int:
     return zlib.crc32(label.encode()) & 0xFFFFFFFF
 
 
+def _joint_block(blocks: dict[str, int | None], left: str, right: str) -> int:
+    return max(_resolve_block(blocks.get(left)), _resolve_block(blocks.get(right)))
+
+
 def report(df: pl.DataFrame, target: str | None) -> dict:
     if "datetime" in df.columns:
         df = df.sort("datetime")
@@ -113,7 +117,7 @@ def _edge_rows(
 
         spearman[col] = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
         lo, hi = _bootstrap_spearman_ci(
-            xc, yc, _resolve_block(blocks.get(col)), seed=_seed_for(col),
+            xc, yc, _joint_block(blocks, col, target_label), seed=_seed_for(col),
         )
         spear_lo[col] = lo
         spear_hi[col] = hi
@@ -409,9 +413,13 @@ def _mutual_info(x: np.ndarray, y: np.ndarray) -> float | None:
         idx = np.linspace(0, n - 1, _MI_MAX_N).astype(np.int64)
         x, y = x[idx], y[idx]
     try:
-        if np.unique(y).size <= 10:
+        values = np.unique(y)
+        if values.size < 2:
+            return 0.0
+        if values.size <= 10 and np.all(values == np.round(values)):
+            labels = np.unique(y, return_inverse=True)[1]
             mi = mutual_info_classif(
-                x.reshape(-1, 1), y.astype(int), random_state=0
+                x.reshape(-1, 1), labels, random_state=0
             )[0]
         else:
             mi = mutual_info_regression(x.reshape(-1, 1), y, random_state=0)[0]
