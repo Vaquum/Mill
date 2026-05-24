@@ -6,9 +6,9 @@ from typing import Any
 
 import polars as pl
 
-from bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
-from feature_registry import producer_for
-from get_data import GetData
+from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
+from .feature_registry import producer_for
+from .get_data import GetData
 
 _START = "2024-01-01"
 _END = "2026-05-15"

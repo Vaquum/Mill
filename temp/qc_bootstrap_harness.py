@@ -9,10 +9,10 @@ import numpy as np
 import polars as pl
 from scipy import stats
 
-import qc
-import views.gen4 as view
-from get_data import GetData
-from targets import apply as apply_target
+from mill import qc
+from mill.get_data import GetData
+from mill.targets import apply as apply_target
+from mill.views import gen4 as view
 
 _BOOTSTRAP_ITER = qc._BOOTSTRAP_ITER
 _BOOTSTRAP_MAX_N = qc._BOOTSTRAP_MAX_N

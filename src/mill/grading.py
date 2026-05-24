@@ -51,7 +51,7 @@ import math
 import re
 from typing import Any
 
-import grading_rules as R
+from . import grading_rules as R
 
 
 # ----- helpers ---------------------------------------------------------------

@@ -1,8 +1,8 @@
 import polars as pl
-import views.gen4 as view
-import qc
-from get_data import GetData
-from targets import apply as apply_target
+from . import qc
+from .get_data import GetData
+from .targets import apply as apply_target
+from .views import gen4 as view
 
 def main():
     print("Loading data...")

@@ -1,4 +1,5 @@
 - We only work between raw signal and features.
+- This project is Mill; the Python import namespace is `mill`.
 - We hold the codebase to high-frequency equity/fx market-making standards or higher.
 - Keep the codebase clean, minimal, honest, and clinical.
 - Prefer atomic composable functions over long workflow files.

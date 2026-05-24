@@ -12,13 +12,10 @@ from urllib.parse import parse_qs, urlsplit
 
 import polars as pl
 
-import feature_registry
-import grading
-import qc
-import targets
-from bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
-from table import build_from_spec, klines
-from views import ALL as VIEWS
+from . import feature_registry, grading, qc, targets
+from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
+from .table import build_from_spec, klines
+from .views import ALL as VIEWS
 
 _HOST = "127.0.0.1"
 _PORT = 8765
@@ -53,7 +50,7 @@ _VIEW_TEMPLATE = '''from __future__ import annotations
 
 import polars as pl
 
-from table import build_from_spec
+from ..table import build_from_spec
 
 NAME = {name!r}
 

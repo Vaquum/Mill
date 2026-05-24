@@ -8,12 +8,12 @@ from pathlib import Path
 
 import polars as pl
 
-from frames import read_parquet, write_parquet
+from .frames import read_parquet, write_parquet
 
 
 def cache_root() -> Path:
-    override = os.environ.get("THE_LAB_CACHE_DIR")
-    return Path(override) if override else Path.home() / ".cache" / "the-lab"
+    override = os.environ.get("MILL_CACHE_DIR")
+    return Path(override) if override else Path.home() / ".cache" / "mill"
 
 
 def cache_path(label: str, criteria: dict[str, object]) -> Path:
