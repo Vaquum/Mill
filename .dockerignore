@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+mill
+__pycache__
+*.pyc
+*.pyo
+.ruff_cache
+.mypy_cache
+.pytest_cache
+*.egg-info
+build
+dist
+.env
+.docker-data
+.DS_Store
+*.parquet

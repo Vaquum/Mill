@@ -3,8 +3,8 @@
 - We hold the codebase to high-frequency equity/fx market-making standards or higher.
 - Keep the codebase clean, minimal, honest, and clinical.
 - Prefer atomic composable functions over long workflow files.
-- Do all project work inside conda env `limen`.
-- You may install dependencies in `limen` when needed.
+- Do all project work inside venv `mill` and create one if not available.
+- You may install dependencies in `mill` when needed.
 - The only allowed data access path is `GetData`.
 - Use `GetData.get_time_bars` for time bars and `GetData.get_dollar_bars` for dollar bars.
 - Use `GetData.from_parquet` for local parquet files.

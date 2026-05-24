@@ -1,0 +1,173 @@
+name: Build And Deploy Mill
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-mill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DEPLOY_DIR: /opt/mill
+  PROJECT_NAME: mill
+  MILL_PORT: ${{ vars.MILL_PORT || '8765' }}
+  MILL_HOST_DATA_ROOT: ${{ vars.MILL_HOST_DATA_ROOT || '/data/experiments' }}
+
+jobs:
+  build:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute lowercased image path
+        id: meta
+        run: |
+          set -euo pipefail
+          image_lc="${REGISTRY}/$(echo "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
+          echo "image=${image_lc}" >> "$GITHUB_OUTPUT"
+          echo "resolved image: ${image_lc}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+          tags: |
+            ${{ steps.meta.outputs.image }}:sha-${{ github.sha }}
+            ${{ steps.meta.outputs.image }}:main
+
+  deploy:
+    name: Deploy to TDW
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate host data root
+        run: |
+          set -euo pipefail
+          root="${MILL_HOST_DATA_ROOT}"
+          case "$root" in
+            /data/experiments) : ;;
+            *)
+              echo "::error::host-data-root must be exactly /data/experiments; got: $root"
+              exit 1
+              ;;
+          esac
+
+      - name: Validate host port
+        run: |
+          set -euo pipefail
+          port="${MILL_PORT}"
+          case "$port" in
+            ''|*[!0-9]*)
+              echo "::error::MILL_PORT must be numeric; got: $port"
+              exit 1
+              ;;
+          esac
+
+      - name: Resolve image tag
+        id: img
+        run: |
+          set -euo pipefail
+          image_lc="${REGISTRY}/$(echo "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
+          echo "image=${image_lc}:sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "deploy image: ${image_lc}:sha-${GITHUB_SHA}"
+
+      - name: Prepare deploy directory on TDW host
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+        with:
+          host: ${{ secrets.TDW_IP }}
+          username: ${{ secrets.TDW_USER }}
+          key: ${{ secrets.TDW_KEY }}
+          envs: DEPLOY_DIR
+          script: |
+            set -euo pipefail
+            mkdir -p "$DEPLOY_DIR"
+
+      - name: Copy compose file to TDW host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TDW_IP }}
+          username: ${{ secrets.TDW_USER }}
+          key: ${{ secrets.TDW_KEY }}
+          source: "deploy/docker-compose.yml"
+          target: ${{ env.DEPLOY_DIR }}
+          strip_components: 1
+
+      - name: Deploy on TDW host
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_IMAGE: ${{ steps.img.outputs.image }}
+          DEPLOY_PORT: ${{ env.MILL_PORT }}
+          DEPLOY_DATA_ROOT: ${{ env.MILL_HOST_DATA_ROOT }}
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          DEPLOY_APP_USERNAME: ${{ secrets.APP_USERNAME }}
+          DEPLOY_APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          DEPLOY_API_SECRET: ${{ secrets.API_SECRET }}
+        with:
+          host: ${{ secrets.TDW_IP }}
+          username: ${{ secrets.TDW_USER }}
+          key: ${{ secrets.TDW_KEY }}
+          envs: DEPLOY_IMAGE,DEPLOY_PORT,DEPLOY_DATA_ROOT,DEPLOY_DIR,REGISTRY_TOKEN,REGISTRY_USER,DEPLOY_APP_USERNAME,DEPLOY_APP_PASSWORD,DEPLOY_API_SECRET
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_DIR"
+            test -d "$DEPLOY_DATA_ROOT" || { echo "host data root $DEPLOY_DATA_ROOT does not exist"; exit 1; }
+            for var_name in DEPLOY_APP_USERNAME DEPLOY_APP_PASSWORD DEPLOY_API_SECRET; do
+              value="${!var_name}"
+              case "$value" in
+                *$'\n'*|*$'\r'*)
+                  echo "::error::$var_name contains a newline; refusing to write multiline value to .env"
+                  exit 1
+                  ;;
+              esac
+            done
+            umask 077
+            {
+              printf 'MILL_IMAGE=%s\n' "$DEPLOY_IMAGE"
+              printf 'MILL_PORT=%s\n' "$DEPLOY_PORT"
+              printf 'MILL_HOST_DATA_ROOT=%s\n' "$DEPLOY_DATA_ROOT"
+              printf 'APP_USERNAME=%s\n' "$DEPLOY_APP_USERNAME"
+              printf 'APP_PASSWORD=%s\n' "$DEPLOY_APP_PASSWORD"
+              printf 'API_SECRET=%s\n' "$DEPLOY_API_SECRET"
+            } > .env
+            export MILL_IMAGE="$DEPLOY_IMAGE"
+            export MILL_PORT="$DEPLOY_PORT"
+            export MILL_HOST_DATA_ROOT="$DEPLOY_DATA_ROOT"
+            export APP_USERNAME="$DEPLOY_APP_USERNAME"
+            export APP_PASSWORD="$DEPLOY_APP_PASSWORD"
+            export API_SECRET="$DEPLOY_API_SECRET"
+            echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+            docker compose -p mill -f docker-compose.yml pull
+            docker compose -p mill -f docker-compose.yml up -d --wait
+            docker compose -p mill -f docker-compose.yml ps
