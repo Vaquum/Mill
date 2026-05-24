@@ -2101,19 +2101,18 @@ function buildPalette() {
   pane.className = "features-pane palette";
   const search = document.createElement("input");
   search.type = "text";
-  search.placeholder = "raw signal / features";
+  search.placeholder = "raw signal / factories";
   search.className = "palette-search";
   search.spellcheck = false;
   search.autocomplete = "off";
   search.value = _paletteSearch;
   pane.appendChild(search);
   const groups = [
-    ["raw", "raw signal columns"],
-    ["limen.features", "features"],
-    ["limen.indicators", "indicators"],
+    ["raw", "raw signal", f => f.source === "raw"],
+    ["factory", "factories", f => f.source !== "raw"],
   ];
-  for (const [source, label] of groups) {
-    const entries = factories.filter(f => f.source === source);
+  for (const [_key, label, include] of groups) {
+    const entries = factories.filter(include);
     if (entries.length === 0) continue;
     const section = document.createElement("div");
     section.className = "palette-section";
@@ -2252,7 +2251,7 @@ function renderActivePane() {
   if (activeFactories.length === 0) {
     const empty = document.createElement("div");
     empty.className = "active-empty";
-    empty.textContent = "drag raw signal columns or features from the left";
+    empty.textContent = "drag raw signal or factories from the left";
     list.appendChild(empty);
     if (pane) pane.scrollTop = prevScroll;
     return;
