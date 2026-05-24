@@ -10,8 +10,6 @@
 - In case you would pull data from any other source, I immediately block you from using any commands at all without permission and our work grinds to a halt
 - We work exclusively with data starting on 2024-01-01 and never before that and ending at 2026-05-15 and never later than that
 - We always pull time bars through `GetData.get_time_bars` unless I specifically say otherwise
-- When we craft new features, we never use `prc` and always use `bps`
-- When we craft new features with `bps`, we always make them `per_bar`
 - Never add features/columns I don't ask you
 - Every feature we create we create a high performance polars expression
 - Never allow any command run longer than 1 minute ... nothing we do should take more than 1 minute ... if it takes more than one minute something is wrong and you have to stop immediately and report back to me
