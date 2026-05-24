@@ -6,7 +6,7 @@ from typing import Any
 
 import polars as pl
 
-from bars import TIME_BAR_SECONDS
+from bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
 from feature_registry import producer_for
 from get_data import GetData
 
@@ -18,6 +18,12 @@ def klines(bar_name: str) -> pl.DataFrame:
     gd = GetData()
     if bar_name in TIME_BAR_SECONDS:
         return gd.get_time_bars(
+            bar_name,
+            start_date_limit=_START,
+            end_date_limit=_END,
+        )
+    if bar_name in DOLLAR_BAR_USD:
+        return gd.get_dollar_bars(
             bar_name,
             start_date_limit=_START,
             end_date_limit=_END,
