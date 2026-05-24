@@ -1,0 +1,26 @@
+services:
+  mill:
+    image: ${MILL_IMAGE:?MILL_IMAGE must be set}
+    init: true
+    environment:
+      APP_USERNAME: ${APP_USERNAME:?APP_USERNAME must be set}
+      APP_PASSWORD: ${APP_PASSWORD:?APP_PASSWORD must be set}
+      API_SECRET: ${API_SECRET:?API_SECRET must be set}
+      MILL_HOST: 0.0.0.0
+      MILL_PORT: 8765
+      MILL_CACHE_DIR: /data/experiments/mill/cache
+      MILL_CONFIG_DIR: /data/experiments/mill/config
+    ports:
+      - "${MILL_PORT:-8765}:8765"
+    volumes:
+      - type: bind
+        source: ${MILL_HOST_DATA_ROOT:-/data/experiments}
+        target: /data/experiments
+        read_only: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8765/health', timeout=5)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped

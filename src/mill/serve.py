@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import json
+import os
 import re
+import secrets
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -84,6 +88,21 @@ _FACTORY_TAGS: dict[str, list[str]] = {}
 _BUILTIN_VIEWS: tuple[str, ...] = ()
 _BUILTIN_VIEW_NAMES: set[str] = set()
 _SAVED_VIEWS: dict[str, dict[str, Any]] = {}
+_APP_USERNAME = ""
+_APP_PASSWORD = ""
+_API_SECRET = ""
+
+
+def _require_auth_env() -> None:
+    global _APP_USERNAME, _APP_PASSWORD, _API_SECRET
+    _APP_USERNAME = os.environ.get("APP_USERNAME", "")
+    _APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+    _API_SECRET = os.environ.get("API_SECRET", "")
+    if not (_APP_USERNAME and _APP_PASSWORD and _API_SECRET):
+        raise RuntimeError(
+            "Mill requires APP_USERNAME, APP_PASSWORD, and "
+            "API_SECRET environment variables; refusing to start"
+        )
 
 
 def _load_factory_tags() -> dict[str, list[str]]:
@@ -510,7 +529,12 @@ def _delete_view(name: str) -> tuple[int, str]:
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         url = urlsplit(self.path)
-        if url.path == "/":
+        if not self._authorized(url.path):
+            self._unauthorized()
+            return
+        if url.path == "/health":
+            self._send(200, "application/json", b'{"status":"ok"}')
+        elif url.path == "/":
             self._send(200, "text/html; charset=utf-8", _INDEX.read_bytes())
         elif url.path == "/app-config":
             with _REGISTRY_LOCK:
@@ -619,6 +643,9 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         url = urlsplit(self.path)
+        if not self._authorized(url.path):
+            self._unauthorized()
+            return
         if url.path == "/save_view":
             length = int(self.headers.get("Content-Length") or 0)
             try:
@@ -675,21 +702,76 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, "text/plain", b"")
 
+    def do_HEAD(self) -> None:
+        url = urlsplit(self.path)
+        if not self._authorized(url.path):
+            self._unauthorized(head=True)
+            return
+        if url.path in {"/", "/health"}:
+            self._send(200, "text/plain", b"", head=True)
+        else:
+            self._send(404, "text/plain", b"", head=True)
+
     def log_message(self, *args: object, **kwargs: object) -> None:
         return
 
-    def _send(self, status: int, ctype: str, body: bytes) -> None:
+    def _authorized(self, path: str) -> bool:
+        if path == "/health":
+            return True
+        if self.command == "HEAD" and path == "/":
+            return True
+        auth = self.headers.get("authorization", "")
+        scheme, _, credentials = auth.partition(" ")
+        scheme_lc = scheme.lower()
+        if scheme_lc == "basic":
+            try:
+                decoded = base64.b64decode(credentials, validate=True).decode(
+                    "utf-8", errors="strict"
+                )
+            except (binascii.Error, ValueError, UnicodeDecodeError):
+                decoded = ""
+            user, sep, password = decoded.partition(":")
+            return (
+                bool(sep)
+                and secrets.compare_digest(user, _APP_USERNAME)
+                and secrets.compare_digest(password, _APP_PASSWORD)
+            )
+        if scheme_lc == "bearer":
+            return secrets.compare_digest(credentials, _API_SECRET)
+        return False
+
+    def _unauthorized(self, *, head: bool = False) -> None:
+        body = b'{"detail":"authentication required"}'
+        self.send_response(401)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("WWW-Authenticate", 'Basic realm="Mill"')
+        self.end_headers()
+        if not head:
+            self.wfile.write(body)
+
+    def _send(
+        self,
+        status: int,
+        ctype: str,
+        body: bytes,
+        *,
+        head: bool = False,
+    ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        if not head:
+            self.wfile.write(body)
 
 
 def main() -> None:
     global _BUILTIN_VIEWS, _BUILTIN_VIEW_NAMES, _FACTORY_TAGS, _SAVED_VIEWS
     global _VIEW_SPECS, _VIEW_TARGETS, _VIEW_BARS
+    _require_auth_env()
     _BUILTIN_VIEWS = tuple(v.NAME for v in VIEWS)
     _BUILTIN_VIEW_NAMES = set(_BUILTIN_VIEWS)
     _VIEW_SPECS = {v.NAME: list(v.SPEC) for v in VIEWS}
