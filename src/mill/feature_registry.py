@@ -8,26 +8,9 @@ import polars as pl
 import limen.features as _LF
 import limen.indicators as _LI
 
-Producer = Callable[..., pl.DataFrame]
+from .bars import BAR_VALUE_COLUMNS as _RAW_COLUMNS
 
-_RAW_COLUMNS: tuple[str, ...] = (
-    "open",
-    "high",
-    "low",
-    "close",
-    "volume",
-    "mean",
-    "std",
-    "maker_ratio",
-    "no_of_trades",
-    "open_liquidity",
-    "high_liquidity",
-    "low_liquidity",
-    "close_liquidity",
-    "liquidity_sum",
-    "maker_volume",
-    "maker_liquidity",
-)
+Producer = Callable[..., pl.DataFrame]
 
 
 def _raw_producer(name: str) -> Producer:
