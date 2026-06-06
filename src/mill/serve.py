@@ -560,6 +560,15 @@ class _Handler(BaseHTTPRequestHandler):
                     }
                 ).encode()
             self._send(200, "application/json", body)
+        elif url.path == "/version":
+            body = json.dumps(
+                {
+                    "sha": os.environ.get("GIT_SHA", ""),
+                    "date": os.environ.get("BUILD_DATE", ""),
+                    "subject": os.environ.get("GIT_SUBJECT", ""),
+                }
+            ).encode()
+            self._send(200, "application/json", body)
         elif url.path == "/data":
             q = parse_qs(url.query)
             bar, target, err = _parse_selectors(q)
