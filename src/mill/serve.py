@@ -18,9 +18,11 @@ import numpy as np
 import polars as pl
 
 from . import feature_registry, grading, qc, targets
-from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
+from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS, arrow_series
 from .settings import (
     APP_NAME,
+    ARROW_LATEST_NAME,
+    DEFAULT_ARROW_DIR,
     DEFAULT_BAR,
     PROJECT_END_STR,
     PROJECT_START_STR,
@@ -44,29 +46,26 @@ _QUANTILE_PCTS = (0.01, 5, 25, 50, 75, 95, 99.9)
 
 _BARS = tuple(TIME_BAR_SECONDS) + tuple(DOLLAR_BAR_USD)
 _TARGETS = ("none", *targets.NAMES)
+_ARROW_DATA_SOURCE_METHOD = "limen.data.HistoricalData.get_arrow_file"
+
+
+def _arrow_data_source(bar: str) -> dict[str, object]:
+    # Canonical deploy path: the read-only tdw Arrow volume is mounted at
+    # /opt/arrow in both Mill and the Limen runner that consumes the manifest,
+    # independent of any local MILL_ARROW_DIR override used for tests.
+    file_path = f"{DEFAULT_ARROW_DIR}/{arrow_series(bar)}/{ARROW_LATEST_NAME}"
+    return {
+        "method": _ARROW_DATA_SOURCE_METHOD,
+        "params": {
+            "file_path": file_path,
+            "start_date_limit": PROJECT_START_STR,
+            "end_date_limit": PROJECT_END_STR,
+        },
+    }
+
+
 _BAR_DATA_SOURCES: dict[str, dict[str, object]] = {
-    **{
-        name: {
-            "method": "GetData.get_time_bars",
-            "params": {
-                "bar_size": name,
-                "start_date_limit": PROJECT_START_STR,
-                "end_date_limit": PROJECT_END_STR,
-            },
-        }
-        for name in TIME_BAR_SECONDS
-    },
-    **{
-        name: {
-            "method": "GetData.get_dollar_bars",
-            "params": {
-                "bar_size": name,
-                "start_date_limit": PROJECT_START_STR,
-                "end_date_limit": PROJECT_END_STR,
-            },
-        }
-        for name in DOLLAR_BAR_USD
-    },
+    name: _arrow_data_source(name) for name in _BARS
 }
 _TARGET_CLASSES: dict[str, dict[str, object]] = {
     name: targets.binding(name) for name in targets.NAMES

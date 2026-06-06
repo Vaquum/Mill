@@ -8,10 +8,22 @@ from pathlib import Path
 import polars as pl
 from limen import HistoricalData
 
-from .bars import dollar_bar_name, dollar_bar_usd, time_bar_name, time_bar_seconds
+from .bars import (
+    BAR_VALUE_COLUMNS,
+    dollar_bar_name,
+    dollar_bar_series,
+    time_bar_name,
+    time_bar_series,
+)
 from .cache_store import cache_path, read_fresh, write_cache
-from .frames import read_parquet, write_parquet
-from .settings import PROJECT_END, PROJECT_END_STR, PROJECT_START, PROJECT_START_STR
+from .frames import normalize_datetime, read_parquet, write_parquet
+from .settings import (
+    PROJECT_END,
+    PROJECT_END_STR,
+    PROJECT_START,
+    PROJECT_START_STR,
+    arrow_latest_path,
+)
 
 
 _LIMEN_LOCK = threading.Lock()
@@ -64,6 +76,29 @@ class GetData:
     def to_parquet(self, path: str | Path) -> Path:
         return write_parquet(self.data, path)
 
+    def _load_arrow(
+        self,
+        series: str,
+        start_date_limit: str,
+        end_date_limit: str,
+    ) -> pl.DataFrame:
+        """Zero-copy read one bar series from the tdw Arrow bar store.
+
+        Memory-maps ``<arrow_root>/<series>/latest.arrow`` through
+        ``HistoricalData.get_arrow_file``, which slices to the date window over
+        the integer ``ts`` index and adds a ``datetime`` column. The frame is
+        normalized to millisecond UTC and reduced to ``datetime`` plus the
+        canonical measure columns, so the source switch is transparent to
+        features, targets, and QC.
+        """
+        data = self._hd.get_arrow_file(
+            file_path=str(arrow_latest_path(series)),
+            start_date_limit=start_date_limit,
+            end_date_limit=end_date_limit,
+        )
+        data = normalize_datetime(data)
+        return data.select("datetime", *BAR_VALUE_COLUMNS)
+
     def get_time_bars(
         self,
         bar_size: str | int,
@@ -79,12 +114,12 @@ class GetData:
             start_date_limit, end_date_limit
         )
         name = time_bar_name(bar_size)
-        seconds = time_bar_seconds(bar_size)
+        series = time_bar_series(bar_size)
         limit = row_count_limit if row_count_limit is not None else n_rows
         criteria = {
-            "kind": "spot_klines",
+            "kind": "arrow_bar_store",
             "bar": name,
-            "kline_size": seconds,
+            "series": series,
             "start": start_date_limit,
             "end": end_date_limit,
             "row_count_limit": row_count_limit,
@@ -94,11 +129,7 @@ class GetData:
             name,
             criteria,
             lambda: _limit_rows(
-                self._hd.get_spot_klines(
-                    kline_size=seconds,
-                    start_date_limit=start_date_limit,
-                    end_date_limit=end_date_limit,
-                ),
+                self._load_arrow(series, start_date_limit, end_date_limit),
                 limit,
             ),
         )
@@ -118,12 +149,12 @@ class GetData:
             start_date_limit, end_date_limit
         )
         name = dollar_bar_name(bar_size)
-        usd = dollar_bar_usd(bar_size)
+        series = dollar_bar_series(bar_size)
         limit = row_count_limit if row_count_limit is not None else n_rows
         criteria = {
-            "kind": "spot_dollar_klines",
+            "kind": "arrow_bar_store",
             "bar": name,
-            "dollar_bar_size": usd,
+            "series": series,
             "start": start_date_limit,
             "end": end_date_limit,
             "row_count_limit": row_count_limit,
@@ -133,11 +164,7 @@ class GetData:
             name,
             criteria,
             lambda: _limit_rows(
-                self._hd.get_spot_dollar_klines(
-                    dollar_bar_size=usd,
-                    start_date_limit=start_date_limit,
-                    end_date_limit=end_date_limit,
-                ),
+                self._load_arrow(series, start_date_limit, end_date_limit),
                 limit,
             ),
         )

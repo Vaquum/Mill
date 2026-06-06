@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Mill"
-version = "0.1.0"
+version = "0.2.0"
 description = "Raw signal and feature workbench."
 requires-python = ">=3.12"
 dependencies = [
@@ -17,6 +17,12 @@ dependencies = [
     "vaquum_limen @ git+https://github.com/Vaquum/Limen.git@main",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pyyaml",
+]
+
 [project.scripts]
 mill = "mill.serve:main"
 mill-qc = "mill.run_qc:main"
@@ -26,3 +32,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 mill = ["assets/*.html", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

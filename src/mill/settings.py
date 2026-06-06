@@ -13,11 +13,22 @@ PROJECT_END_STR = PROJECT_END.isoformat()
 DEFAULT_BAR = "1h_time_bars"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
+DEFAULT_ARROW_DIR = "/opt/arrow"
+ARROW_LATEST_NAME = "latest.arrow"
 
 
 def cache_root() -> Path:
     override = os.environ.get("MILL_CACHE_DIR")
     return Path(override) if override else Path.home() / ".cache" / APP_SLUG
+
+
+def arrow_root() -> Path:
+    override = os.environ.get("MILL_ARROW_DIR")
+    return Path(override) if override else Path(DEFAULT_ARROW_DIR)
+
+
+def arrow_latest_path(series: str) -> Path:
+    return arrow_root() / series / ARROW_LATEST_NAME
 
 
 def config_root() -> Path:
