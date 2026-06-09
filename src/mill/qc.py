@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import functools
+import hashlib
 import warnings
 import zlib
 from collections.abc import Sequence
@@ -22,6 +24,64 @@ _MI_MAX_N = 20000
 _PAIRWISE_MAX_N = 20000
 _PAIRWISE_MI_MAX_N = 5000
 _PAIRWISE_MIN_N = 30
+
+
+# ---- content-addressed memo for the expensive, pure QC kernels --------------
+# The per-feature kernels (bootstrap CI, mutual information, ADF/KPSS, block
+# size) and the per-pair kernel depend only on their input array bytes plus a
+# few scalars, yet a /qc request recomputes all of them even when only the
+# feature *set* changed. Memoizing them on a content hash of the inputs lets an
+# incremental QC (add/remove a feature and re-run) reuse every unchanged
+# feature's and pair's result. A cold first run is unchanged save a sub-
+# millisecond hash per array. Results are bit-identical: a hit returns the exact
+# value the function produced, a miss computes it exactly as before.
+#
+# Thread note: serve runs QC on a ThreadingHTTPServer. Dict get/set are atomic
+# under the GIL; the only non-atomic step is the size-bound clear, and every
+# kernel here is deterministic, so a race can at worst recompute a value — never
+# return a wrong one.
+_KERNEL_CACHE: dict[object, object] = {}
+_KERNEL_CACHE_MAX = 200_000
+_MISS = object()
+
+
+def _arg_key(value: object) -> object:
+    if isinstance(value, np.ndarray):
+        return (
+            "ndarray",
+            value.shape,
+            value.dtype.str,
+            hashlib.blake2b(value.tobytes(), digest_size=16).digest(),
+        )
+    return value
+
+
+def _memoized(fn):
+    """Memoize a pure kernel on the content of its array args plus scalars."""
+    name = fn.__name__
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        key = (
+            name,
+            tuple(_arg_key(a) for a in args),
+            tuple(sorted((k, _arg_key(v)) for k, v in kwargs.items())),
+        )
+        cached = _KERNEL_CACHE.get(key, _MISS)
+        if cached is not _MISS:
+            return cached
+        value = fn(*args, **kwargs)
+        if len(_KERNEL_CACHE) >= _KERNEL_CACHE_MAX:
+            _KERNEL_CACHE.clear()
+        _KERNEL_CACHE[key] = value
+        return value
+
+    return wrapper
+
+
+def clear_kernel_cache() -> None:
+    """Drop all memoized kernel results (used by tests; harmless at runtime)."""
+    _KERNEL_CACHE.clear()
 
 
 def _resolve_block(b: object) -> int:
@@ -198,22 +258,9 @@ def _pairwise_rows(
     for i in range(n):
         xi = arrays[feature_cols[i]]
         for j in range(i + 1, n):
-            xj = arrays[feature_cols[j]]
-            mask = ~np.isnan(xi) & ~np.isnan(xj)
-            if int(mask.sum()) < _PAIRWISE_MIN_N:
-                continue
-            left = xi[mask]
-            right = xj[mask]
-            sp_left, sp_right = _downsample_pair(left, right, _PAIRWISE_MAX_N)
-            rho = _safe(
-                lambda a, b: float(stats.spearmanr(a, b).statistic),
-                sp_left,
-                sp_right,
-            )
-            if rho is not None:
-                abs_rho[i, j] = abs_rho[j, i] = abs(float(rho))
-            mi_left, mi_right = _downsample_pair(left, right, _PAIRWISE_MI_MAX_N)
-            mi = _pairwise_mi(mi_left, mi_right)
+            abs_r, mi = _pair_metrics(xi, arrays[feature_cols[j]])
+            if abs_r is not None:
+                abs_rho[i, j] = abs_rho[j, i] = abs_r
             if mi is not None:
                 max_mi_values[i] = (
                     mi if max_mi_values[i] is None else max(max_mi_values[i], mi)
@@ -244,6 +291,35 @@ def _pairwise_rows(
         ("redundancy_penalty", redundancy),
         ("max_pairwise_mi", max_mi),
     ]
+
+
+@_memoized
+def _pair_metrics(
+    xi: np.ndarray, xj: np.ndarray
+) -> tuple[float | None, float | None]:
+    """Absolute Spearman and mutual information for one feature pair.
+
+    Extracted verbatim from the pairwise loop so the whole per-pair cost (mask,
+    downsample, Spearman, MI) is memoized on the pair's content: an incremental
+    QC then recomputes only the pairs that involve a changed feature, not all
+    O(k^2). Keyed by (xi, xj) in the loop's i<j order, so the value matches what
+    the inline loop produced.
+    """
+    mask = ~np.isnan(xi) & ~np.isnan(xj)
+    if int(mask.sum()) < _PAIRWISE_MIN_N:
+        return None, None
+    left = xi[mask]
+    right = xj[mask]
+    sp_left, sp_right = _downsample_pair(left, right, _PAIRWISE_MAX_N)
+    rho = _safe(
+        lambda a, b: float(stats.spearmanr(a, b).statistic),
+        sp_left,
+        sp_right,
+    )
+    abs_rho = abs(float(rho)) if rho is not None else None
+    mi_left, mi_right = _downsample_pair(left, right, _PAIRWISE_MI_MAX_N)
+    mi = _pairwise_mi(mi_left, mi_right)
+    return abs_rho, mi
 
 
 def _downsample_pair(
@@ -285,6 +361,7 @@ def _safe(fn, *args):
     return result
 
 
+@_memoized
 def _adf_p(arr: np.ndarray) -> float | None:
     if arr.size < 50:
         return None
@@ -294,6 +371,7 @@ def _adf_p(arr: np.ndarray) -> float | None:
         return float(adfuller(a, maxlag=10, autolag=None)[1])
 
 
+@_memoized
 def _kpss_p(arr: np.ndarray) -> float | None:
     if arr.size < 50:
         return None
@@ -308,6 +386,7 @@ def _stride(arr: np.ndarray, n: int) -> np.ndarray:
     return arr[::step][:n]
 
 
+@_memoized
 def _block_size(arr: np.ndarray) -> int | None:
     a = _drop_nan(arr)
     if a.size <= 3:
@@ -387,6 +466,7 @@ def _warmup_bootstrap() -> None:
     _bootstrap_spearman_estimates(arr, arr, idx)
 
 
+@_memoized
 def _bootstrap_spearman_ci(
     x: np.ndarray,
     y: np.ndarray,
@@ -415,6 +495,7 @@ def _bootstrap_spearman_ci(
     )
 
 
+@_memoized
 def _mutual_info(x: np.ndarray, y: np.ndarray) -> float | None:
     n = x.size
     if n > _MI_MAX_N:
