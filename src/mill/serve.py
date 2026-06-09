@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, urlsplit
 import numpy as np
 import polars as pl
 
-from . import feature_registry, grading, qc, targets
+from . import api_reference, feature_registry, grading, qc, targets
 from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS, arrow_series
 from .settings import (
     APP_NAME,
@@ -71,6 +71,20 @@ _TARGET_CLASSES: dict[str, dict[str, object]] = {
     name: targets.binding(name) for name in targets.NAMES
 }
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
+
+# Static description of the endpoint surface, served at GET /api-reference. The
+# enum values are taken from the live route constants so the document tracks
+# what the endpoints actually accept; serialized once since it never changes
+# after startup.
+_API_REFERENCE = api_reference.build_reference(
+    app_name=APP_NAME,
+    bars=list(_BARS),
+    bar_default=_BARS[0],
+    targets=list(_TARGETS),
+    row_modes=sorted(_ROW_MODES),
+    data_window={"start": PROJECT_START_STR, "end": PROJECT_END_STR},
+)
+_API_REFERENCE_BYTES = json.dumps(_API_REFERENCE).encode()
 
 
 _PAYLOADS: dict[tuple[str, str, str], bytes] = {}
@@ -569,6 +583,8 @@ class _Handler(BaseHTTPRequestHandler):
                 }
             ).encode()
             self._send(200, "application/json", body)
+        elif url.path == "/api-reference":
+            self._send(200, "application/json", _API_REFERENCE_BYTES)
         elif url.path == "/data":
             q = parse_qs(url.query)
             bar, target, err = _parse_selectors(q)
@@ -724,7 +740,7 @@ class _Handler(BaseHTTPRequestHandler):
         return
 
     def _authorized(self, path: str) -> bool:
-        if path == "/health":
+        if path in ("/health", "/api-reference"):
             return True
         if self.command == "HEAD" and path == "/":
             return True
