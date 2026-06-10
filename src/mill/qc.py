@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import itertools
 import warnings
 import weakref
 import zlib
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from dataclasses import dataclass
 
 import numpy as np
 import polars as pl
@@ -108,7 +110,41 @@ def _joint_block(blocks: dict[str, int | None], left: str, right: str) -> int:
     return max(_resolve_block(blocks.get(left)), _resolve_block(blocks.get(right)))
 
 
+# ---- sweep: run the kernels once per pool, assemble reports per subset ------
+# Nothing in a report couples features except the pairwise max/mean
+# aggregation, so every value decomposes into per-column, per-(feature,
+# target), and per-pair primitives that do not depend on which other features
+# are present. precompute() runs the kernels once over a pool; report_for()
+# assembles any subset's report from the maps without touching polars or the
+# kernels, which is what makes exhaustive uni/pair/multi combination sweeps
+# tractable: C(n, k) subsets cost C(n, 2) pair kernels, not C(n, k) reports.
+
+
+@dataclass(frozen=True)
+class QCPrimitives:
+    """Subset-independent QC primitives for one feature pool.
+
+    health is keyed by column (features plus target when present); edge and
+    regime by feature; pairs by (left, right) in pool column order. The pair
+    kernel is direction-sensitive (KNN mutual information), so report_for
+    normalizes every subset to pool order to reuse exactly these values.
+    """
+
+    feature_cols: tuple[str, ...]
+    target: str | None
+    n_rows: int
+    health: dict[str, tuple]
+    pairs: dict[tuple[str, str], tuple]
+    edge: dict[str, tuple]
+    regime: dict[str, tuple]
+
+
 def report(df: pl.DataFrame, target: str | None) -> dict:
+    return report_for(precompute(df, target))
+
+
+def precompute(df: pl.DataFrame, target: str | None) -> QCPrimitives:
+    """Run every QC kernel once over the full feature pool of df."""
     if "datetime" in df.columns:
         df = df.sort("datetime")
     skip = {"datetime"} | ({target} if target else set())
@@ -121,29 +157,84 @@ def report(df: pl.DataFrame, target: str | None) -> dict:
     }
     blocks: dict[str, int | None] = {col: _block_size(arrays[col]) for col in columns}
 
-    rows: list[tuple[str, dict[str, object]]] = []
-    rows.extend(_health_rows(df, arrays, columns))
-    rows.extend(_pairwise_rows(arrays, feature_cols))
-
     if has_target:
         target_arr = arrays[target]
-        rows.extend(_edge_rows(arrays, feature_cols, target_arr, blocks, target))
-        rows.extend(_regime_rows(arrays, feature_cols, target_arr, target))
+        edge = _edge_map(arrays, feature_cols, target_arr, blocks, target)
+        regime = _regime_map(arrays, feature_cols, target_arr)
+    else:
+        edge = {}
+        regime = {}
+
+    return QCPrimitives(
+        feature_cols=tuple(feature_cols),
+        target=target if has_target else None,
+        n_rows=df.height,
+        health=_health_map(arrays, columns),
+        pairs=_pair_map(arrays, feature_cols),
+        edge=edge,
+        regime=regime,
+    )
+
+
+def report_for(prim: QCPrimitives, cols: Sequence[str] | None = None) -> dict:
+    """Assemble the report for a subset of the pool (default: all features).
+
+    Bit-identical to report() on the frame restricted to cols: every value is
+    a primitive lookup; only the pairwise aggregation depends on the subset.
+    The target column is appended automatically and must not be requested.
+    Columns follow pool order regardless of the order given.
+    """
+    subset = prim.feature_cols if cols is None else _pool_ordered(prim, cols)
+    columns = list(subset) + ([prim.target] if prim.target else [])
+
+    rows: list[tuple[str, dict[str, object]]] = []
+    rows.extend(_health_rows(prim.health, columns, prim.n_rows))
+    rows.extend(_pairwise_rows(prim.pairs, subset))
+    if prim.target:
+        rows.extend(_edge_rows(prim.edge, subset, prim.target))
+        rows.extend(_regime_rows(prim.regime, subset, prim.target))
 
     return {
         "columns": ["metric", *columns],
         "rows": [[name, *(values.get(c) for c in columns)] for name, values in rows],
-        "n_rows": df.height,
+        "n_rows": prim.n_rows,
     }
 
 
-def _health_rows(
-    df: pl.DataFrame,
+def sweep(
+    prim: QCPrimitives,
+    sizes: Sequence[int],
+) -> Iterator[tuple[tuple[str, ...], dict]]:
+    """Yield (cols, report) for every feature combination of each size.
+
+    Pure aggregation over the precomputed primitives, so exhaustive
+    enumeration is bounded by precompute(), not the combination count.
+    """
+    for k in sizes:
+        for combo in itertools.combinations(prim.feature_cols, k):
+            yield combo, report_for(prim, combo)
+
+
+def _pool_ordered(prim: QCPrimitives, cols: Sequence[str]) -> tuple[str, ...]:
+    requested = set(cols)
+    unknown = requested.difference(prim.feature_cols)
+    if unknown:
+        raise ValueError(f"columns not in the precomputed pool: {sorted(unknown)}")
+    return tuple(c for c in prim.feature_cols if c in requested)
+
+
+def _health_map(
     arrays: dict[str, np.ndarray],
     columns: Sequence[str],
+) -> dict[str, tuple]:
+    return {c: _col_health(arrays[c]) for c in columns}
+
+
+def _health_rows(
+    health: dict[str, tuple],
+    columns: Sequence[str],
+    n: int,
 ) -> list[tuple[str, dict[str, object]]]:
-    n = df.height
-    health = {c: _col_health(arrays[c]) for c in columns}
     return [
         ("missing_rate", {c: float(health[c][0]) / n if n else None for c in columns}),
         ("n_unique", {c: health[c][1] for c in columns}),
@@ -180,14 +271,14 @@ _EDGE_METRICS = (
 )
 
 
-def _edge_rows(
+def _edge_map(
     arrays: dict[str, np.ndarray],
     feature_cols: Sequence[str],
     target_arr: np.ndarray,
     blocks: dict[str, int | None],
     target_label: str,
-) -> list[tuple[str, dict[str, object]]]:
-    metrics = {
+) -> dict[str, tuple]:
+    return {
         col: _edge_metrics(
             arrays[col],
             target_arr,
@@ -196,9 +287,16 @@ def _edge_rows(
         )
         for col in feature_cols
     }
+
+
+def _edge_rows(
+    edge: dict[str, tuple],
+    feature_cols: Sequence[str],
+    target_label: str,
+) -> list[tuple[str, dict[str, object]]]:
     rows: list[tuple[str, dict[str, object]]] = []
     for idx, name in enumerate(_EDGE_METRICS):
-        values: dict[str, object] = {col: metrics[col][idx] for col in feature_cols}
+        values: dict[str, object] = {col: edge[col][idx] for col in feature_cols}
         values[target_label] = None
         rows.append((name, values))
     return rows
@@ -229,16 +327,21 @@ def _edge_metrics(
     return spearman, lo, hi, mi, spread, monotonic
 
 
-def _regime_rows(
+def _regime_map(
     arrays: dict[str, np.ndarray],
     feature_cols: Sequence[str],
     target_arr: np.ndarray,
+) -> dict[str, tuple]:
+    return {col: _regime_metrics(arrays[col], target_arr) for col in feature_cols}
+
+
+def _regime_rows(
+    regime: dict[str, tuple],
+    feature_cols: Sequence[str],
     target_label: str,
 ) -> list[tuple[str, dict[str, object]]]:
-    agreement: dict[str, object] = {}
-    spread: dict[str, object] = {}
-    for col in feature_cols:
-        agreement[col], spread[col] = _regime_metrics(arrays[col], target_arr)
+    agreement: dict[str, object] = {col: regime[col][0] for col in feature_cols}
+    spread: dict[str, object] = {col: regime[col][1] for col in feature_cols}
     agreement[target_label] = None
     spread[target_label] = None
     return [
@@ -271,8 +374,20 @@ def _regime_metrics(x: np.ndarray, y: np.ndarray) -> tuple[object, object]:
     return f"{max(pos, neg)}/{len(values)}", float(np.std(arr))
 
 
-def _pairwise_rows(
+def _pair_map(
     arrays: dict[str, np.ndarray],
+    feature_cols: Sequence[str],
+) -> dict[tuple[str, str], tuple]:
+    pairs: dict[tuple[str, str], tuple] = {}
+    for i, left in enumerate(feature_cols):
+        xi = arrays[left]
+        for right in feature_cols[i + 1 :]:
+            pairs[(left, right)] = _pair_metrics(xi, arrays[right])
+    return pairs
+
+
+def _pairwise_rows(
+    pairs: dict[tuple[str, str], tuple],
     feature_cols: Sequence[str],
 ) -> list[tuple[str, dict[str, object]]]:
     n = len(feature_cols)
@@ -289,9 +404,8 @@ def _pairwise_rows(
     max_mi_values: list[float | None] = [None] * n
 
     for i in range(n):
-        xi = arrays[feature_cols[i]]
         for j in range(i + 1, n):
-            abs_r, mi = _pair_metrics(xi, arrays[feature_cols[j]])
+            abs_r, mi = pairs[(feature_cols[i], feature_cols[j])]
             if abs_r is not None:
                 abs_rho[i, j] = abs_rho[j, i] = abs_r
             if mi is not None:

@@ -108,7 +108,7 @@ def _median(fn, reps: int) -> tuple[object, float]:
 
 
 # ---- qc.report section timers (monkeypatched) -------------------------------
-_SECTIONS = ("_health_rows", "_pairwise_rows", "_edge_rows", "_regime_rows")
+_SECTIONS = ("_health_map", "_pair_map", "_edge_map", "_regime_map")
 _section_time: dict[str, float] = {}
 
 
@@ -244,8 +244,8 @@ def main() -> None:
     print("-" * len(sh))
     for k, rtot, sect in section_rows:
         print(f"{k:>3} | {sect.get('setup(sort/cast/block)',0):10.1f} "
-              f"{sect.get('_health_rows',0):8.1f} {sect.get('_pairwise_rows',0):9.1f} "
-              f"{sect.get('_edge_rows',0):8.1f} {sect.get('_regime_rows',0):8.1f} | {rtot:8.1f}")
+              f"{sect.get('_health_map',0):8.1f} {sect.get('_pair_map',0):9.1f} "
+              f"{sect.get('_edge_map',0):8.1f} {sect.get('_regime_map',0):8.1f} | {rtot:8.1f}")
 
     for k, text in cprofiles:
         print(f"\n=== cProfile qc.report  k={k}  (sorted by tottime, top 12) ===")
