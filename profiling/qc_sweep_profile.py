@@ -19,7 +19,8 @@ import tempfile
 import time
 from pathlib import Path
 
-# Hermetic: arrow + cache live in a temp dir; never touch the host store.
+# Input parquet is read from the host cache (read-only); MILL_* dirs point at
+# a temp dir so any Arrow/cache writes never touch the host store.
 _TMP = tempfile.mkdtemp(prefix="qc_sweep_profile_")
 os.environ["MILL_ARROW_DIR"] = str(Path(_TMP) / "arrow")
 os.environ["MILL_CACHE_DIR"] = str(Path(_TMP) / "cache")
