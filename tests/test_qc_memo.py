@@ -99,10 +99,11 @@ def test_incremental_reuses_cached_kernels() -> None:
     qc.report(base, "y")               # adds feature f8: its kernels + 8 new pairs
     s9 = len(qc._KERNEL_CACHE)
     added = s9 - s8
-    # New work only: <= 5 single-array kernels for f8 + 8 new pairs. A full
-    # recompute would re-add nothing (all keyed by content) — the point is the
-    # increment is bounded by the *new* feature, not the whole set.
-    assert 1 <= added <= 5 + 8
+    # New work only: <= 8 kernels for f8 (block, health + inner ADF/KPSS,
+    # edge + inner CI/MI, regime) + 8 new pairs. A full recompute would re-add
+    # nothing (all keyed by content) — the point is the increment is bounded
+    # by the *new* feature, not the whole set.
+    assert 1 <= added <= 8 + 8
     # Re-running the 8-feature set now hits entirely: no new entries.
     qc.report(f8, "y")
     assert len(qc._KERNEL_CACHE) == s9
