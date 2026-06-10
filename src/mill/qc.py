@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import hashlib
 import warnings
+import weakref
 import zlib
 from collections.abc import Sequence
 
@@ -27,14 +28,19 @@ _PAIRWISE_MIN_N = 30
 
 
 # ---- content-addressed memo for the expensive, pure QC kernels --------------
-# The per-feature kernels (bootstrap CI, mutual information, ADF/KPSS, block
-# size) and the per-pair kernel depend only on their input array bytes plus a
-# few scalars, yet a /qc request recomputes all of them even when only the
-# feature *set* changed. Memoizing them on a content hash of the inputs lets an
-# incremental QC (add/remove a feature and re-run) reuse every unchanged
-# feature's and pair's result. A cold first run is unchanged save a sub-
-# millisecond hash per array. Results are bit-identical: a hit returns the exact
-# value the function produced, a miss computes it exactly as before.
+# Every per-column block (health/ADF/KPSS, block size), per-(feature, target)
+# block (edge, regime), and per-pair kernel depends only on its input array
+# bytes plus a few scalars, yet a /qc request recomputes all of them even when
+# only the feature *set* changed. Memoizing them on a content hash of the
+# inputs lets an incremental QC (add/remove a feature and re-run) reuse every
+# unchanged feature's and pair's result. A cold first run is unchanged save a
+# sub-millisecond hash per array. Results are bit-identical: a hit returns the
+# exact value the function produced, a miss computes it exactly as before.
+#
+# The content hash itself is cached per array *object* (keyed on id, evicted
+# via weakref.finalize when the array dies), so one report call hashes each
+# column once, not once per kernel that sees it. Safe because no kernel — and
+# nothing in report() — mutates an array after creating it.
 #
 # Thread note: serve runs QC on a ThreadingHTTPServer. Dict get/set are atomic
 # under the GIL; the only non-atomic step is the size-bound clear, and every
@@ -43,16 +49,22 @@ _PAIRWISE_MIN_N = 30
 _KERNEL_CACHE: dict[object, object] = {}
 _KERNEL_CACHE_MAX = 200_000
 _MISS = object()
+_DIGEST_CACHE: dict[int, tuple] = {}
 
 
 def _arg_key(value: object) -> object:
     if isinstance(value, np.ndarray):
-        return (
-            "ndarray",
-            value.shape,
-            value.dtype.str,
-            hashlib.blake2b(value.tobytes(), digest_size=16).digest(),
-        )
+        key = _DIGEST_CACHE.get(id(value))
+        if key is None:
+            key = (
+                "ndarray",
+                value.shape,
+                value.dtype.str,
+                hashlib.blake2b(value.tobytes(), digest_size=16).digest(),
+            )
+            weakref.finalize(value, _DIGEST_CACHE.pop, id(value), None)
+            _DIGEST_CACHE[id(value)] = key
+        return key
     return value
 
 
@@ -131,25 +143,41 @@ def _health_rows(
     columns: Sequence[str],
 ) -> list[tuple[str, dict[str, object]]]:
     n = df.height
-    out: list[tuple[str, dict[str, object]]] = []
+    health = {c: _col_health(arrays[c]) for c in columns}
+    return [
+        ("missing_rate", {c: float(health[c][0]) / n if n else None for c in columns}),
+        ("n_unique", {c: health[c][1] for c in columns}),
+        ("skew", {c: health[c][2] for c in columns}),
+        ("adf_p", {c: health[c][3] for c in columns}),
+        ("kpss_p", {c: health[c][4] for c in columns}),
+    ]
 
-    out.append((
-        "missing_rate",
-        {c: float(np.isnan(arrays[c]).sum()) / n if n else None for c in columns},
-    ))
-    out.append((
-        "n_unique",
-        {c: int(np.unique(_drop_nan(arrays[c])).size) for c in columns},
-    ))
-    out.append((
-        "skew",
-        {c: _safe(lambda a: stats.skew(a, nan_policy="omit", bias=False), _drop_nan(arrays[c])) for c in columns},
-    ))
 
-    out.append(("adf_p", {c: _safe(_adf_p, _drop_nan(arrays[c])) for c in columns}))
-    out.append(("kpss_p", {c: _safe(_kpss_p, _drop_nan(arrays[c])) for c in columns}))
+@_memoized
+def _col_health(arr: np.ndarray) -> tuple[object, ...]:
+    """Whole per-column health block (missing/unique/skew/ADF/KPSS).
 
-    return out
+    Memoized as one kernel so a warm re-run pays one digest lookup per column
+    instead of re-sorting it for n_unique and re-dropping NaNs four times.
+    """
+    finite = _drop_nan(arr)
+    return (
+        int(np.isnan(arr).sum()),
+        int(np.unique(finite).size),
+        _safe(lambda a: stats.skew(a, nan_policy="omit", bias=False), finite),
+        _safe(_adf_p, finite),
+        _safe(_kpss_p, finite),
+    )
+
+
+_EDGE_METRICS = (
+    "spearman",
+    "spearman_ci_lo",
+    "spearman_ci_hi",
+    "mutual_information",
+    "decile_spread",
+    "monotonic_fraction",
+)
 
 
 def _edge_rows(
@@ -159,44 +187,46 @@ def _edge_rows(
     blocks: dict[str, int | None],
     target_label: str,
 ) -> list[tuple[str, dict[str, object]]]:
-    spearman: dict[str, object] = {}
-    spear_lo: dict[str, object] = {}
-    spear_hi: dict[str, object] = {}
-    mi: dict[str, object] = {}
-    spread: dict[str, object] = {}
-    monotonic: dict[str, object] = {}
-
-    for col in feature_cols:
-        x = arrays[col]
-        mask = ~np.isnan(x) & ~np.isnan(target_arr)
-        xc, yc = x[mask], target_arr[mask]
-        if xc.size < 100:
-            spearman[col] = spear_lo[col] = spear_hi[col] = None
-            mi[col] = spread[col] = monotonic[col] = None
-            continue
-
-        spearman[col] = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
-        lo, hi = _bootstrap_spearman_ci(
-            xc, yc, _joint_block(blocks, col, target_label), seed=_seed_for(col),
+    metrics = {
+        col: _edge_metrics(
+            arrays[col],
+            target_arr,
+            _joint_block(blocks, col, target_label),
+            _seed_for(col),
         )
-        spear_lo[col] = lo
-        spear_hi[col] = hi
-        mi[col] = _mutual_info(xc, yc)
-        spread[col], monotonic[col] = _decile_metrics(xc, yc)
-
+        for col in feature_cols
+    }
     rows: list[tuple[str, dict[str, object]]] = []
-    for name, values in (
-        ("spearman", spearman),
-        ("spearman_ci_lo", spear_lo),
-        ("spearman_ci_hi", spear_hi),
-        ("mutual_information", mi),
-        ("decile_spread", spread),
-        ("monotonic_fraction", monotonic),
-    ):
-        values = dict(values)
+    for idx, name in enumerate(_EDGE_METRICS):
+        values: dict[str, object] = {col: metrics[col][idx] for col in feature_cols}
         values[target_label] = None
         rows.append((name, values))
     return rows
+
+
+@_memoized
+def _edge_metrics(
+    x: np.ndarray,
+    y: np.ndarray,
+    block: int,
+    seed: int,
+) -> tuple[object, ...]:
+    """Whole per-feature edge block (mask, Spearman, CI, MI, deciles).
+
+    Memoized as one kernel so a warm re-run is one digest lookup per feature
+    instead of re-ranking full-length arrays for the point Spearman and
+    deciles. The CI and MI beneath keep their own memos, so a cold call
+    computes exactly what the inline loop did.
+    """
+    mask = ~np.isnan(x) & ~np.isnan(y)
+    xc, yc = x[mask], y[mask]
+    if xc.size < 100:
+        return None, None, None, None, None, None
+    spearman = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
+    lo, hi = _bootstrap_spearman_ci(xc, yc, block, seed=seed)
+    mi = _mutual_info(xc, yc)
+    spread, monotonic = _decile_metrics(xc, yc)
+    return spearman, lo, hi, mi, spread, monotonic
 
 
 def _regime_rows(
@@ -205,37 +235,40 @@ def _regime_rows(
     target_arr: np.ndarray,
     target_label: str,
 ) -> list[tuple[str, dict[str, object]]]:
-    n = target_arr.size
-    chunks = [(i * n // 4, (i + 1) * n // 4) for i in range(4)]
     agreement: dict[str, object] = {}
     spread: dict[str, object] = {}
-
     for col in feature_cols:
-        x = arrays[col]
-        values: list[float] = []
-        for s, e in chunks:
-            xc, yc = x[s:e], target_arr[s:e]
-            mask = ~np.isnan(xc) & ~np.isnan(yc)
-            if mask.sum() < 10:
-                continue
-            v = _safe(lambda a: float(stats.spearmanr(a, yc[mask]).statistic), xc[mask])
-            if v is not None:
-                values.append(v)
-        if len(values) >= 2:
-            arr = np.asarray(values)
-            pos = int((arr > 0).sum())
-            neg = int((arr < 0).sum())
-            agreement[col] = f"{max(pos, neg)}/{len(values)}"
-            spread[col] = float(np.std(arr))
-        else:
-            agreement[col] = spread[col] = None
-
+        agreement[col], spread[col] = _regime_metrics(arrays[col], target_arr)
     agreement[target_label] = None
     spread[target_label] = None
     return [
         ("regime_sign_agreement", agreement),
         ("regime_spearman_std", spread),
     ]
+
+
+@_memoized
+def _regime_metrics(x: np.ndarray, y: np.ndarray) -> tuple[object, object]:
+    """Per-feature regime block over four equal time chunks, memoized whole:
+    the four chunked Spearmans were the only kernels a warm re-run still paid.
+    """
+    n = y.size
+    chunks = [(i * n // 4, (i + 1) * n // 4) for i in range(4)]
+    values: list[float] = []
+    for s, e in chunks:
+        xc, yc = x[s:e], y[s:e]
+        mask = ~np.isnan(xc) & ~np.isnan(yc)
+        if mask.sum() < 10:
+            continue
+        v = _safe(lambda a: float(stats.spearmanr(a, yc[mask]).statistic), xc[mask])
+        if v is not None:
+            values.append(v)
+    if len(values) < 2:
+        return None, None
+    arr = np.asarray(values)
+    pos = int((arr > 0).sum())
+    neg = int((arr < 0).sum())
+    return f"{max(pos, neg)}/{len(values)}", float(np.std(arr))
 
 
 def _pairwise_rows(
