@@ -633,7 +633,9 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(200, "application/json", cached)
                 return
             with _REGISTRY_LOCK:
-                qc_lock = _QC_LOCKS.setdefault(cache_key, threading.Lock())
+                qc_lock = _QC_LOCKS.get(cache_key)
+                if qc_lock is None:
+                    qc_lock = _QC_LOCKS[cache_key] = threading.Lock()
             with qc_lock:
                 cached = _QC_CACHE.get(cache_key)
                 if cached is not None:

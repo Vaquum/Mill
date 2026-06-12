@@ -51,7 +51,7 @@ def server(arrow_store: ArrowStore, monkeypatch: pytest.MonkeyPatch):
 
 def _get(url: str) -> tuple[int, bytes]:
     request = urllib.request.Request(url, headers={"Authorization": _AUTH})
-    with urllib.request.urlopen(request) as resp:
+    with urllib.request.urlopen(request, timeout=10) as resp:
         return resp.status, resp.read()
 
 
@@ -59,10 +59,12 @@ def test_identical_concurrent_qc_computes_once(
     server: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls: list[int] = []
+    entered = threading.Event()
     real_report = qc.report
 
     def slow_counting_report(df, target):
         calls.append(1)
+        entered.set()
         time.sleep(0.3)
         return real_report(df, target)
 
@@ -75,10 +77,14 @@ def test_identical_concurrent_qc_computes_once(
         )
         for _ in range(2)
     ]
+    # Deterministic overlap: the second request is issued only once the
+    # first is inside qc.report, so a broken lock cannot pass by luck.
+    threads[0].start()
+    assert entered.wait(timeout=10), "first request never reached qc.report"
+    threads[1].start()
     for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+        t.join(timeout=30)
+        assert not t.is_alive(), "request thread hung; single-flight deadlock?"
 
     assert len(calls) == 1
     assert [status for status, _ in results] == [200, 200]
