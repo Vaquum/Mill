@@ -91,6 +91,9 @@ _API_REFERENCE_BYTES = json.dumps(_API_REFERENCE).encode()
 # path below reads without a lock, and a reader must never see one half.
 _RESULTS: dict[tuple[str, str, str], tuple[bytes, pl.DataFrame]] = {}
 _QC_CACHE: dict[tuple[str, str, str, tuple[str, ...], str, str, str, str], bytes] = {}
+# Single-flight: one lock per QC cache key so identical concurrent requests
+# compute once; created under _REGISTRY_LOCK, same lifetime as the cache entry.
+_QC_LOCKS: dict[tuple[str, str, str, tuple[str, ...], str, str, str, str], threading.Lock] = {}
 _RAW_CACHE: dict[str, pl.DataFrame] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
@@ -632,35 +635,44 @@ class _Handler(BaseHTTPRequestHandler):
             if cached is not None:
                 self._send(200, "application/json", cached)
                 return
-            try:
-                _payload, frame = _ensure(bar, target, spec)
-                if cols:
-                    sel = ["datetime", *(c for c in cols if c in frame.columns)]
-                    if target != "none" and target in frame.columns:
-                        sel.append(target)
-                    sub = frame.select(sel)
-                else:
-                    sub = frame
-                sub = _date_filter(sub, date_from, date_to)
-                sub = _group_for_qc(
-                    sub,
-                    row_mode,
-                    cut_n,
-                    target if target != "none" else None,
-                )
-                report = qc.report(sub, target if target != "none" else None)
-                report["grades"] = grading.grade_map(
-                    report, target=target if target != "none" else None
-                )
-            except Exception as exc:
-                self._send(500, "text/plain", f"qc failed: {exc}".encode())
-                return
-            try:
-                body = json.dumps(report, allow_nan=False).encode()
-            except ValueError as exc:
-                self._send(500, "text/plain", f"qc serialize failed: {exc}".encode())
-                return
-            _QC_CACHE[cache_key] = body
+            with _REGISTRY_LOCK:
+                qc_lock = _QC_LOCKS.setdefault(cache_key, threading.Lock())
+            with qc_lock:
+                cached = _QC_CACHE.get(cache_key)
+                if cached is not None:
+                    self._send(200, "application/json", cached)
+                    return
+                try:
+                    _payload, frame = _ensure(bar, target, spec)
+                    if cols:
+                        sel = ["datetime", *(c for c in cols if c in frame.columns)]
+                        if target != "none" and target in frame.columns:
+                            sel.append(target)
+                        sub = frame.select(sel)
+                    else:
+                        sub = frame
+                    sub = _date_filter(sub, date_from, date_to)
+                    sub = _group_for_qc(
+                        sub,
+                        row_mode,
+                        cut_n,
+                        target if target != "none" else None,
+                    )
+                    report = qc.report(sub, target if target != "none" else None)
+                    report["grades"] = grading.grade_map(
+                        report, target=target if target != "none" else None
+                    )
+                except Exception as exc:
+                    self._send(500, "text/plain", f"qc failed: {exc}".encode())
+                    return
+                try:
+                    body = json.dumps(report, allow_nan=False).encode()
+                except ValueError as exc:
+                    self._send(
+                        500, "text/plain", f"qc serialize failed: {exc}".encode()
+                    )
+                    return
+                _QC_CACHE[cache_key] = body
             self._send(200, "application/json", body)
         else:
             self._send(404, "text/plain", b"")
