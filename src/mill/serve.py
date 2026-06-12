@@ -88,8 +88,9 @@ _API_REFERENCE = api_reference.build_reference(
 _API_REFERENCE_BYTES = json.dumps(_API_REFERENCE).encode()
 
 
-_PAYLOADS: dict[tuple[str, str, str], bytes] = {}
-_FRAMES: dict[tuple[str, str, str], pl.DataFrame] = {}
+# One dict so payload and frame publish in a single assignment: the fast
+# path below reads without a lock, and a reader must never see one half.
+_RESULTS: dict[tuple[str, str, str], tuple[bytes, pl.DataFrame]] = {}
 _QC_CACHE: dict[tuple[str, str, str, tuple[str, ...], str, str, str, str], bytes] = {}
 _RAW_CACHE: dict[str, pl.DataFrame] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
@@ -395,15 +396,15 @@ def _ensure(
 ) -> tuple[bytes, pl.DataFrame]:
     sh = _spec_hash(spec)
     key = (bar, target, sh)
-    payload = _PAYLOADS.get(key)
-    if payload is not None:
-        return payload, _FRAMES[key]
+    entry = _RESULTS.get(key)
+    if entry is not None:
+        return entry
     with _REGISTRY_LOCK:
         bar_lock = _BAR_LOCKS.setdefault(bar, threading.Lock())
     with bar_lock:
-        payload = _PAYLOADS.get(key)
-        if payload is not None:
-            return payload, _FRAMES[key]
+        entry = _RESULTS.get(key)
+        if entry is not None:
+            return entry
         raw = _raw_for(bar)
         if spec:
             features = build_from_spec(raw, spec)
@@ -417,8 +418,7 @@ def _ensure(
             )
             result = features.join(tdf, on="datetime", how="left")
         payload = _serialize(result)
-        _PAYLOADS[key] = payload
-        _FRAMES[key] = result
+        _RESULTS[key] = (payload, result)
     return payload, result
 
 
