@@ -3,8 +3,10 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
+# libgomp1: OpenMP runtime that slim images omit; limen's lightgbm dlopens
+# libgomp.so.1 at import, so the app dies at boot without it.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git \
+ && apt-get install -y --no-install-recommends git libgomp1 \
  && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml /app/pyproject.toml
