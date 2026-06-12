@@ -31,6 +31,18 @@ def read_fresh(path: Path) -> pl.DataFrame | None:
         return None
 
 
+def write_json_atomic(path: Path, obj: object) -> None:
+    """Dump to a sibling tmp file, then rename onto the target.
+
+    A crash at any instant leaves the previous valid file; readers never see
+    a torn write. The dump fails before the tmp exists for unserializable
+    input, so the target is untouched on error.
+    """
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n")
+    tmp.replace(path)
+
+
 def write_cache(
     path: Path,
     data: pl.DataFrame,
@@ -45,7 +57,5 @@ def write_cache(
         "rows": data.height,
         "columns": data.columns,
     }
-    path.with_suffix(".json").write_text(
-        json.dumps(metadata, indent=2, sort_keys=True) + "\n"
-    )
+    write_json_atomic(path.with_suffix(".json"), metadata)
     return path

@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import hashlib
 import itertools
+import threading
 import warnings
 import weakref
 import zlib
@@ -592,6 +593,12 @@ def _bootstrap_spearman_estimates(
     return estimates
 
 
+# numba's workqueue threading layer (the one selected here and in the
+# container: no TBB/OpenMP runtime) aborts the process on concurrent access,
+# so launches of the one parallel=True kernel must be serialized.
+_PARALLEL_KERNEL_LOCK = threading.Lock()
+
+
 def _bootstrap_block_indices(
     n: int,
     block: int,
@@ -634,7 +641,8 @@ def _bootstrap_spearman_ci(
     if n < block + 1:
         return None, None
     idx = _bootstrap_block_indices(n, block, n_iter, seed)
-    estimates = _bootstrap_spearman_estimates(x, y, idx)
+    with _PARALLEL_KERNEL_LOCK:
+        estimates = _bootstrap_spearman_estimates(x, y, idx)
     alpha = (1 - ci) / 2
     return (
         float(np.percentile(estimates, 100 * alpha)),
