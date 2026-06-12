@@ -19,6 +19,7 @@ import polars as pl
 
 from . import api_reference, feature_registry, grading, qc, targets
 from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS, arrow_series
+from .cache_store import write_json_atomic
 from .settings import (
     APP_NAME,
     ARROW_LATEST_NAME,
@@ -136,9 +137,7 @@ def _load_factory_tags() -> dict[str, list[str]]:
 
 def _save_factory_tags() -> None:
     _TAGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _TAGS_PATH.write_text(
-        json.dumps(_FACTORY_TAGS, indent=2, sort_keys=True) + "\n"
-    )
+    write_json_atomic(_TAGS_PATH, _FACTORY_TAGS)
 
 
 def _load_saved_views() -> dict[str, dict[str, Any]]:
@@ -170,9 +169,7 @@ def _load_saved_views() -> dict[str, dict[str, Any]]:
 
 def _save_saved_views() -> None:
     _SAVED_VIEWS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _SAVED_VIEWS_PATH.write_text(
-        json.dumps(_SAVED_VIEWS, indent=2, sort_keys=True) + "\n"
-    )
+    write_json_atomic(_SAVED_VIEWS_PATH, _SAVED_VIEWS)
 
 
 def _sanitize_tags(raw: list[Any]) -> list[str]:
