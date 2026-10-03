@@ -12,7 +12,7 @@ services:
       MILL_CONFIG_DIR: /data/experiments/mill/config
       MILL_ARROW_DIR: /opt/arrow
     ports:
-      - "${MILL_PORT:-8765}:8765"
+      - "127.0.0.1:${MILL_PORT:-8765}:8765"
     volumes:
       - type: bind
         source: ${MILL_HOST_DATA_ROOT:-/data/experiments}
