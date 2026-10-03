@@ -14,7 +14,7 @@ dependencies = [
     "scikit-learn",
     "scipy",
     "statsmodels",
-    "vaquum_limen @ git+https://github.com/Vaquum/Limen.git@main",
+    "vaquum_limen @ git+https://github.com/Vaquum/Limen.git@86968e44022cabcae83fc38fe2ed0c7105816fa2",
 ]
 
 [project.optional-dependencies]
