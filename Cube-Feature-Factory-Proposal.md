@@ -115,7 +115,7 @@ Measured on typed arrays in V8: EMA, rolling z-score, Wilder RSI and a three-con
 - A custom line goes through `curveVertices` (one point per pixel column), the 1.5 px reference stroke and its casing, the occlusion planner and the tags. It costs what a moving average costs.
 - A custom column goes through the pane's painter and the axis registry: a fixed domain when the unit is bounded, a symmetric Auto axis for signed values, an Auto axis otherwise, with the existing non-value glyphs.
 - A boolean feature becomes events: glyphs at bar ends, as the crosses are drawn, or intervals in the event strip, as the squeezes are.
-- One new family token, `--ol-line-custom`. Its hue is chosen by the co-occurrence matrix (CIEDE2000 of at least 8 in grayscale and in the protan, deutan and tritan simulations), not by taste.
+- No new hue. Screening the six existing reference and signed hues with an OKLab colour-vision simulation already gives a worst pair of ΔE 4.5 in the light theme (negative clay against the POC gold, deutan), which the Cube separates by label, glyph and place. Every candidate seventh hue I screened (two teals, a magenta and a green, per theme) fell below the target of 8 against at least one existing hue, the best at 7.2 in light and 5.9 in dark. So the **Your features** family draws in a neutral carrier, ink or muted as the co-occurrence matrix decides, the way Historical comparison is neutral; each line is told apart by its tag, an `ƒ` mark in the tag and the row, and its name. An authored RGB per feature stays possible on the drawings' terms: object identity only, with its name and exact value beside every swatch.
 
 ### 2.6 Semantics the factory inherits
 
@@ -249,7 +249,7 @@ Measured on typed arrays in V8: EMA, rolling z-score, Wilder RSI and a three-con
 2. **The 2026-05-15 window.** If it protects an out-of-sample period, I propose that QC, discovery and Furnace never cross it; that drawing crosses it only for features computed in the page, which the Cube already shows over all history; and that the Check step records when a feature was tuned while later data was on screen.
 3. **Mill's own interface.** Retire it into the Cube, or rebuild it on the Cube's design system.
 4. **A new read kind.** `/cube/feature` is deliberate. The Cube's DR-17 forbade new read kinds for its calibration work.
-5. **The custom family's hue**, chosen by the co-occurrence matrix.
+5. **The custom family's carrier.** I recommend no new hue (section 2.5), with the co-occurrence matrix choosing between ink and muted.
 
 ## 6. Recommendation
 
@@ -265,3 +265,4 @@ Build the foundation once, then ship in this order:
 - V8: Node 23.10 on the same payloads; `JSON.parse` with conversion to `Float64Array`, against `zlib.gunzipSync` with typed-array views; kernels on a seeded random walk (timing only).
 - Pool: every registry factory whose parameters all have defaults, applied to the 1h bars (233 numeric columns), ranked with Polars, AUC as a rank-sum matrix-vector product against one binary label (timing only).
 - The QC values quoted in the companion page come from `qc.report` and `grading.grade_report` on the 1h bars with target `next_bar_up`.
+- Hue screen: OKLab ΔE ×100 under the Machado (2009) severity-1.0 protan and deutan simulations and unsimulated vision, pair by pair, against the Cube's light and dark values of `--ol-line-poc`, `--ol-line-level`, `--ol-line-average`, `--ol-line-vwap`, `--ol-positive` and `--ol-negative`. It is an engineering screen in a different metric from the Cube's CIEDE2000 matrix, which stays the authority.
