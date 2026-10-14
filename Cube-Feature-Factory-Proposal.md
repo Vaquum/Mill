@@ -184,7 +184,7 @@ Measured on typed arrays in V8: EMA, rolling z-score, Wilder RSI and a three-con
 1. **Target**: inside the selection against the rest of the view, which is described rather than tested (see the method below); the four hours before each rally starts; the bar after each case's anchor. Label counts are shown, and below 30 events intervals are withheld, as Continuations already does.
 2. **Pool**: your Mill views, the catalog at default parameters, or parameter grids, with the size stated ("233 candidates on 1h").
 3. **Search**, in two stages, with results streaming in.
-4. **Results**: a ranked shortlist. Each card gives the separation (AUC with a block-bootstrap interval, ranked by its lower bound), regime agreement over four quarters, redundancy with what is already on, and where it stands against chance. The selected card draws as a ghost column, and the arrow keys step through the cards.
+4. **Results**: a ranked shortlist. Each card gives the AUC with a block-bootstrap interval and its direction (higher or lower inside the target), regime agreement over four quarters, redundancy with what is already on, and where it stands against chance. Cards rank by conservative separation in either direction: the distance from 0.5 of the interval's bound nearest 0.5, and zero when the interval spans 0.5. A perfect inverse separator such as TRIX(30) at AUC 0.00 therefore ranks with one at 1.00 and offers a "below" rule. The selected card draws as a ghost column, and the arrow keys step through the cards.
 5. **Rule**: "Make it a rule" fits a threshold or a crossing with persistence as a Limen leaf, draws its hits as events, and places it as A does, or emits a RuleBasedManifest for a walk-forward Furnace run with acceptance gates.
 
 **The method.**
