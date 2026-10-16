@@ -184,7 +184,7 @@ def test_rule_manifest_validates_with_limen() -> None:
     assert "not out of sample" in manifest["metadata"]["description"]
 
 
-# Ten days from 2024-01-01, and the ten days through 2026-10-16, after where Mill once stopped,
+# Ten days from 2024-01-01, and the ten days through 2026-10-15, after where Mill once stopped,
 # so a default context reaches the latest bar.
 def test_split_dates_keep_three_ordered_splits_or_none() -> None:
     def splits(first: str, latest: str):
@@ -204,7 +204,7 @@ def test_split_dates_keep_three_ordered_splits_or_none() -> None:
 
 
 _TS = ([ns(2024, 1, 1) + i * 3_600_000_000_000 for i in range(240)]
-       + [ns(2026, 10, 7) + i * 3_600_000_000_000 for i in range(240)])
+       + [ns(2026, 10, 6) + i * 3_600_000_000_000 for i in range(240)])
 
 
 @pytest.fixture
@@ -248,7 +248,7 @@ def test_discover_ranks_a_view_against_one_window(server: str) -> None:
     assert out["evidence"] == "description" and out["intervals"] is False
     assert out["chance"]["shifts"] == 240 - 2 * 12 + 1
     assert out["pool"] == {"kind": "view", "name": "ochlv", "columns": 2, "skipped": [], "cached": False,
-                           "built_ms": out["pool"]["built_ms"]}
+                           "built_ms": out["pool"]["built_ms"], "through_ms": discover.parse_ms("2026-10-16T00:00:00Z")}
     # The fixture's columns are ramps over time, so both columns rank like time and form one cluster.
     assert len(out["candidates"]) == 1 and out["candidates"][0]["similar"]
     leader = out["candidates"][0]
@@ -258,11 +258,11 @@ def test_discover_ranks_a_view_against_one_window(server: str) -> None:
 
 def test_discover_default_context_reaches_the_latest_bar(server: str) -> None:
     status, out = _post(server, {"pool": {"kind": "view", "name": "ochlv"},
-                                 "windows": [{"start": "2026-10-16T00:00:00Z", "end": "2026-10-17T00:00:00Z"}]})
+                                 "windows": [{"start": "2026-10-15T00:00:00Z", "end": "2026-10-16T00:00:00Z"}]})
     assert status == 200, out
     assert out["target"]["marked_bars"] == 24
-    assert out["context"]["end_ms"] == discover.parse_ms("2026-10-17T00:00:00Z")
-    assert out["window"] == {"start": "2024-01-01", "end": "2026-10-16"}
+    assert out["context"]["end_ms"] == discover.parse_ms("2026-10-16T00:00:00Z")
+    assert out["window"] == {"start": "2024-01-01", "end": "2026-10-15"}
 
 
 def test_discover_refuses_an_empty_window(server: str) -> None:

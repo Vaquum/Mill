@@ -93,15 +93,15 @@ _QC_CACHE: dict[tuple[str, int, str, str, tuple[str, ...], str, str, str, str], 
 # Single-flight: one lock per QC cache key so identical concurrent requests
 # compute once; created under _REGISTRY_LOCK, same lifetime as the cache entry.
 _QC_LOCKS: dict[tuple[str, int, str, str, tuple[str, ...], str, str, str, str], threading.Lock] = {}
-# Each bar series with its version: the store rewrites a series' file as bars arrive.
-_RAW_CACHE: dict[str, tuple[pl.DataFrame, int]] = {}
+# Each bar series' closed bars, their version and the file's write time they were read at.
+_RAW_CACHE: dict[str, tuple[pl.DataFrame, int, int]] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
 # Find features pools: a catalog pool holds every default-parameter column of a bar series
-# (40 MB on 1h, 160 MB on 15m), so only the most recent few are kept; each builds once.
+# (about 120 MB on 1h, 490 MB on 15m), so only as many are kept as there are time bars; each builds once.
 _POOLS: dict[tuple[str, int, str], discover.Pool] = {}
 _POOL_LOCKS: dict[tuple[str, int, str], threading.Lock] = {}
-_POOLS_MAX = 3
+_POOLS_MAX = len(TIME_BAR_SECONDS)
 _DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": discover.MAX_LEADERS, "max_points": 4096}
 
 _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
@@ -226,7 +226,7 @@ def _serialize(df: pl.DataFrame) -> bytes:
 
 
 def _source_version(bar: str) -> int:
-    """A bar series' version: when the store last wrote its file, which it does as bars arrive."""
+    """When the store last wrote a bar series' file, which it does every few minutes."""
     try:
         return arrow_latest_path(arrow_series(bar)).stat().st_mtime_ns
     except FileNotFoundError:
@@ -234,24 +234,28 @@ def _source_version(bar: str) -> int:
 
 
 def _raw_for(bar: str) -> tuple[pl.DataFrame, int]:
-    """A bar series through its latest bar, with its version; read again once the store has written since."""
-    version = _source_version(bar)
+    """A bar series through its latest closed bar, with its version; read again once the store has written since.
+
+    The store rewrites the file while a bar is open, so the version moves only when the closed bars change.
+    """
+    written = _source_version(bar)
     hit = _RAW_CACHE.get(bar)
-    if hit is not None and hit[1] == version:
-        return hit
-    hit = (klines(bar), version)
-    _RAW_CACHE[bar] = hit
+    if hit is not None and hit[2] == written:
+        return hit[0], hit[1]
+    raw = klines(bar)
+    version = hit[1] if hit is not None and raw.equals(hit[0]) else written
+    _RAW_CACHE[bar] = (raw, version, written)
     _retire(bar, version)
-    return hit
+    return raw, version
 
 
 def _retire(bar: str, version: int) -> None:
-    """Forget what was computed from a bar series' earlier versions: their keys are (bar, version, ...).
+    """Forget the results and QC reports of a bar series' earlier versions: their keys are (bar, version, ...).
 
-    Under the registry lock, which pool eviction also holds while it mutates the pools.
+    A pool stays until its successor replaces it (_build_pool). Under the registry lock.
     """
     with _REGISTRY_LOCK:
-        for cache in (_RESULTS, _QC_CACHE, _QC_LOCKS, _POOLS, _POOL_LOCKS):
+        for cache in (_RESULTS, _QC_CACHE, _QC_LOCKS):
             for key in [k for k in list(cache) if k[0] == bar and k[1] != version]:
                 cache.pop(key, None)
 
@@ -463,7 +467,11 @@ def _ensure(
 
 
 def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, float]:
-    """The bar's Find features pool, built once per key while others wait for it."""
+    """The bar's Find features pool, built once per key while others wait for it.
+
+    Once newer bars have closed, the last pool answers while the current one builds behind it,
+    so only the first search of a bar and pool waits for a build.
+    """
     kind = pool.get("kind", "catalog")
     spec: list[dict[str, Any]] | None = None
     raw, version = _raw_for(bar)
@@ -483,6 +491,18 @@ def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, floa
         return hit, True, 0.0
     with _REGISTRY_LOCK:
         lock = _POOL_LOCKS.setdefault(key, threading.Lock())
+        last = max((k for k in _POOLS if k[0] == bar and k[2] == key[2]), default=None)
+        older = _POOLS.get(last) if last is not None else None
+    if older is not None:
+        threading.Thread(target=_build_pool, args=(key, lock, raw, spec), daemon=True).start()
+        return older, True, 0.0
+    return _build_pool(key, lock, raw, spec)
+
+
+def _build_pool(
+    key: tuple[str, int, str], lock: threading.Lock, raw: pl.DataFrame, spec: list[dict[str, Any]] | None
+) -> tuple[discover.Pool, bool, float]:
+    """Build a pool once under its key's lock; it replaces its bar and pool's earlier versions."""
     with lock:
         hit = _POOLS.get(key)
         if hit is not None:
@@ -490,10 +510,28 @@ def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, floa
         began = time.perf_counter()
         built = discover.catalog_pool(raw) if spec is None else discover.spec_pool(raw, spec)
         with _REGISTRY_LOCK:
-            while len(_POOLS) >= _POOLS_MAX:
-                _POOLS.pop(next(iter(_POOLS)))
-            _POOLS[key] = built
+            same = [k for k in _POOLS if k[0] == key[0] and k[2] == key[2]]
+            # A later version may have landed while this one built; then this one is already behind.
+            if all(k[1] < key[1] for k in same):
+                for k in same:
+                    del _POOLS[k]
+                    _POOL_LOCKS.pop(k, None)
+                while len(_POOLS) >= _POOLS_MAX:
+                    _POOLS.pop(next(iter(_POOLS)))
+                _POOLS[key] = built
         return built, False, (time.perf_counter() - began) * 1000
+
+
+def _warm() -> None:
+    """Build each time bar's catalog pool once, fewest bars first, so no search has to wait for one.
+
+    A bar it cannot build is left to its first search, which builds it or says why not.
+    """
+    for bar in sorted(TIME_BAR_SECONDS, key=TIME_BAR_SECONDS.get, reverse=True):
+        try:
+            _pool_for(bar, {"kind": "catalog"})
+        except Exception:
+            continue
 
 
 def _bounded_int(body: dict[str, Any], name: str, default: int, low: int) -> int:
@@ -552,7 +590,7 @@ def _discover(body: Any) -> dict[str, Any]:
     out["pool"] = {
         "kind": pool_request.get("kind", "catalog"), "name": pool_request.get("name"),
         "columns": len(pool.names), "skipped": list(pool.skipped), "cached": cached,
-        "built_ms": round(built_ms, 1),
+        "built_ms": round(built_ms, 1), "through_ms": whole[1],
     }
     return out
 
@@ -759,9 +797,12 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(400, "text/plain", b"bad cut_n")
                 return
             sh = _spec_hash(spec)
-            cache_key = (
-                bar, _source_version(bar), target, sh, cols, date_from, date_to, row_mode, str(cut_n)
-            )
+            try:
+                _, version = _raw_for(bar)
+            except Exception as exc:
+                self._send(500, "text/plain", f"qc failed: {exc}".encode())
+                return
+            cache_key = (bar, version, target, sh, cols, date_from, date_to, row_mode, str(cut_n))
             cached = _QC_CACHE.get(cache_key)
             if cached is not None:
                 self._send(200, "application/json", cached)
@@ -981,6 +1022,7 @@ def main() -> None:
         flush=True,
     )
     server = ThreadingHTTPServer((bind_host, bind_port), _Handler)
+    threading.Thread(target=_warm, daemon=True).start()
     webbrowser.open(url)
     server.serve_forever()
 

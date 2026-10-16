@@ -82,7 +82,7 @@ def build_reference(
             "method": "GET", "path": "/app-config", "auth": True,
             "summary": "UI configuration: bars, targets, factories, views, "
                        "bar data sources, and data_window, the days the default bar "
-                       "series covers through its latest bar.",
+                       "series covers through its latest closed bar.",
             "response": {"content_type": "application/json",
                          "description": "Configuration object consumed by the UI."},
         },
@@ -142,7 +142,7 @@ def build_reference(
                     _param("lead_bars", "int", default=4, description="Bars before each "
                            "window in lead mode, 1 to 96."),
                     _param("context", "json", description="{start, end}: the bars compared "
-                           "against; default every bar of the series, through its latest."),
+                           "against; default every bar of the series, through its latest closed one."),
                     _param("display", "json", description="{start, end}: the span of the "
                            "returned series and rule hits; default the context."),
                     _param("pool", "json", default={"kind": "catalog"},
@@ -157,7 +157,9 @@ def build_reference(
             },
             "response": {"content_type": "application/json",
                          "description": "{bar, step_ms, window, pool, target, context, evidence, "
-                                        "intervals, chance, screened, timing_ms, candidates}; "
+                                        "intervals, chance, screened, timing_ms, candidates}; pool.through_ms "
+                                        "is when the pool's latest bar closed, as a pool answers "
+                                        "until the next one with newer bars is built; "
                                         "400 {error, detail} for a refused request."},
         },
         {
