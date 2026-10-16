@@ -8,6 +8,7 @@ import os
 import re
 import secrets
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
@@ -17,7 +18,7 @@ from urllib.parse import parse_qs, urlsplit
 import numpy as np
 import polars as pl
 
-from . import api_reference, feature_registry, grading, qc, targets
+from . import api_reference, discover, feature_registry, grading, qc, targets
 from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS, arrow_series
 from .cache_store import write_json_atomic
 from .settings import (
@@ -84,6 +85,8 @@ _API_REFERENCE = api_reference.build_reference(
     targets=list(_TARGETS),
     row_modes=sorted(_ROW_MODES),
     data_window={"start": PROJECT_START_STR, "end": PROJECT_END_STR},
+    time_bars=list(TIME_BAR_SECONDS),
+    time_bar_default=DEFAULT_BAR,
 )
 _API_REFERENCE_BYTES = json.dumps(_API_REFERENCE).encode()
 
@@ -98,6 +101,12 @@ _QC_LOCKS: dict[tuple[str, str, str, tuple[str, ...], str, str, str, str], threa
 _RAW_CACHE: dict[str, pl.DataFrame] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
+# Find features pools: a catalog pool holds every default-parameter column of a bar series
+# (40 MB on 1h, 160 MB on 15m), so only the most recent few are kept; each builds once.
+_POOLS: dict[tuple[str, str], discover.Pool] = {}
+_POOL_LOCKS: dict[tuple[str, str], threading.Lock] = {}
+_POOLS_MAX = 3
+_DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": discover.MAX_LEADERS, "max_points": 4096}
 
 _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
 _VIEW_TARGETS: dict[str, str] = {}
@@ -425,6 +434,96 @@ def _ensure(
     return payload, result
 
 
+def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, float]:
+    """The bar's Find features pool, built once per key while others wait for it."""
+    kind = pool.get("kind", "catalog")
+    spec: list[dict[str, Any]] | None = None
+    if kind == "catalog":
+        key = (bar, "catalog")
+    elif kind == "view":
+        name = pool.get("name")
+        with _REGISTRY_LOCK:
+            spec = _VIEW_SPECS.get(name) if isinstance(name, str) else None
+        if spec is None:
+            raise ValueError(f"unknown view: {name!r}")
+        key = (bar, f"view:{name}:{_spec_hash(spec)}")
+    else:
+        raise ValueError("pool kind must be 'catalog' or 'view'")
+    hit = _POOLS.get(key)
+    if hit is not None:
+        return hit, True, 0.0
+    with _REGISTRY_LOCK:
+        lock = _POOL_LOCKS.setdefault(key, threading.Lock())
+    with lock:
+        hit = _POOLS.get(key)
+        if hit is not None:
+            return hit, True, 0.0
+        began = time.perf_counter()
+        raw = _raw_for(bar)
+        built = discover.catalog_pool(raw) if spec is None else discover.spec_pool(raw, spec)
+        with _REGISTRY_LOCK:
+            while len(_POOLS) >= _POOLS_MAX:
+                _POOLS.pop(next(iter(_POOLS)))
+            _POOLS[key] = built
+        return built, False, (time.perf_counter() - began) * 1000
+
+
+def _bounded_int(body: dict[str, Any], name: str, default: int, low: int) -> int:
+    value = body.get(name, default)
+    if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= _DISCOVER_LIMITS[name]:
+        raise ValueError(f"{name} must be an integer from {low} to {_DISCOVER_LIMITS[name]}")
+    return value
+
+
+def _span(item: Any, label: str) -> tuple[int, int]:
+    if not isinstance(item, dict):
+        raise ValueError(f"{label} must be an object with start and end")
+    span = (discover.parse_ms(item.get("start")), discover.parse_ms(item.get("end")))
+    discover.research_bounds(*span)
+    return span
+
+
+def _discover(body: Any) -> dict[str, Any]:
+    """Validate a Find features request, then rank the pool against its windows."""
+    if not isinstance(body, dict):
+        raise ValueError("the request must be a JSON object")
+    bar = body.get("bar", DEFAULT_BAR)
+    if bar not in TIME_BAR_SECONDS:
+        raise ValueError(f"bar must be one of {list(TIME_BAR_SECONDS)}")
+    windows = body.get("windows")
+    if not isinstance(windows, list) or not 1 <= len(windows) <= _DISCOVER_LIMITS["windows"]:
+        raise ValueError(f"windows must be a list of 1 to {_DISCOVER_LIMITS['windows']} spans")
+    spans = [_span(w, "each window") for w in windows]
+    mode = body.get("mode", "inside")
+    if mode not in discover.MODES:
+        raise ValueError(f"mode must be one of {list(discover.MODES)}")
+    window = {"start": PROJECT_START_STR, "end": PROJECT_END_STR}
+    # By default the whole research window, its last day included.
+    research = {"start": discover.RESEARCH_START_MS, "end": discover.RESEARCH_END_MS}
+    context = _span(body.get("context") or research, "context")
+    display = _span(body.get("display") or body.get("context") or research, "display")
+    pool_request = body.get("pool") or {"kind": "catalog"}
+    if not isinstance(pool_request, dict):
+        raise ValueError("pool must be an object")
+    pool, cached, built_ms = _pool_for(bar, pool_request)
+    step_ms = TIME_BAR_SECONDS[bar] * 1000
+    out = discover.discover(
+        pool, step_ms=step_ms, windows=spans, mode=mode,
+        lead_bars=_bounded_int(body, "lead_bars", 4, 1), context=context, display=display,
+        top=_bounded_int(body, "top", 5, 1), max_points=_bounded_int(body, "max_points", 2000, 100),
+        bar_source=_BAR_DATA_SOURCES[bar], label=bar,
+    )
+    out["bar"] = bar
+    out["step_ms"] = step_ms
+    out["window"] = window
+    out["pool"] = {
+        "kind": pool_request.get("kind", "catalog"), "name": pool_request.get("name"),
+        "columns": len(pool.names), "skipped": list(pool.skipped), "cached": cached,
+        "built_ms": round(built_ms, 1),
+    }
+    return out
+
+
 def _parse_features(q: dict[str, list[str]]) -> tuple[list[dict[str, Any]], str | None]:
     raw = q.get("features", ["[]"])[0]
     try:
@@ -700,6 +799,22 @@ class _Handler(BaseHTTPRequestHandler):
             status, msg = _save_view(name, spec, target)
             body = {"ok": status == 200, "msg": msg, "name": name}
             self._send(status, "application/json", json.dumps(body).encode())
+        elif url.path == "/discover":
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                request = json.loads(self.rfile.read(length).decode() or "{}")
+            except json.JSONDecodeError as exc:
+                self._send(400, "application/json", json.dumps({"error": "invalid_request", "detail": f"bad json: {exc}"}).encode())
+                return
+            try:
+                answer = _discover(request)
+            except (ValueError, TypeError, KeyError) as exc:
+                self._send(400, "application/json", json.dumps({"error": "invalid_request", "detail": str(exc)}).encode())
+                return
+            except Exception as exc:
+                self._send(500, "application/json", json.dumps({"error": "discover_failed", "detail": str(exc)}).encode())
+                return
+            self._send(200, "application/json", json.dumps(answer, allow_nan=False).encode())
         elif url.path == "/delete_view":
             length = int(self.headers.get("Content-Length") or 0)
             try:

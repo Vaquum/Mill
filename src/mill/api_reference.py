@@ -40,8 +40,12 @@ def build_reference(
     targets: list[str],
     row_modes: list[str],
     data_window: dict[str, str],
+    time_bars: list[str] | None = None,
+    time_bar_default: str | None = None,
 ) -> dict[str, Any]:
     """Build the API reference document from the live route enums."""
+    time_bars = time_bars or bars
+    time_bar_default = time_bar_default or bar_default
     bars_param = _param(
         "bars", "enum", default=bar_default, values=bars,
         description="Bar series to load.",
@@ -117,6 +121,44 @@ def build_reference(
             ],
             "response": {"content_type": "application/json",
                          "description": "{columns, rows, n_rows, grades}."},
+        },
+        {
+            "method": "POST", "path": "/discover", "auth": True,
+            "summary": "Find features: rank the catalog or a view's columns against marked "
+                       "windows, with an exact circular-shift chance check, intervals at 30 or "
+                       "more events, and a fitted Limen threshold rule per leader.",
+            "body": {
+                "content_type": "application/json",
+                "fields": [
+                    _param("bar", "enum", default=time_bar_default, values=time_bars,
+                           description="Time bar series to rank on."),
+                    _param("windows", "json", required=True,
+                           description="Array of {start, end} UTC instants (ISO 8601 or "
+                                       "milliseconds) inside the data window; 1 to 500."),
+                    _param("mode", "enum", default="inside", values=["inside", "lead"],
+                           description="Mark the bars inside each window, or the lead_bars "
+                                       "bars before each window (the windows then leave the "
+                                       "comparison)."),
+                    _param("lead_bars", "int", default=4, description="Bars before each "
+                           "window in lead mode, 1 to 96."),
+                    _param("context", "json", description="{start, end}: the bars compared "
+                           "against; default the whole data window."),
+                    _param("display", "json", description="{start, end}: the span of the "
+                           "returned series and rule hits; default the context."),
+                    _param("pool", "json", default={"kind": "catalog"},
+                           description="{kind: catalog} for every default-parameter factory, "
+                                       "or {kind: view, name} for a view's columns."),
+                    _param("top", "int", default=5, description="Leaders returned, 1 to 12: the "
+                           "first of the twelve best clusters in rank order, so fewer is a prefix."),
+                    _param("max_points", "int", default=2000,
+                           description="Series points per leader, 100 to 4096; longer spans "
+                                       "carry each bucket's last bar."),
+                ],
+            },
+            "response": {"content_type": "application/json",
+                         "description": "{bar, step_ms, window, pool, target, context, evidence, "
+                                        "intervals, chance, screened, timing_ms, candidates}; "
+                                        "400 {error, detail} for a refused request."},
         },
         {
             "method": "POST", "path": "/save_view", "auth": True,
