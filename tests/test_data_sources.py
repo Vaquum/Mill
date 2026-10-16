@@ -4,18 +4,14 @@ from __future__ import annotations
 
 from mill import serve
 from mill.bars import arrow_series
-from mill.settings import PROJECT_END_STR, PROJECT_START_STR
 
 
 def test_every_bar_data_source_is_get_arrow_file() -> None:
     assert set(serve._BAR_DATA_SOURCES) == set(serve._BARS)
     for bar, source in serve._BAR_DATA_SOURCES.items():
         assert source["method"] == "limen.data.HistoricalData.get_arrow_file"
-        params = source["params"]
-        assert isinstance(params, dict)
-        assert params["file_path"] == f"/opt/arrow/{arrow_series(bar)}/latest.arrow"
-        assert params["start_date_limit"] == PROJECT_START_STR
-        assert params["end_date_limit"] == PROJECT_END_STR
+        # The file only: no date limits, so a consumer reads through the latest bar.
+        assert source["params"] == {"file_path": f"/opt/arrow/{arrow_series(bar)}/latest.arrow"}
 
 
 def test_no_bar_uses_the_old_getdata_methods() -> None:

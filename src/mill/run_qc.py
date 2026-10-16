@@ -7,7 +7,7 @@ from types import ModuleType
 from . import qc
 from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS
 from .get_data import GetData
-from .settings import DEFAULT_BAR, PROJECT_END_STR, PROJECT_START_STR
+from .settings import DEFAULT_BAR
 from .targets import apply as apply_target
 
 
@@ -21,12 +21,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--bar", default=DEFAULT_BAR)
     parser.add_argument("--view", default="gen4")
     parser.add_argument("--target")
-    parser.add_argument("--start", default=PROJECT_START_STR)
-    parser.add_argument("--end", default=PROJECT_END_STR)
+    parser.add_argument("--start", default=None, help="first day, inclusive (default: the series' first bar)")
+    parser.add_argument("--end", default=None, help="last day, inclusive (default: the latest bar)")
     return parser
 
 
-def _load_raw(gd: GetData, bar: str, start: str, end: str):
+def _load_raw(gd: GetData, bar: str, start: str | None, end: str | None):
     if bar in TIME_BAR_SECONDS:
         return gd.get_time_bars(bar, start_date_limit=start, end_date_limit=end)
     if bar in DOLLAR_BAR_USD:

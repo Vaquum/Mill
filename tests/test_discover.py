@@ -110,7 +110,7 @@ _SOURCE = serve._BAR_DATA_SOURCES["1h_time_bars"]
 def _run(values: np.ndarray, windows: list[tuple[int, int]], top: int = 5) -> dict:
     """discover() on a hand-made pool of hourly bars; windows are [start, stop) bar indices."""
     n, c = values.shape
-    ms = discover.RESEARCH_START_MS + np.arange(n, dtype=np.int64) * _H
+    ms = discover.parse_ms("2024-01-01T00:00:00Z") + np.arange(n, dtype=np.int64) * _H
     names = tuple(f"c{i}" for i in range(c))
     pool = discover.Pool(names=names, natives=names, factories=("close",) * c, sources=("raw",) * c,
                          params=({},) * c, ms=ms, values=values, skipped=())
@@ -160,32 +160,51 @@ def test_intervals_need_thirty_events_where_the_column_is_defined() -> None:
     assert [c["column"] for c in _run(values, windows, top=1)["candidates"]] == ["c0"]
 
 
-def test_research_window_refuses_spans_outside_it() -> None:
-    with pytest.raises(ValueError, match="research window"):
-        discover.research_bounds(discover.parse_ms("2023-12-31T00:00:00Z"), discover.parse_ms("2024-01-02T00:00:00Z"))
-    with pytest.raises(ValueError, match="research window"):
-        discover.research_bounds(discover.parse_ms("2026-05-15T00:00:00Z"), discover.parse_ms("2026-05-16T00:00:01Z"))
-    discover.research_bounds(discover.parse_ms("2026-05-15T00:00:00Z"), discover.parse_ms("2026-05-16T00:00:00Z"))
+def test_a_span_must_end_after_it_starts_and_may_be_any_time() -> None:
+    with pytest.raises(ValueError, match="end after it starts"):
+        discover.check_span(discover.parse_ms("2026-10-16T00:00:00Z"), discover.parse_ms("2026-10-16T00:00:00Z"))
+    discover.check_span(discover.parse_ms("2021-01-01T00:00:00Z"), discover.parse_ms("2026-10-16T21:00:00Z"))
 
 
 def test_rule_manifest_validates_with_limen() -> None:
     params = {p["name"]: p["default"] for p in REGISTRY["roc"]["params"]}
     rule = {"column": "roc_10", "operator": ">", "value": 1.25, "persistence_n": 2}
     source = serve._BAR_DATA_SOURCES["1h_time_bars"]
-    for context in ((discover.parse_ms("2025-01-01"), discover.parse_ms("2025-07-01")),
-                    (discover.parse_ms("2024-01-01"), discover.parse_ms("2026-05-16"))):
+    data = (discover.parse_ms("2024-01-01"), discover.parse_ms("2026-10-17"))
+    for context in ((discover.parse_ms("2025-01-01"), discover.parse_ms("2025-07-01")), data):
         manifest = discover.manifest(bar_source=source, factory="roc", source="limen.indicators", params=params,
-                                     rule=rule, name="find_features_test", description="roc_10 > 1.25", context=context)
+                                     rule=rule, name="find_features_test", description="roc_10 > 1.25", context=context,
+                                     data=data)
         result = validate(manifest)
         assert result.valid, [e.message for e in result.errors]
         splits = manifest["sfd"]["manifest"]["split_dates"]
         assert splits["train_start"] < splits["val_start"] < splits["test_start"] <= splits["test_end"]
+        # The splits span the series' data, through its latest bar.
+        assert (splits["train_start"], splits["test_end"]) == ("2024-01-01", "2026-10-16")
     assert "not out of sample" in manifest["metadata"]["description"]
 
 
-# Ten days from the research window's start, and its last ten days, so a default context reaches both ends.
+# Ten days from 2024-01-01, and the ten days through 2026-10-16, after where Mill once stopped,
+# so a default context reaches the latest bar.
+def test_split_dates_keep_three_ordered_splits_or_none() -> None:
+    def splits(first: str, latest: str):
+        data = (discover.parse_ms(first), discover.parse_ms(latest))
+        return discover.split_dates((data[0], data[1]), data)
+    # One or two days cannot hold training, validation and test.
+    assert splits("2026-10-16", "2026-10-17") is None
+    assert splits("2026-10-15", "2026-10-17") is None
+    dates, clean = splits("2026-10-14", "2026-10-17")
+    assert (dates["train_start"], dates["train_end"], dates["val_start"], dates["val_end"], dates["test_start"],
+            dates["test_end"]) == ("2026-10-14", "2026-10-14", "2026-10-15", "2026-10-15", "2026-10-16", "2026-10-16")
+    assert not clean
+    for latest in ("2026-10-24", "2026-12-31", "2027-06-01"):
+        dates, _ = splits("2026-10-14", latest)
+        assert (dates["train_start"] <= dates["train_end"] < dates["val_start"] <= dates["val_end"]
+                < dates["test_start"] <= dates["test_end"]), dates
+
+
 _TS = ([ns(2024, 1, 1) + i * 3_600_000_000_000 for i in range(240)]
-       + [ns(2026, 5, 6) + i * 3_600_000_000_000 for i in range(240)])
+       + [ns(2026, 10, 7) + i * 3_600_000_000_000 for i in range(240)])
 
 
 @pytest.fixture
@@ -237,15 +256,16 @@ def test_discover_ranks_a_view_against_one_window(server: str) -> None:
     assert len(leader["series"]["values"]) == 240
 
 
-def test_discover_default_context_includes_the_last_research_day(server: str) -> None:
+def test_discover_default_context_reaches_the_latest_bar(server: str) -> None:
     status, out = _post(server, {"pool": {"kind": "view", "name": "ochlv"},
-                                 "windows": [{"start": "2026-05-15T00:00:00Z", "end": "2026-05-16T00:00:00Z"}]})
+                                 "windows": [{"start": "2026-10-16T00:00:00Z", "end": "2026-10-17T00:00:00Z"}]})
     assert status == 200, out
     assert out["target"]["marked_bars"] == 24
-    assert out["context"]["end_ms"] == discover.parse_ms("2026-05-16T00:00:00Z")
+    assert out["context"]["end_ms"] == discover.parse_ms("2026-10-17T00:00:00Z")
+    assert out["window"] == {"start": "2024-01-01", "end": "2026-10-16"}
 
 
-def test_discover_refuses_windows_outside_the_research_window(server: str) -> None:
-    status, out = _post(server, {"windows": [{"start": "2023-06-01T00:00:00Z", "end": "2023-06-02T00:00:00Z"}]})
+def test_discover_refuses_an_empty_window(server: str) -> None:
+    status, out = _post(server, {"windows": [{"start": "2025-06-01T00:00:00Z", "end": "2025-06-01T00:00:00Z"}]})
     assert status == 400 and out["error"] == "invalid_request"
-    assert "research window" in out["detail"]
+    assert "end after it starts" in out["detail"]

@@ -39,7 +39,6 @@ def build_reference(
     bar_default: str,
     targets: list[str],
     row_modes: list[str],
-    data_window: dict[str, str],
     time_bars: list[str] | None = None,
     time_bar_default: str | None = None,
 ) -> dict[str, Any]:
@@ -82,7 +81,8 @@ def build_reference(
         {
             "method": "GET", "path": "/app-config", "auth": True,
             "summary": "UI configuration: bars, targets, factories, views, "
-                       "bar data sources, and the data window.",
+                       "bar data sources, and data_window, the days the default bar "
+                       "series covers through its latest bar.",
             "response": {"content_type": "application/json",
                          "description": "Configuration object consumed by the UI."},
         },
@@ -134,7 +134,7 @@ def build_reference(
                            description="Time bar series to rank on."),
                     _param("windows", "json", required=True,
                            description="Array of {start, end} UTC instants (ISO 8601 or "
-                                       "milliseconds) inside the data window; 1 to 500."),
+                                       "milliseconds); 1 to 500."),
                     _param("mode", "enum", default="inside", values=["inside", "lead"],
                            description="Mark the bars inside each window, or the lead_bars "
                                        "bars before each window (the windows then leave the "
@@ -142,7 +142,7 @@ def build_reference(
                     _param("lead_bars", "int", default=4, description="Bars before each "
                            "window in lead mode, 1 to 96."),
                     _param("context", "json", description="{start, end}: the bars compared "
-                           "against; default the whole data window."),
+                           "against; default every bar of the series, through its latest."),
                     _param("display", "json", description="{start, end}: the span of the "
                            "returned series and rule hits; default the context."),
                     _param("pool", "json", default={"kind": "catalog"},
@@ -214,6 +214,5 @@ def build_reference(
             "description": "HTTP Basic (username/password) or Bearer (API "
                            "secret); 401 with WWW-Authenticate on failure.",
         },
-        "data_window": data_window,
         "endpoints": endpoints,
     }

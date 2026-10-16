@@ -11,7 +11,7 @@ Stage two keeps one leader per correlation cluster, adds moving-block bootstrap
 intervals, and fits a Limen threshold rule with persistence to each leader.
 
 Nothing here creates a feature: it evaluates the registry's producers on Mill's
-own bars, inside the research window those bars are fenced to.
+own bars, as the store holds them through the latest bar.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from __future__ import annotations
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, time as clock, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from importlib.metadata import version
 from typing import Any
 
@@ -28,7 +28,6 @@ import polars as pl
 from limen.sfd.rule_based.predicates import build_predicate
 
 from . import feature_registry
-from .settings import PROJECT_END, PROJECT_END_STR, PROJECT_START, PROJECT_START_STR
 
 MODES = ("inside", "lead")
 MAX_LEADERS = 12
@@ -42,9 +41,6 @@ _FFT_CHUNK = 64
 _BEYOND_ONE_IN = 20
 # FFT and direct sums agree far closer than this; a near tie counts against the column.
 _TIE = 1e-9
-# The research window as half-open UTC milliseconds: its first day's start to the day after its last.
-RESEARCH_START_MS = int(datetime.combine(PROJECT_START, clock(), timezone.utc).timestamp() * 1000)
-RESEARCH_END_MS = int(datetime.combine(PROJECT_END + timedelta(days=1), clock(), timezone.utc).timestamp() * 1000)
 
 
 @dataclass(frozen=True)
@@ -129,15 +125,15 @@ def parse_ms(value: Any) -> int:
     return int(moment.timestamp() * 1000)
 
 
-def research_bounds(start_ms: int, end_ms: int) -> None:
-    """Refuse a span outside Mill's research window, or an empty one."""
+def check_span(start_ms: int, end_ms: int) -> None:
+    """Refuse an empty span; a span without bars simply marks none."""
     if start_ms >= end_ms:
         raise ValueError("a window must end after it starts")
-    if start_ms < RESEARCH_START_MS or end_ms > RESEARCH_END_MS:
-        raise ValueError(
-            f"outside the research window {PROJECT_START_STR} to {PROJECT_END_STR}; "
-            "Mill does not read bars beyond it"
-        )
+
+
+def day_of(ms: int) -> date:
+    """The UTC day an instant falls on."""
+    return datetime.fromtimestamp(ms / 1000, timezone.utc).date()
 
 
 def overlap(ms: np.ndarray, step_ms: int, start_ms: int, end_ms: int) -> np.ndarray:
@@ -348,26 +344,31 @@ def fit_rule(
     return best
 
 
-def split_dates(context: tuple[int, int]) -> tuple[dict[str, str], bool]:
-    """Chronological splits whose test lies after the discovery context when 60 days remain.
+def split_dates(context: tuple[int, int], data: tuple[int, int]) -> tuple[dict[str, str], bool] | None:
+    """Chronological splits of the series' data whose test lies after the discovery context when 60 days remain.
 
-    Returns the split and whether its test is out of sample. Without that much
-    time after the context, it falls back to a fixed split of the research
-    window, whose test the context may overlap.
+    `data` is the span the bar series covers, its first bar to its latest. Returns
+    the split and whether its test is out of sample. Without that much time after
+    the context, it falls back to a 60/20/20 split of the data's days, each at
+    least one day, whose test the context may overlap. Fewer than three days have
+    no such split: None.
     """
     day = timedelta(days=1)
-    last = datetime.fromtimestamp((context[1] - 1) / 1000, timezone.utc).date()
-    remaining = (PROJECT_END - last).days
+    first, final, last = day_of(data[0]), day_of(data[1] - 1), day_of(context[1] - 1)
+    remaining = (final - last).days
     if remaining >= 60:
         val_start = last + day
         test_start = val_start + timedelta(days=remaining // 2)
-        dates = (PROJECT_START, last, val_start, test_start - day, test_start, PROJECT_END)
+        dates = (first, last, val_start, test_start - day, test_start, final)
         clean = True
     else:
-        span = (PROJECT_END - PROJECT_START).days
-        val_start = PROJECT_START + timedelta(days=span * 6 // 10)
-        test_start = PROJECT_START + timedelta(days=span * 8 // 10)
-        dates = (PROJECT_START, val_start - day, val_start, test_start - day, test_start, PROJECT_END)
+        days = (final - first).days + 1
+        if days < 3:
+            return None
+        to_val = max(1, days * 6 // 10)
+        to_test = min(days - 1, max(to_val + 1, days * 8 // 10))
+        val_start, test_start = first + timedelta(days=to_val), first + timedelta(days=to_test)
+        dates = (first, val_start - day, val_start, test_start - day, test_start, final)
         clean = last < test_start
     keys = ("train_start", "train_end", "val_start", "val_end", "test_start", "test_end")
     return dict(zip(keys, (d.isoformat() for d in dates))), clean
@@ -375,20 +376,23 @@ def split_dates(context: tuple[int, int]) -> tuple[dict[str, str], bool]:
 
 def manifest(
     *, bar_source: dict[str, Any], factory: str, source: str, params: dict[str, Any], rule: dict[str, Any],
-    name: str, description: str, context: tuple[int, int],
-) -> dict[str, Any]:
+    name: str, description: str, context: tuple[int, int], data: tuple[int, int],
+) -> dict[str, Any] | None:
     """The fitted rule as a Limen rule-based experiment manifest, threshold as its one parameter.
 
     Limen derives the data window from split_dates, so the source keeps only its
-    file; every transform, feature or indicator, is a rule-based indicator.
+    file; every transform, feature or indicator, is a rule-based indicator. None
+    when the data has too few days to split.
     """
     condition = {
         "id": "entry", "name": description, "type": "threshold", "column": rule["column"],
         "operator": rule["operator"], "value": "{threshold}", "persistence_n": rule["persistence_n"],
     }
-    splits, clean = split_dates(context)
-    source_params = {k: v for k, v in bar_source["params"].items() if k not in ("start_date_limit", "end_date_limit")}
-    body: dict[str, Any] = {"type": "rule_based", "data_source": {"method": bar_source["method"], "params": source_params},
+    split = split_dates(context, data)
+    if split is None:
+        return None
+    splits, clean = split
+    body: dict[str, Any] = {"type": "rule_based", "data_source": {"method": bar_source["method"], "params": dict(bar_source["params"])},
                             "split_dates": splits}
     if source != "raw":
         body["indicators"] = [{"func": f"{source}.{factory}", "params": params}]
@@ -544,7 +548,8 @@ def _describe(
         rule["hits"] = spans(hits, pool.ms, step_ms, *display)
         rule["manifest"] = manifest(bar_source=bar_source, factory=pool.factories[j], source=pool.sources[j],
                                     params=pool.params[j], rule=rule, name=f"find_features_{label}",
-                                    description=f"{text}, fitted in sample by Mill Find features", context=context)
+                                    description=f"{text}, fitted in sample by Mill Find features", context=context,
+                                    data=(int(pool.ms[0]), int(pool.ms[-1]) + step_ms))
         rule["text"] = text
     out["rule"] = rule
     out["series"] = series(values, pool.ms, step_ms, *display, max_points)
