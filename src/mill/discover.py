@@ -344,13 +344,14 @@ def fit_rule(
     return best
 
 
-def split_dates(context: tuple[int, int], data: tuple[int, int]) -> tuple[dict[str, str], bool]:
+def split_dates(context: tuple[int, int], data: tuple[int, int]) -> tuple[dict[str, str], bool] | None:
     """Chronological splits of the series' data whose test lies after the discovery context when 60 days remain.
 
     `data` is the span the bar series covers, its first bar to its latest. Returns
     the split and whether its test is out of sample. Without that much time after
-    the context, it falls back to a fixed 60/20/20 split of the data, whose test
-    the context may overlap.
+    the context, it falls back to a 60/20/20 split of the data's days, each at
+    least one day, whose test the context may overlap. Fewer than three days have
+    no such split: None.
     """
     day = timedelta(days=1)
     first, final, last = day_of(data[0]), day_of(data[1] - 1), day_of(context[1] - 1)
@@ -361,9 +362,12 @@ def split_dates(context: tuple[int, int], data: tuple[int, int]) -> tuple[dict[s
         dates = (first, last, val_start, test_start - day, test_start, final)
         clean = True
     else:
-        span = (final - first).days
-        val_start = first + timedelta(days=span * 6 // 10)
-        test_start = first + timedelta(days=span * 8 // 10)
+        days = (final - first).days + 1
+        if days < 3:
+            return None
+        to_val = max(1, days * 6 // 10)
+        to_test = min(days - 1, max(to_val + 1, days * 8 // 10))
+        val_start, test_start = first + timedelta(days=to_val), first + timedelta(days=to_test)
         dates = (first, val_start - day, val_start, test_start - day, test_start, final)
         clean = last < test_start
     keys = ("train_start", "train_end", "val_start", "val_end", "test_start", "test_end")
@@ -373,17 +377,21 @@ def split_dates(context: tuple[int, int], data: tuple[int, int]) -> tuple[dict[s
 def manifest(
     *, bar_source: dict[str, Any], factory: str, source: str, params: dict[str, Any], rule: dict[str, Any],
     name: str, description: str, context: tuple[int, int], data: tuple[int, int],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     """The fitted rule as a Limen rule-based experiment manifest, threshold as its one parameter.
 
     Limen derives the data window from split_dates, so the source keeps only its
-    file; every transform, feature or indicator, is a rule-based indicator.
+    file; every transform, feature or indicator, is a rule-based indicator. None
+    when the data has too few days to split.
     """
     condition = {
         "id": "entry", "name": description, "type": "threshold", "column": rule["column"],
         "operator": rule["operator"], "value": "{threshold}", "persistence_n": rule["persistence_n"],
     }
-    splits, clean = split_dates(context, data)
+    split = split_dates(context, data)
+    if split is None:
+        return None
+    splits, clean = split
     body: dict[str, Any] = {"type": "rule_based", "data_source": {"method": bar_source["method"], "params": dict(bar_source["params"])},
                             "split_dates": splits}
     if source != "raw":

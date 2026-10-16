@@ -186,6 +186,23 @@ def test_rule_manifest_validates_with_limen() -> None:
 
 # Ten days from 2024-01-01, and the ten days through 2026-10-16, after where Mill once stopped,
 # so a default context reaches the latest bar.
+def test_split_dates_keep_three_ordered_splits_or_none() -> None:
+    def splits(first: str, latest: str):
+        data = (discover.parse_ms(first), discover.parse_ms(latest))
+        return discover.split_dates((data[0], data[1]), data)
+    # One or two days cannot hold training, validation and test.
+    assert splits("2026-10-16", "2026-10-17") is None
+    assert splits("2026-10-15", "2026-10-17") is None
+    dates, clean = splits("2026-10-14", "2026-10-17")
+    assert (dates["train_start"], dates["train_end"], dates["val_start"], dates["val_end"], dates["test_start"],
+            dates["test_end"]) == ("2026-10-14", "2026-10-14", "2026-10-15", "2026-10-15", "2026-10-16", "2026-10-16")
+    assert not clean
+    for latest in ("2026-10-24", "2026-12-31", "2027-06-01"):
+        dates, _ = splits("2026-10-14", latest)
+        assert (dates["train_start"] <= dates["train_end"] < dates["val_start"] <= dates["val_end"]
+                < dates["test_start"] <= dates["test_end"]), dates
+
+
 _TS = ([ns(2024, 1, 1) + i * 3_600_000_000_000 for i in range(240)]
        + [ns(2026, 10, 7) + i * 3_600_000_000_000 for i in range(240)])
 
