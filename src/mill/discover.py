@@ -304,20 +304,53 @@ def fit_rule(
     return best
 
 
+def split_dates(context: tuple[int, int]) -> tuple[dict[str, str], bool]:
+    """Chronological splits whose test lies after the discovery context when 60 days remain.
+
+    Returns the split and whether its test is out of sample. Without that much
+    time after the context, it falls back to a fixed split of the research
+    window, whose test the context may overlap.
+    """
+    day = timedelta(days=1)
+    last = datetime.fromtimestamp((context[1] - 1) / 1000, timezone.utc).date()
+    remaining = (PROJECT_END - last).days
+    if remaining >= 60:
+        val_start = last + day
+        test_start = val_start + timedelta(days=remaining // 2)
+        dates = (PROJECT_START, last, val_start, test_start - day, test_start, PROJECT_END)
+        clean = True
+    else:
+        span = (PROJECT_END - PROJECT_START).days
+        val_start = PROJECT_START + timedelta(days=span * 6 // 10)
+        test_start = PROJECT_START + timedelta(days=span * 8 // 10)
+        dates = (PROJECT_START, val_start - day, val_start, test_start - day, test_start, PROJECT_END)
+        clean = last < test_start
+    keys = ("train_start", "train_end", "val_start", "val_end", "test_start", "test_end")
+    return dict(zip(keys, (d.isoformat() for d in dates))), clean
+
+
 def manifest(
     *, bar_source: dict[str, Any], factory: str, source: str, params: dict[str, Any], rule: dict[str, Any],
-    name: str, description: str,
+    name: str, description: str, context: tuple[int, int],
 ) -> dict[str, Any]:
-    """The fitted rule as a Limen rule-based experiment manifest, threshold as its one parameter."""
+    """The fitted rule as a Limen rule-based experiment manifest, threshold as its one parameter.
+
+    Limen derives the data window from split_dates, so the source keeps only its
+    file; every transform, feature or indicator, is a rule-based indicator.
+    """
     condition = {
         "id": "entry", "name": description, "type": "threshold", "column": rule["column"],
         "operator": rule["operator"], "value": "{threshold}", "persistence_n": rule["persistence_n"],
     }
-    body: dict[str, Any] = {"type": "rule_based", "data_source": bar_source}
+    splits, clean = split_dates(context)
+    source_params = {k: v for k, v in bar_source["params"].items() if k not in ("start_date_limit", "end_date_limit")}
+    body: dict[str, Any] = {"type": "rule_based", "data_source": {"method": bar_source["method"], "params": source_params},
+                            "split_dates": splits}
     if source != "raw":
-        key = "indicators" if source == "limen.indicators" else "features"
-        body[key] = [{"func": f"{source}.{factory}", "params": params}]
+        body["indicators"] = [{"func": f"{source}.{factory}", "params": params}]
     body["strategy"] = {"conditions": [condition], "entry": "entry"}
+    if not clean:
+        description += "; its test split overlaps the discovery context, so it is not out of sample"
     body["reference_architecture"] = "limen.sfd.reference_architecture.rule_based"
     return {
         "schema_version": "1.0",
@@ -400,7 +433,7 @@ def discover(
             continue
         kept.append(int(j))
         leaders.append(_leader(pool, int(j), point[j], separation[j], null, q95, y, ranks, intervals, block,
-                               marked, rows, events, step_ms, display, max_points, bar_source, label))
+                               marked, rows, events, step_ms, context, display, max_points, bar_source, label))
     if intervals:
         leaders.sort(key=lambda c: -c["conservative"])
     timing["stage_two"] = time.perf_counter() - clock3
@@ -426,8 +459,8 @@ def discover(
 def _leader(
     pool: Pool, j: int, point: float, sep: float, null: np.ndarray, q95: float | None, y: np.ndarray,
     ranks: np.ndarray, intervals: bool, block: int, marked: np.ndarray, rows: np.ndarray,
-    events: list[tuple[int, int]], step_ms: int, display: tuple[int, int], max_points: int,
-    bar_source: dict[str, Any], label: str,
+    events: list[tuple[int, int]], step_ms: int, context: tuple[int, int], display: tuple[int, int],
+    max_points: int, bar_source: dict[str, Any], label: str,
 ) -> dict[str, Any]:
     column = pool.names[j]
     direction = "higher" if point > 0.5 else "lower"
@@ -451,7 +484,7 @@ def _leader(
         rule["hits"] = spans(hits, pool.ms, step_ms, *display)
         rule["manifest"] = manifest(bar_source=bar_source, factory=pool.factories[j], source=pool.sources[j],
                                     params=pool.params[j], rule=rule, name=f"find_features_{label}",
-                                    description=f"{text}, fitted in sample by Mill Find features")
+                                    description=f"{text}, fitted in sample by Mill Find features", context=context)
         rule["text"] = text
     out["rule"] = rule
     out["series"] = series(values, pool.ms, step_ms, *display, max_points)
