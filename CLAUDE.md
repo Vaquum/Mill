@@ -10,7 +10,7 @@
 - Use `GetData.from_parquet` for local parquet files.
 - Do not call `limen.HistoricalData` directly outside `GetData`.
 - Limen is the underlying external data source; `GetData` owns cache and normalization.
-- Mill serves all the data the bar store holds, through its latest bar; never gate data by date.
+- Mill serves all the data the bar store holds, through its latest closed bar; never gate data by date.
 - Feature sources are raw bar columns and Limen feature/indicator factories registered in `feature_registry.py`.
 - Never add features or columns unless explicitly requested.
 - Every new feature we write directly must be a high-performance Polars expression.

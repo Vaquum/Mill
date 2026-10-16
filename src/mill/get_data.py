@@ -13,6 +13,7 @@ from .bars import (
     dollar_bar_name,
     dollar_bar_series,
     time_bar_name,
+    time_bar_seconds,
     time_bar_series,
 )
 from .cache_store import cache_path, read_fresh, write_cache
@@ -48,6 +49,11 @@ def _date_limits(
 
 def _limit_rows(data: pl.DataFrame, limit: int | None) -> pl.DataFrame:
     return data.tail(limit) if limit is not None else data
+
+
+def _closed(data: pl.DataFrame, seconds: int, written_ns: int) -> pl.DataFrame:
+    """The bars that had closed when the store wrote its file: it also writes the open bar, and rewrites it as trades arrive."""
+    return data.filter(pl.col("datetime").dt.epoch("ms") + seconds * 1000 <= written_ns // 1_000_000)
 
 
 class GetData:
@@ -101,6 +107,7 @@ class GetData:
         )
         name = time_bar_name(bar_size)
         series = time_bar_series(bar_size)
+        source = arrow_latest_path(series)
         limit = row_count_limit if row_count_limit is not None else n_rows
         criteria = {
             "kind": "arrow_bar_store",
@@ -110,16 +117,16 @@ class GetData:
             "end": end_date_limit,
             "row_count_limit": row_count_limit,
             "n_rows": n_rows,
+            "closed": True,
         }
-        return self._cached(
-            name,
-            criteria,
-            lambda: _limit_rows(
-                self._load_arrow(series, start_date_limit, end_date_limit),
-                limit,
-            ),
-            arrow_latest_path(series),
-        )
+
+        def fetch() -> pl.DataFrame:
+            # When the store wrote the file, read before the bars: a bar closed by then is closed in what is read.
+            written = source.stat().st_mtime_ns
+            bars = self._load_arrow(series, start_date_limit, end_date_limit)
+            return _limit_rows(_closed(bars, time_bar_seconds(name), written), limit)
+
+        return self._cached(name, criteria, fetch, source)
 
     def get_dollar_bars(
         self,
