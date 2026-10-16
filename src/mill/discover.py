@@ -4,8 +4,9 @@ Stage one ranks every column of a feature pool by the AUC of its values between
 the marked bars and the rest of a context, from per-column ranks and one matrix
 product. The chance check is an exact circular-shift null of the best separation
 in the whole pool: every shift that moves each marked run off itself, computed
-for all columns at once by FFT, so a column reads "beyond chance" only when it
-beats the best column of most shifted labelings (family-wise across the pool).
+for all columns at once by FFT. A column reads "beyond chance" when its adjusted
+p, the share of labelings (the observed one counted in) whose best column
+separates at least as well, is at most 1 in 20: family-wise across the pool.
 Stage two keeps one leader per correlation cluster, adds moving-block bootstrap
 intervals, and fits a Limen threshold rule with persistence to each leader.
 
@@ -37,6 +38,9 @@ _BOOTSTRAP_DRAWS = 200
 _MIN_BLOCK = 24
 _PERSISTENCE = (1, 2, 3)
 _FFT_CHUNK = 64
+_BEYOND_ONE_IN = 20
+# FFT and direct sums agree far closer than this; a near tie counts against the column.
+_TIE = 1e-9
 _RESEARCH_START_MS = int(datetime.combine(PROJECT_START, clock(), timezone.utc).timestamp() * 1000)
 _RESEARCH_END_MS = int(datetime.combine(PROJECT_END + timedelta(days=1), clock(), timezone.utc).timestamp() * 1000)
 
@@ -218,6 +222,22 @@ def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
     return best
 
 
+def exceedances(sep: float, null: np.ndarray) -> int:
+    """Shifted labelings whose best column separates at least as well as sep."""
+    return int((null >= sep - _TIE).sum())
+
+
+def critical_separation(null: np.ndarray) -> float | None:
+    """The separation a column must exceed to be beyond chance; None when the shifts are too few.
+
+    Beyond chance needs (1 + exceedances) / (1 + shifts) <= 1/20, so at most
+    k = (1 + shifts) // 20 - 1 shifts may separate as well: the column must beat
+    the (k + 1)-th best shifted separation. Below 19 shifts nothing can.
+    """
+    k = (1 + null.size) // _BEYOND_ONE_IN - 1
+    return float(np.sort(null)[::-1][k]) if k >= 0 else None
+
+
 def weighted_auc(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """AUC under row weights (one row of weights per draw), ties counted as half."""
     order = np.argsort(x, kind="stable")
@@ -231,8 +251,11 @@ def weighted_auc(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.ndarra
         return (pos * (below + 0.5 * neg)).sum(axis=1) / (pos.sum(axis=1) * neg.sum(axis=1))
 
 
-def bootstrap_interval(x: np.ndarray, y: np.ndarray, block: int, seed: int) -> tuple[float, float]:
-    """A 90% moving-block bootstrap interval for the AUC, circular blocks of block rows."""
+def bootstrap_interval(x: np.ndarray, y: np.ndarray, block: int, seed: int) -> tuple[float, float] | None:
+    """A 90% moving-block bootstrap interval for the AUC, circular blocks of block rows.
+
+    Draws without both groups have no AUC and are dropped; None when every draw is.
+    """
     n = x.size
     rng = np.random.default_rng(seed)
     count = -(-n // block)
@@ -242,6 +265,8 @@ def bootstrap_interval(x: np.ndarray, y: np.ndarray, block: int, seed: int) -> t
     weights = np.bincount(flat.ravel(), minlength=_BOOTSTRAP_DRAWS * n).reshape(_BOOTSTRAP_DRAWS, n)
     draws = weighted_auc(x, y, weights.astype(np.float64))
     draws = draws[np.isfinite(draws)]
+    if draws.size == 0:
+        return None
     lo, hi = np.quantile(draws, [0.05, 0.95])
     return float(lo), float(hi)
 
@@ -256,7 +281,12 @@ def rank_correlation(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def threshold(x: np.ndarray, y: np.ndarray, operator: str) -> float | None:
-    """The cut that maximizes TPR - FPR for `x operator cut`, between two observed values."""
+    """The cut that maximizes TPR - FPR for `x operator cut`; None when no cut beats zero.
+
+    The cut keeps exactly the split it was chosen for: the midpoint between the
+    last flagged and first unflagged value, at the fewest significant digits that
+    still fall between them.
+    """
     valid = np.isfinite(x)
     x, y = x[valid], y[valid].astype(bool)
     if not y.any() or y.all():
@@ -266,8 +296,20 @@ def threshold(x: np.ndarray, y: np.ndarray, operator: str) -> float | None:
     youden = np.cumsum(ys) / ys.sum() - np.cumsum(~ys) / (~ys).sum()
     youden[np.r_[xs[1:] == xs[:-1], False]] = -np.inf
     k = int(np.argmax(youden))
-    cut = (xs[k] + xs[k + 1]) / 2 if k + 1 < xs.size else xs[k]
-    return float(f"{cut:.6g}")
+    # Flagging every row scores exactly zero, so a positive best is never the last value.
+    if youden[k] <= 0:
+        return None
+    return _cut(float(xs[k]), float(xs[k + 1]), operator)
+
+
+def _cut(flagged: float, unflagged: float, operator: str) -> float:
+    """The shortest rounding of the midpoint with `flagged operator cut` and not `unflagged operator cut`."""
+    mid = flagged + (unflagged - flagged) / 2
+    for digits in range(1, 18):
+        cut = float(f"{mid:.{digits}g}")
+        if (flagged > cut >= unflagged) if operator == ">" else (flagged < cut <= unflagged):
+            return cut
+    return unflagged
 
 
 def rule_hits(values: np.ndarray, column: str, operator: str, value: float, persistence_n: int) -> np.ndarray:
@@ -406,25 +448,23 @@ def discover(
 
     clock1 = time.perf_counter()
     point = auc(y, ranks)
-    timing["screen"] = time.perf_counter() - clock1
     separation = np.abs(point - 0.5)
-    separation[~np.isfinite(separation)] = -1.0
+    ranked = np.flatnonzero(np.isfinite(separation))
+    ranked = ranked[np.argsort(-separation[ranked], kind="stable")]
+    timing["screen"] = time.perf_counter() - clock1
 
     clock2 = time.perf_counter()
     longest = max(b - a for a, b in runs(y.astype(bool)))
     min_shift = longest
     null = shift_null(y, ranks, min_shift)
     timing["null"] = time.perf_counter() - clock2
-    q95 = float(np.quantile(null, 0.95)) if null.size else None
+    critical = critical_separation(null)
 
     clock3 = time.perf_counter()
     intervals = len(events) >= MIN_EVENTS_FOR_INTERVALS
-    block = max(longest, _MIN_BLOCK)
     leaders: list[dict[str, Any]] = []
     kept: list[int] = []
-    for j in np.argsort(-separation)[:_SCREEN_LEADERS]:
-        if separation[j] < 0:
-            break
+    for j in ranked[:_SCREEN_LEADERS]:
         twin = next((k for k in kept if abs(rank_correlation(ranks[:, j], ranks[:, k])) > _CLUSTER_RHO), None)
         if twin is not None:
             leaders[kept.index(twin)]["similar"].append(pool.names[j])
@@ -432,10 +472,10 @@ def discover(
         if len(kept) == top:
             continue
         kept.append(int(j))
-        leaders.append(_leader(pool, int(j), point[j], separation[j], null, q95, y, ranks, intervals, block,
+        leaders.append(_leader(pool, int(j), point[j], separation[j], null, y, ranks, intervals,
                                marked, rows, events, step_ms, context, display, max_points, bar_source, label))
-    if intervals:
-        leaders.sort(key=lambda c: -c["conservative"])
+    # Leaders with an interval rank by its conservative end; the rest follow by their point separation.
+    leaders.sort(key=lambda c: (c["conservative"] is None, -(c["conservative"] or 0.0), -c["separation"]))
     timing["stage_two"] = time.perf_counter() - clock3
     timing["total"] = time.perf_counter() - clock0
 
@@ -448,39 +488,46 @@ def discover(
         "evidence": "events" if len(events) > 1 else "description",
         "intervals": intervals,
         "chance": {"method": "circular-shift", "shifts": int(null.size), "min_shift": int(min_shift),
-                   "q95": None if q95 is None else round(q95, 4),
-                   "best": round(float(separation.max()), 4) if separation.size else None},
-        "screened": int(np.isfinite(point).sum()),
+                   "alpha": 1 / _BEYOND_ONE_IN, "critical": None if critical is None else round(critical, 4),
+                   "best": round(float(separation[ranked[0]]), 4) if ranked.size else None},
+        "screened": int(ranked.size),
         "timing_ms": {k: round(v * 1000, 2) for k, v in timing.items()},
         "candidates": leaders,
     }
 
 
 def _leader(
-    pool: Pool, j: int, point: float, sep: float, null: np.ndarray, q95: float | None, y: np.ndarray,
-    ranks: np.ndarray, intervals: bool, block: int, marked: np.ndarray, rows: np.ndarray,
+    pool: Pool, j: int, point: float, sep: float, null: np.ndarray, y: np.ndarray,
+    ranks: np.ndarray, intervals: bool, marked: np.ndarray, rows: np.ndarray,
     events: list[tuple[int, int]], step_ms: int, context: tuple[int, int], display: tuple[int, int],
     max_points: int, bar_source: dict[str, Any], label: str,
 ) -> dict[str, Any]:
     column = pool.names[j]
     direction = "higher" if point > 0.5 else "lower"
+    over = exceedances(sep, null)
     out: dict[str, Any] = {
         "column": column, "factory": pool.factories[j], "source": pool.sources[j], "params": pool.params[j],
         "auc": round(float(point), 4), "direction": direction, "separation": round(float(sep), 4),
-        "p_adjusted": round(float((1 + (null >= sep).sum()) / (1 + null.size)), 4),
-        "beyond_chance": bool(q95 is not None and sep > q95),
+        "p_adjusted": round((1 + over) / (1 + null.size), 4),
+        "beyond_chance": _BEYOND_ONE_IN * (1 + over) <= 1 + null.size,
         "ci90": None, "conservative": None, "similar": [],
     }
-    if intervals:
-        valid = ~np.isnan(ranks[:, j])
-        lo, hi = bootstrap_interval(ranks[valid, j], y[valid], block, seed=j)
-        out["ci90"] = [round(lo, 4), round(hi, 4)]
-        out["conservative"] = round(max(0.0, lo - 0.5) if direction == "higher" else max(0.0, 0.5 - hi), 4)
+    valid = ~np.isnan(ranks[:, j])
+    # The column's own events: marked runs among the rows it defines, as its bootstrap sees them.
+    own = runs(y[valid].astype(bool)) if intervals else []
+    if len(own) >= MIN_EVENTS_FOR_INTERVALS:
+        block = max(max(b - a for a, b in own), _MIN_BLOCK)
+        interval = bootstrap_interval(ranks[valid, j], y[valid], block, seed=j)
+        if interval is not None:
+            lo, hi = interval
+            out["ci90"] = [round(lo, 4), round(hi, 4)]
+            out["conservative"] = round(max(0.0, lo - 0.5) if direction == "higher" else max(0.0, 0.5 - hi), 4)
     values = pool.values[:, j]
     rule = fit_rule(values, pool.natives[j], direction, marked, rows, events)
     if rule is not None:
         hits = rule.pop("_hits")
-        text = f"{column} {rule['operator']} {rule['value']:g} for {rule['persistence_n']} bar" + ("s" if rule["persistence_n"] > 1 else "")
+        value = np.format_float_positional(rule["value"], trim="-")
+        text = f"{column} {rule['operator']} {value} for {rule['persistence_n']} bar" + ("s" if rule["persistence_n"] > 1 else "")
         rule["hits"] = spans(hits, pool.ms, step_ms, *display)
         rule["manifest"] = manifest(bar_source=bar_source, factory=pool.factories[j], source=pool.sources[j],
                                     params=pool.params[j], rule=rule, name=f"find_features_{label}",
