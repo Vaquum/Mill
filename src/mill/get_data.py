@@ -17,47 +17,33 @@ from .bars import (
 )
 from .cache_store import cache_path, read_fresh, write_cache
 from .frames import normalize_datetime, read_parquet, write_parquet
-from .settings import (
-    PROJECT_END,
-    PROJECT_END_STR,
-    PROJECT_START,
-    PROJECT_START_STR,
-    arrow_latest_path,
-)
+from .settings import arrow_latest_path
 
 
 _LIMEN_LOCK = threading.Lock()
 
 
-def _date_part(value: str | None, default: date) -> date:
+def _date_part(value: str | None) -> date | None:
     if value is None:
-        return default
+        return None
     try:
         return date.fromisoformat(value.strip()[:10])
     except ValueError as exc:
         raise ValueError(f"Invalid date limit: {value!r}.") from exc
 
 
-def _bounded_dates(
+def _date_limits(
     start_date_limit: str | None,
     end_date_limit: str | None,
-) -> tuple[str, str]:
-    start = _date_part(start_date_limit, PROJECT_START)
-    end = _date_part(end_date_limit, PROJECT_END)
-    if start < PROJECT_START:
-        raise ValueError(f"start_date_limit cannot be before {PROJECT_START_STR}.")
-    if end > PROJECT_END:
-        raise ValueError(f"end_date_limit cannot be after {PROJECT_END_STR}.")
-    if start > end:
+) -> tuple[str | None, str | None]:
+    """Optional inclusive day limits; without them a series is read through its latest bar."""
+    start, end = _date_part(start_date_limit), _date_part(end_date_limit)
+    if start is not None and end is not None and start > end:
         raise ValueError("start_date_limit cannot be after end_date_limit.")
-    return start.isoformat(), end.isoformat()
-
-
-def _project_window(data: pl.DataFrame) -> pl.DataFrame:
-    if "datetime" not in data.columns:
-        raise ValueError("Data must contain datetime to enforce project date bounds.")
-    day = pl.col("datetime").dt.date()
-    return data.filter((day >= pl.lit(PROJECT_START)) & (day <= pl.lit(PROJECT_END)))
+    return (
+        start.isoformat() if start is not None else None,
+        end.isoformat() if end is not None else None,
+    )
 
 
 def _limit_rows(data: pl.DataFrame, limit: int | None) -> pl.DataFrame:
@@ -79,13 +65,13 @@ class GetData:
     def _load_arrow(
         self,
         series: str,
-        start_date_limit: str,
-        end_date_limit: str,
+        start_date_limit: str | None,
+        end_date_limit: str | None,
     ) -> pl.DataFrame:
         """Zero-copy read one bar series from the tdw Arrow bar store.
 
         Memory-maps ``<arrow_root>/<series>/latest.arrow`` through
-        ``HistoricalData.get_arrow_file``, which slices to the date window over
+        ``HistoricalData.get_arrow_file``, which slices to any date limits over
         the integer ``ts`` index and adds a ``datetime`` column. The frame is
         normalized to millisecond UTC and reduced to ``datetime`` plus the
         canonical measure columns, so the source switch is transparent to
@@ -110,7 +96,7 @@ class GetData:
     ) -> pl.DataFrame:
         if row_count_limit is not None and n_rows is not None:
             raise ValueError("row_count_limit and n_rows are mutually exclusive.")
-        start_date_limit, end_date_limit = _bounded_dates(
+        start_date_limit, end_date_limit = _date_limits(
             start_date_limit, end_date_limit
         )
         name = time_bar_name(bar_size)
@@ -132,6 +118,7 @@ class GetData:
                 self._load_arrow(series, start_date_limit, end_date_limit),
                 limit,
             ),
+            arrow_latest_path(series),
         )
 
     def get_dollar_bars(
@@ -145,7 +132,7 @@ class GetData:
     ) -> pl.DataFrame:
         if row_count_limit is not None and n_rows is not None:
             raise ValueError("row_count_limit and n_rows are mutually exclusive.")
-        start_date_limit, end_date_limit = _bounded_dates(
+        start_date_limit, end_date_limit = _date_limits(
             start_date_limit, end_date_limit
         )
         name = dollar_bar_name(bar_size)
@@ -167,6 +154,7 @@ class GetData:
                 self._load_arrow(series, start_date_limit, end_date_limit),
                 limit,
             ),
+            arrow_latest_path(series),
         )
 
     def _cached(
@@ -174,21 +162,21 @@ class GetData:
         label: str,
         criteria: dict[str, object],
         fetch: Callable[[], pl.DataFrame],
+        source: Path,
     ) -> pl.DataFrame:
         path = cache_path(label, criteria)
-        cached = read_fresh(path)
+        cached = read_fresh(path, source)
         if cached is not None:
             return self._store(cached)
         with _LIMEN_LOCK:
-            cached = read_fresh(path)
+            cached = read_fresh(path, source)
             if cached is not None:
                 return self._store(cached)
-            data = _project_window(fetch())
+            data = fetch()
             write_cache(path, data, criteria)
             return self._store(data)
 
     def _store(self, data: pl.DataFrame) -> pl.DataFrame:
-        data = _project_window(data)
         self.data = data
         self.data_columns = data.columns
         return data

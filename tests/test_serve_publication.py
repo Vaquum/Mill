@@ -51,7 +51,7 @@ def test_ensure_roundtrip_on_fixture_store(
     assert frame.height == len(_TS)
     assert json.loads(payload)["columns"] == ["datetime"]
 
-    key = ("15m_time_bars", "none", serve._spec_hash([]))
+    key = ("15m_time_bars", serve._source_version("15m_time_bars"), "none", serve._spec_hash([]))
     assert serve._RESULTS[key][0] is payload
     assert serve._RESULTS[key][1] is frame
 

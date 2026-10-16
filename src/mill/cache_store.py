@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
 import polars as pl
@@ -18,13 +17,19 @@ def cache_path(label: str, criteria: dict[str, object]) -> Path:
     return cache_root() / f"{label}_{digest}.parquet"
 
 
-def read_fresh(path: Path) -> pl.DataFrame | None:
+def read_fresh(path: Path, source: Path) -> pl.DataFrame | None:
+    """The cached frame while it is current: written since its source last changed.
+
+    The bar store rewrites a series' file as bars arrive, so a cache older than
+    its file is stale. Without the file to compare, the cache is the last known.
+    """
     if not path.exists():
         return None
-    written = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).date()
-    today = datetime.now(tz=timezone.utc).date()
-    if written < today:
-        return None
+    try:
+        if path.stat().st_mtime < source.stat().st_mtime:
+            return None
+    except FileNotFoundError:
+        pass
     try:
         return read_parquet(path)
     except Exception:

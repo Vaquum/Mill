@@ -10,6 +10,7 @@ import secrets
 import threading
 import time
 import webbrowser
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 from typing import Any
@@ -26,8 +27,7 @@ from .settings import (
     ARROW_LATEST_NAME,
     DEFAULT_ARROW_DIR,
     DEFAULT_BAR,
-    PROJECT_END_STR,
-    PROJECT_START_STR,
+    arrow_latest_path,
     config_root,
     host,
     port,
@@ -58,11 +58,7 @@ def _arrow_data_source(bar: str) -> dict[str, object]:
     file_path = f"{DEFAULT_ARROW_DIR}/{arrow_series(bar)}/{ARROW_LATEST_NAME}"
     return {
         "method": _ARROW_DATA_SOURCE_METHOD,
-        "params": {
-            "file_path": file_path,
-            "start_date_limit": PROJECT_START_STR,
-            "end_date_limit": PROJECT_END_STR,
-        },
+        "params": {"file_path": file_path},
     }
 
 
@@ -84,7 +80,6 @@ _API_REFERENCE = api_reference.build_reference(
     bar_default=_BARS[0],
     targets=list(_TARGETS),
     row_modes=sorted(_ROW_MODES),
-    data_window={"start": PROJECT_START_STR, "end": PROJECT_END_STR},
     time_bars=list(TIME_BAR_SECONDS),
     time_bar_default=DEFAULT_BAR,
 )
@@ -93,18 +88,19 @@ _API_REFERENCE_BYTES = json.dumps(_API_REFERENCE).encode()
 
 # One dict so payload and frame publish in a single assignment: the fast
 # path below reads without a lock, and a reader must never see one half.
-_RESULTS: dict[tuple[str, str, str], tuple[bytes, pl.DataFrame]] = {}
-_QC_CACHE: dict[tuple[str, str, str, tuple[str, ...], str, str, str, str], bytes] = {}
+_RESULTS: dict[tuple[str, int, str, str], tuple[bytes, pl.DataFrame]] = {}
+_QC_CACHE: dict[tuple[str, int, str, str, tuple[str, ...], str, str, str, str], bytes] = {}
 # Single-flight: one lock per QC cache key so identical concurrent requests
 # compute once; created under _REGISTRY_LOCK, same lifetime as the cache entry.
-_QC_LOCKS: dict[tuple[str, str, str, tuple[str, ...], str, str, str, str], threading.Lock] = {}
-_RAW_CACHE: dict[str, pl.DataFrame] = {}
+_QC_LOCKS: dict[tuple[str, int, str, str, tuple[str, ...], str, str, str, str], threading.Lock] = {}
+# Each bar series with its version: the store rewrites a series' file as bars arrive.
+_RAW_CACHE: dict[str, tuple[pl.DataFrame, int]] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
 # Find features pools: a catalog pool holds every default-parameter column of a bar series
 # (40 MB on 1h, 160 MB on 15m), so only the most recent few are kept; each builds once.
-_POOLS: dict[tuple[str, str], discover.Pool] = {}
-_POOL_LOCKS: dict[tuple[str, str], threading.Lock] = {}
+_POOLS: dict[tuple[str, int, str], discover.Pool] = {}
+_POOL_LOCKS: dict[tuple[str, int, str], threading.Lock] = {}
 _POOLS_MAX = 3
 _DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": discover.MAX_LEADERS, "max_points": 4096}
 
@@ -229,12 +225,40 @@ def _serialize(df: pl.DataFrame) -> bytes:
     ).encode()
 
 
-def _raw_for(bar: str) -> pl.DataFrame:
-    raw = _RAW_CACHE.get(bar)
-    if raw is None:
-        raw = klines(bar)
-        _RAW_CACHE[bar] = raw
-    return raw
+def _source_version(bar: str) -> int:
+    """A bar series' version: when the store last wrote its file, which it does as bars arrive."""
+    try:
+        return arrow_latest_path(arrow_series(bar)).stat().st_mtime_ns
+    except FileNotFoundError:
+        return 0
+
+
+def _raw_for(bar: str) -> tuple[pl.DataFrame, int]:
+    """A bar series through its latest bar, with its version; read again once the store has written since."""
+    version = _source_version(bar)
+    hit = _RAW_CACHE.get(bar)
+    if hit is not None and hit[1] == version:
+        return hit
+    hit = (klines(bar), version)
+    _RAW_CACHE[bar] = hit
+    _retire(bar, version)
+    return hit
+
+
+def _retire(bar: str, version: int) -> None:
+    """Forget what was computed from a bar series' earlier versions: their keys are (bar, version, ...)."""
+    for cache in (_RESULTS, _QC_CACHE, _QC_LOCKS, _POOLS, _POOL_LOCKS):
+        for key in [k for k in list(cache) if k[0] == bar and k[1] != version]:
+            cache.pop(key, None)
+
+
+def _data_window(bar: str = DEFAULT_BAR) -> dict[str, str]:
+    """The days the bar series covers, its first bar's through its latest bar's; empty without bars."""
+    raw, _ = _raw_for(bar)
+    if raw.height == 0:
+        return {}
+    days = raw["datetime"].dt.date()
+    return {"start": days[0].isoformat(), "end": days[-1].isoformat()}
 
 
 def _date_filter(df: pl.DataFrame, date_from: str, date_to: str) -> pl.DataFrame:
@@ -407,7 +431,8 @@ def _ensure(
     bar: str, target: str, spec: list[dict[str, Any]]
 ) -> tuple[bytes, pl.DataFrame]:
     sh = _spec_hash(spec)
-    key = (bar, target, sh)
+    raw, version = _raw_for(bar)
+    key = (bar, version, target, sh)
     entry = _RESULTS.get(key)
     if entry is not None:
         return entry
@@ -417,7 +442,6 @@ def _ensure(
         entry = _RESULTS.get(key)
         if entry is not None:
             return entry
-        raw = _raw_for(bar)
         if spec:
             features = build_from_spec(raw, spec)
         else:
@@ -438,15 +462,16 @@ def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, floa
     """The bar's Find features pool, built once per key while others wait for it."""
     kind = pool.get("kind", "catalog")
     spec: list[dict[str, Any]] | None = None
+    raw, version = _raw_for(bar)
     if kind == "catalog":
-        key = (bar, "catalog")
+        key = (bar, version, "catalog")
     elif kind == "view":
         name = pool.get("name")
         with _REGISTRY_LOCK:
             spec = _VIEW_SPECS.get(name) if isinstance(name, str) else None
         if spec is None:
             raise ValueError(f"unknown view: {name!r}")
-        key = (bar, f"view:{name}:{_spec_hash(spec)}")
+        key = (bar, version, f"view:{name}:{_spec_hash(spec)}")
     else:
         raise ValueError("pool kind must be 'catalog' or 'view'")
     hit = _POOLS.get(key)
@@ -459,7 +484,6 @@ def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, floa
         if hit is not None:
             return hit, True, 0.0
         began = time.perf_counter()
-        raw = _raw_for(bar)
         built = discover.catalog_pool(raw) if spec is None else discover.spec_pool(raw, spec)
         with _REGISTRY_LOCK:
             while len(_POOLS) >= _POOLS_MAX:
@@ -479,7 +503,7 @@ def _span(item: Any, label: str) -> tuple[int, int]:
     if not isinstance(item, dict):
         raise ValueError(f"{label} must be an object with start and end")
     span = (discover.parse_ms(item.get("start")), discover.parse_ms(item.get("end")))
-    discover.research_bounds(*span)
+    discover.check_span(*span)
     return span
 
 
@@ -497,16 +521,21 @@ def _discover(body: Any) -> dict[str, Any]:
     mode = body.get("mode", "inside")
     if mode not in discover.MODES:
         raise ValueError(f"mode must be one of {list(discover.MODES)}")
-    window = {"start": PROJECT_START_STR, "end": PROJECT_END_STR}
-    # By default the whole research window, its last day included.
-    research = {"start": discover.RESEARCH_START_MS, "end": discover.RESEARCH_END_MS}
-    context = _span(body.get("context") or research, "context")
-    display = _span(body.get("display") or body.get("context") or research, "display")
+    given = body.get("context")
+    context = _span(given, "context") if given else None
+    display = _span(body["display"], "display") if body.get("display") else context
     pool_request = body.get("pool") or {"kind": "catalog"}
     if not isinstance(pool_request, dict):
         raise ValueError("pool must be an object")
     pool, cached, built_ms = _pool_for(bar, pool_request)
     step_ms = TIME_BAR_SECONDS[bar] * 1000
+    if pool.ms.size == 0:
+        raise ValueError(f"{bar} has no bars")
+    # By default every bar the series has, through its latest.
+    whole = (int(pool.ms[0]), int(pool.ms[-1]) + step_ms)
+    context, display = context or whole, display or whole
+    first, last = (datetime.fromtimestamp(ms / 1000, timezone.utc).date().isoformat() for ms in (whole[0], whole[1] - 1))
+    window = {"start": first, "end": last}
     out = discover.discover(
         pool, step_ms=step_ms, windows=spans, mode=mode,
         lead_bars=_bounded_int(body, "lead_bars", 4, 1), context=context, display=display,
@@ -649,16 +678,18 @@ class _Handler(BaseHTTPRequestHandler):
         elif url.path == "/":
             self._send(200, "text/html; charset=utf-8", _INDEX.read_bytes())
         elif url.path == "/app-config":
+            # The days the default series covers now; read outside the registry lock, as a first read can take seconds.
+            try:
+                data_window = _data_window()
+            except Exception:
+                data_window = {}
             with _REGISTRY_LOCK:
                 body = json.dumps(
                     {
                         "bars": list(_BARS),
                         "default_bar": DEFAULT_BAR,
                         "app_name": APP_NAME,
-                        "data_window": {
-                            "start": PROJECT_START_STR,
-                            "end": PROJECT_END_STR,
-                        },
+                        "data_window": data_window,
                         "views": list(_VIEW_SPECS.keys()),
                         "saved_views": list(_SAVED_VIEWS.keys()),
                         "builtin_views": list(_BUILTIN_VIEWS),
@@ -725,7 +756,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             sh = _spec_hash(spec)
             cache_key = (
-                bar, target, sh, cols, date_from, date_to, row_mode, str(cut_n)
+                bar, _raw_for(bar)[1], target, sh, cols, date_from, date_to, row_mode, str(cut_n)
             )
             cached = _QC_CACHE.get(cache_key)
             if cached is not None:

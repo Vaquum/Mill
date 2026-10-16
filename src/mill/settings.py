@@ -1,15 +1,10 @@
 from __future__ import annotations
 
 import os
-from datetime import date
 from pathlib import Path
 
 APP_NAME = "Mill"
 APP_SLUG = "mill"
-PROJECT_START = date(2024, 1, 1)
-PROJECT_END = date(2026, 5, 15)
-PROJECT_START_STR = PROJECT_START.isoformat()
-PROJECT_END_STR = PROJECT_END.isoformat()
 DEFAULT_BAR = "1h_time_bars"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
