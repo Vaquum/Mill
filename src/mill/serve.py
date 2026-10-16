@@ -106,7 +106,7 @@ _REGISTRY_LOCK = threading.Lock()
 _POOLS: dict[tuple[str, str], discover.Pool] = {}
 _POOL_LOCKS: dict[tuple[str, str], threading.Lock] = {}
 _POOLS_MAX = 3
-_DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": 12, "max_points": 4096}
+_DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": discover.MAX_LEADERS, "max_points": 4096}
 
 _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
 _VIEW_TARGETS: dict[str, str] = {}

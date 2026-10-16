@@ -31,6 +31,7 @@ from . import feature_registry
 from .settings import PROJECT_END, PROJECT_END_STR, PROJECT_START, PROJECT_START_STR
 
 MODES = ("inside", "lead")
+MAX_LEADERS = 12
 MIN_EVENTS_FOR_INTERVALS = 30
 _SCREEN_LEADERS = 40
 _CLUSTER_RHO = 0.9
@@ -469,13 +470,16 @@ def discover(
         if twin is not None:
             leaders[kept.index(twin)]["similar"].append(pool.names[j])
             continue
-        if len(kept) == top:
+        if len(kept) == MAX_LEADERS:
             continue
         kept.append(int(j))
-        leaders.append(_leader(pool, int(j), point[j], separation[j], null, y, ranks, intervals,
-                               marked, rows, events, step_ms, context, display, max_points, bar_source, label))
-    # Leaders with an interval rank by its conservative end; the rest follow by their point separation.
-    leaders.sort(key=lambda c: (c["conservative"] is None, -(c["conservative"] or 0.0), -c["separation"]))
+        leaders.append(_leader(pool, int(j), point[j], separation[j], null, y, ranks, intervals))
+    # Leaders with an interval rank by its conservative end, the rest after them by point separation.
+    # top takes a prefix of that order over the same clusters, so asking for fewer never changes who leads.
+    order = sorted(range(len(leaders)), key=lambda i: (
+        leaders[i]["conservative"] is None, -(leaders[i]["conservative"] or 0.0), -leaders[i]["separation"]))
+    leaders = [_describe(leaders[i], pool, kept[i], marked, rows, events, step_ms, context, display, max_points,
+                         bar_source, label) for i in order[:top]]
     timing["stage_two"] = time.perf_counter() - clock3
     timing["total"] = time.perf_counter() - clock0
 
@@ -497,11 +501,10 @@ def discover(
 
 
 def _leader(
-    pool: Pool, j: int, point: float, sep: float, null: np.ndarray, y: np.ndarray,
-    ranks: np.ndarray, intervals: bool, marked: np.ndarray, rows: np.ndarray,
-    events: list[tuple[int, int]], step_ms: int, context: tuple[int, int], display: tuple[int, int],
-    max_points: int, bar_source: dict[str, Any], label: str,
+    pool: Pool, j: int, point: float, sep: float, null: np.ndarray, y: np.ndarray, ranks: np.ndarray,
+    intervals: bool,
 ) -> dict[str, Any]:
+    """A cluster leader's separation, chance call and interval: everything its rank depends on."""
     column = pool.names[j]
     direction = "higher" if point > 0.5 else "lower"
     over = exceedances(sep, null)
@@ -522,8 +525,17 @@ def _leader(
             lo, hi = interval
             out["ci90"] = [round(lo, 4), round(hi, 4)]
             out["conservative"] = round(max(0.0, lo - 0.5) if direction == "higher" else max(0.0, 0.5 - hi), 4)
-    values = pool.values[:, j]
-    rule = fit_rule(values, pool.natives[j], direction, marked, rows, events)
+    return out
+
+
+def _describe(
+    out: dict[str, Any], pool: Pool, j: int, marked: np.ndarray, rows: np.ndarray,
+    events: list[tuple[int, int]], step_ms: int, context: tuple[int, int], display: tuple[int, int],
+    max_points: int, bar_source: dict[str, Any], label: str,
+) -> dict[str, Any]:
+    """A returned leader's fitted rule, its hits and manifest, and its series."""
+    column, values = pool.names[j], pool.values[:, j]
+    rule = fit_rule(values, pool.natives[j], out["direction"], marked, rows, events)
     if rule is not None:
         hits = rule.pop("_hits")
         value = np.format_float_positional(rule["value"], trim="-")

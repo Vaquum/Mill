@@ -107,7 +107,7 @@ def test_threshold_keeps_the_split_it_selects() -> None:
 _SOURCE = serve._BAR_DATA_SOURCES["1h_time_bars"]
 
 
-def _run(values: np.ndarray, windows: list[tuple[int, int]]) -> dict:
+def _run(values: np.ndarray, windows: list[tuple[int, int]], top: int = 5) -> dict:
     """discover() on a hand-made pool of hourly bars; windows are [start, stop) bar indices."""
     n, c = values.shape
     ms = discover._RESEARCH_START_MS + np.arange(n, dtype=np.int64) * _H
@@ -116,7 +116,7 @@ def _run(values: np.ndarray, windows: list[tuple[int, int]]) -> dict:
                          params=({},) * c, ms=ms, values=values, skipped=())
     span = (int(ms[0]), int(ms[-1]) + _H)
     return discover.discover(pool, step_ms=_H, windows=[(int(ms[a]), int(ms[b - 1]) + _H) for a, b in windows],
-                             mode="inside", lead_bars=4, context=span, display=span, top=5, max_points=n,
+                             mode="inside", lead_bars=4, context=span, display=span, top=top, max_points=n,
                              bar_source=_SOURCE, label="test")
 
 
@@ -152,9 +152,12 @@ def test_intervals_need_thirty_events_where_the_column_is_defined() -> None:
     # c1 is defined on one marked and one unmarked bar: a perfect but two-row separation.
     values[:, 1] = np.nan
     values[starts[0], 1], values[starts[0] + 1, 1] = 1.0, 0.0
-    out = _run(values, [(int(a), int(a) + 1) for a in starts])
+    windows = [(int(a), int(a) + 1) for a in starts]
+    out = _run(values, windows)
     assert out["intervals"] and [c["column"] for c in out["candidates"]] == ["c0", "c1"]
     assert out["candidates"][0]["ci90"] is not None and out["candidates"][1]["ci90"] is None
+    # Asking for fewer leaders returns a prefix of the same order.
+    assert [c["column"] for c in _run(values, windows, top=1)["candidates"]] == ["c0"]
 
 
 def test_research_window_refuses_spans_outside_it() -> None:

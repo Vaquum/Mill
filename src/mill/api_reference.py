@@ -148,7 +148,8 @@ def build_reference(
                     _param("pool", "json", default={"kind": "catalog"},
                            description="{kind: catalog} for every default-parameter factory, "
                                        "or {kind: view, name} for a view's columns."),
-                    _param("top", "int", default=5, description="Leaders returned, 1 to 12."),
+                    _param("top", "int", default=5, description="Leaders returned, 1 to 12: the "
+                           "first of the twelve best clusters in rank order, so fewer is a prefix."),
                     _param("max_points", "int", default=2000,
                            description="Series points per leader, 100 to 4096; longer spans "
                                        "carry each bucket's last bar."),
