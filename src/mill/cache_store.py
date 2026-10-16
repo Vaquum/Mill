@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,15 +20,17 @@ def cache_path(label: str, criteria: dict[str, object]) -> Path:
 
 
 def read_fresh(path: Path, source: Path) -> pl.DataFrame | None:
-    """The cached frame while it is current: written since its source last changed.
+    """The cached frame while it is current: its source has not changed since the version it was read from.
 
-    The bar store rewrites a series' file as bars arrive, so a cache older than
-    its file is stale. Without the file to compare, the cache is the last known.
+    The bar store rewrites a series' file as bars arrive. A cache carries the
+    source's modification time as read (write_cache's stamp), so a later write
+    makes it stale, one during the read included. Without the file to compare,
+    the cache is the last known.
     """
     if not path.exists():
         return None
     try:
-        if path.stat().st_mtime < source.stat().st_mtime:
+        if path.stat().st_mtime_ns < source.stat().st_mtime_ns:
             return None
     except FileNotFoundError:
         pass
@@ -53,9 +56,13 @@ def write_cache(
     path: Path,
     data: pl.DataFrame,
     criteria: dict[str, object],
+    stamp_ns: int | None = None,
 ) -> Path:
+    """Write the frame atomically; with stamp_ns, the file carries that modification time (its source's as read)."""
     tmp = path.with_suffix(path.suffix + ".tmp")
     write_parquet(data, tmp)
+    if stamp_ns is not None:
+        os.utime(tmp, ns=(stamp_ns, stamp_ns))
     tmp.replace(path)
     metadata = {
         "wrote_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),

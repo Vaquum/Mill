@@ -246,10 +246,14 @@ def _raw_for(bar: str) -> tuple[pl.DataFrame, int]:
 
 
 def _retire(bar: str, version: int) -> None:
-    """Forget what was computed from a bar series' earlier versions: their keys are (bar, version, ...)."""
-    for cache in (_RESULTS, _QC_CACHE, _QC_LOCKS, _POOLS, _POOL_LOCKS):
-        for key in [k for k in list(cache) if k[0] == bar and k[1] != version]:
-            cache.pop(key, None)
+    """Forget what was computed from a bar series' earlier versions: their keys are (bar, version, ...).
+
+    Under the registry lock, which pool eviction also holds while it mutates the pools.
+    """
+    with _REGISTRY_LOCK:
+        for cache in (_RESULTS, _QC_CACHE, _QC_LOCKS, _POOLS, _POOL_LOCKS):
+            for key in [k for k in list(cache) if k[0] == bar and k[1] != version]:
+                cache.pop(key, None)
 
 
 def _data_window(bar: str = DEFAULT_BAR) -> dict[str, str]:
@@ -756,7 +760,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             sh = _spec_hash(spec)
             cache_key = (
-                bar, _raw_for(bar)[1], target, sh, cols, date_from, date_to, row_mode, str(cut_n)
+                bar, _source_version(bar), target, sh, cols, date_from, date_to, row_mode, str(cut_n)
             )
             cached = _QC_CACHE.get(cache_key)
             if cached is not None:

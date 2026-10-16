@@ -172,8 +172,13 @@ class GetData:
             cached = read_fresh(path, source)
             if cached is not None:
                 return self._store(cached)
+            # The source's version before reading it: a write during the read leaves the cache stale.
+            try:
+                stamp = source.stat().st_mtime_ns
+            except FileNotFoundError:
+                stamp = None
             data = fetch()
-            write_cache(path, data, criteria)
+            write_cache(path, data, criteria, stamp)
             return self._store(data)
 
     def _store(self, data: pl.DataFrame) -> pl.DataFrame:
