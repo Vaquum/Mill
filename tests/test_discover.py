@@ -110,7 +110,7 @@ _SOURCE = serve._BAR_DATA_SOURCES["1h_time_bars"]
 def _run(values: np.ndarray, windows: list[tuple[int, int]], top: int = 5) -> dict:
     """discover() on a hand-made pool of hourly bars; windows are [start, stop) bar indices."""
     n, c = values.shape
-    ms = discover._RESEARCH_START_MS + np.arange(n, dtype=np.int64) * _H
+    ms = discover.RESEARCH_START_MS + np.arange(n, dtype=np.int64) * _H
     names = tuple(f"c{i}" for i in range(c))
     pool = discover.Pool(names=names, natives=names, factories=("close",) * c, sources=("raw",) * c,
                          params=({},) * c, ms=ms, values=values, skipped=())
@@ -183,7 +183,9 @@ def test_rule_manifest_validates_with_limen() -> None:
     assert "not out of sample" in manifest["metadata"]["description"]
 
 
-_TS = [ns(2024, 1, 1) + i * 3_600_000_000_000 for i in range(240)]
+# Ten days from the research window's start, and its last ten days, so a default context reaches both ends.
+_TS = ([ns(2024, 1, 1) + i * 3_600_000_000_000 for i in range(240)]
+       + [ns(2026, 5, 6) + i * 3_600_000_000_000 for i in range(240)])
 
 
 @pytest.fixture
@@ -233,6 +235,14 @@ def test_discover_ranks_a_view_against_one_window(server: str) -> None:
     leader = out["candidates"][0]
     assert leader["rule"]["manifest"]["sfd"]["manifest"]["strategy"]["entry"] == "entry"
     assert len(leader["series"]["values"]) == 240
+
+
+def test_discover_default_context_includes_the_last_research_day(server: str) -> None:
+    status, out = _post(server, {"pool": {"kind": "view", "name": "ochlv"},
+                                 "windows": [{"start": "2026-05-15T00:00:00Z", "end": "2026-05-16T00:00:00Z"}]})
+    assert status == 200, out
+    assert out["target"]["marked_bars"] == 24
+    assert out["context"]["end_ms"] == discover.parse_ms("2026-05-16T00:00:00Z")
 
 
 def test_discover_refuses_windows_outside_the_research_window(server: str) -> None:

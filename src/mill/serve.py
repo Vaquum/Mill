@@ -498,8 +498,10 @@ def _discover(body: Any) -> dict[str, Any]:
     if mode not in discover.MODES:
         raise ValueError(f"mode must be one of {list(discover.MODES)}")
     window = {"start": PROJECT_START_STR, "end": PROJECT_END_STR}
-    context = _span(body.get("context") or window, "context")
-    display = _span(body.get("display") or body.get("context") or window, "display")
+    # By default the whole research window, its last day included.
+    research = {"start": discover.RESEARCH_START_MS, "end": discover.RESEARCH_END_MS}
+    context = _span(body.get("context") or research, "context")
+    display = _span(body.get("display") or body.get("context") or research, "display")
     pool_request = body.get("pool") or {"kind": "catalog"}
     if not isinstance(pool_request, dict):
         raise ValueError("pool must be an object")

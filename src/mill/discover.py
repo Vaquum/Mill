@@ -42,8 +42,9 @@ _FFT_CHUNK = 64
 _BEYOND_ONE_IN = 20
 # FFT and direct sums agree far closer than this; a near tie counts against the column.
 _TIE = 1e-9
-_RESEARCH_START_MS = int(datetime.combine(PROJECT_START, clock(), timezone.utc).timestamp() * 1000)
-_RESEARCH_END_MS = int(datetime.combine(PROJECT_END + timedelta(days=1), clock(), timezone.utc).timestamp() * 1000)
+# The research window as half-open UTC milliseconds: its first day's start to the day after its last.
+RESEARCH_START_MS = int(datetime.combine(PROJECT_START, clock(), timezone.utc).timestamp() * 1000)
+RESEARCH_END_MS = int(datetime.combine(PROJECT_END + timedelta(days=1), clock(), timezone.utc).timestamp() * 1000)
 
 
 @dataclass(frozen=True)
@@ -132,7 +133,7 @@ def research_bounds(start_ms: int, end_ms: int) -> None:
     """Refuse a span outside Mill's research window, or an empty one."""
     if start_ms >= end_ms:
         raise ValueError("a window must end after it starts")
-    if start_ms < _RESEARCH_START_MS or end_ms > _RESEARCH_END_MS:
+    if start_ms < RESEARCH_START_MS or end_ms > RESEARCH_END_MS:
         raise ValueError(
             f"outside the research window {PROJECT_START_STR} to {PROJECT_END_STR}; "
             "Mill does not read bars beyond it"
