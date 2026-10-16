@@ -98,10 +98,11 @@ _RAW_CACHE: dict[str, tuple[pl.DataFrame, int, int]] = {}
 _BAR_LOCKS: dict[str, threading.Lock] = {}
 _REGISTRY_LOCK = threading.Lock()
 # Find features pools: a catalog pool holds every default-parameter column of a bar series
-# (about 120 MB on 1h, 490 MB on 15m), so only as many are kept as there are time bars; each builds once.
+# (about 120 MB on 1h, 490 MB on 15m). Each time bar keeps its one catalog pool, and the most
+# recent few view pools are kept beside them; each builds once.
 _POOLS: dict[tuple[str, int, str], discover.Pool] = {}
 _POOL_LOCKS: dict[tuple[str, int, str], threading.Lock] = {}
-_POOLS_MAX = len(TIME_BAR_SECONDS)
+_VIEW_POOLS_MAX = 3
 _DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": discover.MAX_LEADERS, "max_points": 4096}
 
 _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
@@ -494,32 +495,46 @@ def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, floa
         last = max((k for k in _POOLS if k[0] == bar and k[2] == key[2]), default=None)
         older = _POOLS.get(last) if last is not None else None
     if older is not None:
-        threading.Thread(target=_build_pool, args=(key, lock, raw, spec), daemon=True).start()
+        # One build per key: a request that finds it running answers from the older pool as well.
+        if lock.acquire(blocking=False):
+            threading.Thread(target=_refresh_pool, args=(key, lock, raw, spec), daemon=True).start()
         return older, True, 0.0
-    return _build_pool(key, lock, raw, spec)
+    with lock:
+        return _build_pool(key, raw, spec)
+
+
+def _refresh_pool(
+    key: tuple[str, int, str], lock: threading.Lock, raw: pl.DataFrame, spec: list[dict[str, Any]] | None
+) -> None:
+    """Build a pool while an older one answers; its key's lock is held for it."""
+    try:
+        _build_pool(key, raw, spec)
+    finally:
+        lock.release()
 
 
 def _build_pool(
-    key: tuple[str, int, str], lock: threading.Lock, raw: pl.DataFrame, spec: list[dict[str, Any]] | None
+    key: tuple[str, int, str], raw: pl.DataFrame, spec: list[dict[str, Any]] | None
 ) -> tuple[discover.Pool, bool, float]:
-    """Build a pool once under its key's lock; it replaces its bar and pool's earlier versions."""
-    with lock:
-        hit = _POOLS.get(key)
-        if hit is not None:
-            return hit, True, 0.0
-        began = time.perf_counter()
-        built = discover.catalog_pool(raw) if spec is None else discover.spec_pool(raw, spec)
-        with _REGISTRY_LOCK:
-            same = [k for k in _POOLS if k[0] == key[0] and k[2] == key[2]]
-            # A later version may have landed while this one built; then this one is already behind.
-            if all(k[1] < key[1] for k in same):
-                for k in same:
-                    del _POOLS[k]
-                    _POOL_LOCKS.pop(k, None)
-                while len(_POOLS) >= _POOLS_MAX:
-                    _POOLS.pop(next(iter(_POOLS)))
-                _POOLS[key] = built
-        return built, False, (time.perf_counter() - began) * 1000
+    """Build a pool under its key's lock; it replaces its bar and pool's earlier versions."""
+    hit = _POOLS.get(key)
+    if hit is not None:
+        return hit, True, 0.0
+    began = time.perf_counter()
+    built = discover.catalog_pool(raw) if spec is None else discover.spec_pool(raw, spec)
+    with _REGISTRY_LOCK:
+        same = [k for k in _POOLS if k[0] == key[0] and k[2] == key[2]]
+        # A later version may have landed while this one built; then this one is already behind.
+        if all(k[1] < key[1] for k in same):
+            for k in same:
+                del _POOLS[k]
+                _POOL_LOCKS.pop(k, None)
+            if key[2] != "catalog":
+                views = [k for k in _POOLS if k[2] != "catalog"]
+                while len(views) >= _VIEW_POOLS_MAX:
+                    del _POOLS[views.pop(0)]
+            _POOLS[key] = built
+    return built, False, (time.perf_counter() - began) * 1000
 
 
 def _warm() -> None:

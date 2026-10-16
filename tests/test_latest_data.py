@@ -111,6 +111,12 @@ def test_a_rewrite_of_the_open_bar_alone_keeps_what_was_computed(
     assert serve._ensure("1h_time_bars", "none", [])[1] is frame
 
 
+def _pool(raw) -> discover.Pool:
+    """A pool without columns over the bars, for the server's bookkeeping alone."""
+    return discover.Pool(names=(), natives=(), factories=(), sources=(), params=(),
+                         ms=raw["datetime"].dt.epoch("ms").to_numpy(), values=np.empty((raw.height, 0)), skipped=())
+
+
 def test_the_last_pool_answers_while_the_next_one_builds(
     arrow_store: ArrowStore, fresh_caches: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -120,8 +126,7 @@ def test_the_last_pool_answers_while_the_next_one_builds(
         if built:
             assert release.wait(5), "the test never released the second build"
         built.append(raw.height)
-        return discover.Pool(names=(), natives=(), factories=(), sources=(), params=(),
-                             ms=raw["datetime"].dt.epoch("ms").to_numpy(), values=np.empty((raw.height, 0)), skipped=())
+        return _pool(raw)
 
     monkeypatch.setattr(discover, "catalog_pool", catalog_pool)
     arrow_store.write("time_1h", _TS)
@@ -132,6 +137,11 @@ def test_the_last_pool_answers_while_the_next_one_builds(
     _later("time_1h")
     pool, cached, _ = serve._pool_for("1h_time_bars", {"kind": "catalog"})
     assert pool is first and cached
+    # Searches meanwhile answer from the first pool too, without starting more builds.
+    threads = threading.active_count()
+    for _ in range(5):
+        assert serve._pool_for("1h_time_bars", {"kind": "catalog"})[0] is first
+    assert threading.active_count() == threads
     release.set()
     deadline = time.monotonic() + 5
     while len(serve._POOLS) != 1 or next(iter(serve._POOLS.values())) is first:
@@ -148,8 +158,7 @@ def test_warming_builds_each_time_bars_pool_fewest_bars_first(
 
     def catalog_pool(raw):
         built.append(raw.height)
-        return discover.Pool(names=(), natives=(), factories=(), sources=(), params=(),
-                             ms=raw["datetime"].dt.epoch("ms").to_numpy(), values=np.empty((raw.height, 0)), skipped=())
+        return _pool(raw)
 
     monkeypatch.setattr(discover, "catalog_pool", catalog_pool)
     arrow_store.write("time_1h", _TS)
@@ -158,6 +167,20 @@ def test_warming_builds_each_time_bars_pool_fewest_bars_first(
     serve._warm()
     assert built == [5, 20]
     assert sorted(key[0] for key in serve._POOLS) == ["1h_time_bars", "4h_time_bars"]
+
+
+def test_view_pools_never_evict_a_time_bars_catalog_pool(
+    arrow_store: ArrowStore, fresh_caches: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(discover, "catalog_pool", _pool)
+    monkeypatch.setattr(discover, "spec_pool", lambda raw, spec: _pool(raw))
+    monkeypatch.setattr(serve, "_VIEW_SPECS", {f"v{i}": [{"factory": "close", "params": {}}] for i in range(5)})
+    arrow_store.write("time_1h", _TS)
+    serve._pool_for("1h_time_bars", {"kind": "catalog"})
+    for i in range(5):
+        serve._pool_for("1h_time_bars", {"kind": "view", "name": f"v{i}"})
+    # The catalog pool stays; the three most recent views are kept beside it.
+    assert [key[2].rsplit(":", 1)[0] for key in serve._POOLS] == ["catalog", "view:v2", "view:v3", "view:v4"]
 
 
 def test_retiring_waits_for_the_registry_lock(fresh_caches: None) -> None:
