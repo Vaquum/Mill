@@ -102,6 +102,27 @@ def test_infinities_keep_spearman_and_reject_mi_like_reference():
     assert work.pair("left", "right") == qc._pair_metrics.__wrapped__(*arrays.values())
 
 
+@pytest.mark.parametrize("kind", ["continuous", "binary", "constant", "infinity"])
+def test_shared_target_mi_matches_reference_for_all_target_kinds(kind):
+    rng = np.random.default_rng(441)
+    arrays = {str(i): rng.normal(size=517) for i in range(3)}
+    arrays["0"][:13] = np.nan
+    arrays["1"][::17] = np.nan
+    y = rng.normal(size=517)
+    if kind == "binary":
+        y = (y > 0).astype(float)
+    elif kind == "constant":
+        y[:] = 1
+    elif kind == "infinity":
+        y[::11] = np.inf
+    arrays["target"] = y
+    blocks = {name: 24 for name in arrays}
+    expected = {name: qc._edge_metrics.__wrapped__(arrays[name], y, 24, qc._seed_for(name))
+                for name in ("0", "1", "2")}
+    qc.clear_kernel_cache()
+    assert qc._edge_map(arrays, ("0", "1", "2"), y, blocks, "target") == expected
+
+
 def test_sorted_radius_counts_match_kdtree_at_floating_point_boundaries():
     rng = np.random.default_rng(82)
     values = np.r_[rng.normal(size=180), np.zeros(8), np.nextafter(1., 0.), 1., np.nextafter(1., 2.)]

@@ -37,7 +37,7 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "null"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
@@ -195,6 +195,11 @@ def worker(args):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
                         for i, left in enumerate(cols) for right in cols[i+1:]}
             qc._pair_map = original_pairs
+        elif args.ablate == "edges":
+            def original_edges(arrays, cols, target, blocks, label):
+                return {col: qc._edge_metrics(arrays[col], target, qc._joint_block(blocks, col, label),
+                                              qc._seed_for(col)) for col in cols}
+            qc._edge_map = original_edges
         elif args.ablate == "null":
             import ast
             source = args.reference_source / "src/mill/discover.py"

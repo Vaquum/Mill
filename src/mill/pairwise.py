@@ -78,6 +78,9 @@ class Workspace:
             return rows
         return self._get(("indices", cohort, cap), build)
 
+    def cohort(self, left, right):
+        return np.bitwise_and(self.masks[left], self.masks[right]).tobytes()
+
     def _ranks(self, name, cohort):
         return self._get(("ranks", name, cohort), lambda: stats.rankdata(
             self.arrays[name][self._indices(cohort, self.max_n)]))
@@ -109,7 +112,7 @@ class Workspace:
         return self._get(("marginal", name, cohort, role), build)
 
     def pair(self, left, right):
-        cohort = np.bitwise_and(self.masks[left], self.masks[right]).tobytes()
+        cohort = self.cohort(left, right)
         rows = self._indices(cohort, self.max_n)
         if rows.size < self.min_n:
             return None, None
@@ -119,10 +122,23 @@ class Workspace:
             # entries can differ by one ULP, so preserve that direction too.
             rho = np.corrcoef(a, b)[1, 0]
         rho = abs(float(rho)) if np.isfinite(rho) else None
+        return rho, self.mutual_info(left, right, cohort)
+
+    def edge_mi(self, left, right, fallback):
+        cohort = self.cohort(left, right)
+        values = self._get(("target_values", right, cohort), lambda: np.unique(
+            self.arrays[right][self._indices(cohort, self.mi_max_n)]))
+        if values.size < 2:
+            return 0.
+        if values.size <= 10 and np.all(values == np.round(values)):
+            return fallback()
+        return self.mutual_info(left, right, cohort)
+
+    def mutual_info(self, left, right, cohort):
         x, sx = self._marginal(left, cohort, "left")
         y, sy = self._marginal(right, cohort, "right")
         if x is None or y is None:
-            return rho, None
+            return None
         try:
             nn = NearestNeighbors(metric="chebyshev", n_neighbors=3).fit(np.column_stack((x, y)))
             radius = np.nextafter(nn.kneighbors()[0][:, -1], 0)
@@ -130,5 +146,5 @@ class Workspace:
             mi = max(0, digamma(x.size) + digamma(3)
                      - np.mean(digamma(nx)) - np.mean(digamma(ny)))
         except Exception:
-            return rho, None
-        return rho, float(mi) if np.isfinite(mi) else None
+            return None
+        return float(mi) if np.isfinite(mi) else None

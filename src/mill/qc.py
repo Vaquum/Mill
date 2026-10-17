@@ -291,15 +291,25 @@ def _edge_map(
     blocks: dict[str, int | None],
     target_label: str,
 ) -> dict[str, tuple]:
-    return {
-        col: _edge_metrics(
-            arrays[col],
-            target_arr,
-            _joint_block(blocks, col, target_label),
-            _seed_for(col),
-        )
-        for col in feature_cols
-    }
+    results, work = {}, None
+    for col in feature_cols:
+        args = (arrays[col], target_arr, _joint_block(blocks, col, target_label), _seed_for(col))
+        key = _kernel_key("_edge_metrics", args, {})
+        result = _KERNEL_CACHE.get(key, _MISS)
+        if result is _MISS:
+            if work is None:
+                work = Workspace(arrays, max_n=target_arr.size, mi_max_n=_MI_MAX_N, min_n=100)
+            def mi(x, y):
+                mi_key = _kernel_key("_mutual_info", (x, y), {})
+                value = _KERNEL_CACHE.get(mi_key, _MISS)
+                if value is _MISS:
+                    value = work.edge_mi(col, target_label, lambda: _mutual_info(x, y))
+                    _KERNEL_CACHE[mi_key] = value
+                return value
+            result = _edge_calculations(*args, mi)
+            _KERNEL_CACHE[key] = result
+        results[col] = result
+    return results
 
 
 def _edge_rows(
@@ -329,13 +339,17 @@ def _edge_metrics(
     deciles. The CI and MI beneath keep their own memos, so a cold call
     computes exactly what the inline loop did.
     """
+    return _edge_calculations(x, y, block, seed, _mutual_info)
+
+
+def _edge_calculations(x, y, block, seed, mutual_information):
     mask = ~np.isnan(x) & ~np.isnan(y)
     xc, yc = x[mask], y[mask]
     if xc.size < 100:
         return None, None, None, None, None, None
     spearman = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
     lo, hi = _bootstrap_spearman_ci(xc, yc, block, seed=seed)
-    mi = _mutual_info(xc, yc)
+    mi = mutual_information(xc, yc)
     spread, monotonic = _decile_metrics(xc, yc)
     return spearman, lo, hi, mi, spread, monotonic
 
