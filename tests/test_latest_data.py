@@ -12,7 +12,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
+from mill.http_server import BoundedHTTPServer as ThreadingHTTPServer
 
 import numpy as np
 import pytest

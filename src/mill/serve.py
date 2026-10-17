@@ -137,6 +137,7 @@ _APP_USERNAME = ""
 _APP_PASSWORD = ""
 _API_SECRET = ""
 _RESEARCH = Worker()
+_RESEARCH_ADMISSION = threading.BoundedSemaphore(2)
 
 
 def _research_report(frame, target):
@@ -808,10 +809,24 @@ def _delete_view(name: str) -> tuple[int, str]:
 
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
+        self._dispatch(self._get)
+
+    def _dispatch(self, route) -> None:
         url = urlsplit(self.path)
         if not self._authorized(url.path):
             self._unauthorized()
             return
+        research = url.path in {"/qc", "/discover"}
+        if research and not _RESEARCH_ADMISSION.acquire(blocking=False):
+            self._send(503, "application/json", b'{"error":"research_busy","detail":"retry shortly"}')
+            return
+        try:
+            route(url)
+        finally:
+            if research:
+                _RESEARCH_ADMISSION.release()
+
+    def _get(self, url) -> None:
         if url.path == "/health":
             self._send(200, "application/json", b'{"status":"ok"}')
         elif url.path == "/":
@@ -952,10 +967,9 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(404, "text/plain", b"")
 
     def do_POST(self) -> None:
-        url = urlsplit(self.path)
-        if not self._authorized(url.path):
-            self._unauthorized()
-            return
+        self._dispatch(self._post)
+
+    def _post(self, url) -> None:
         if url.path == "/save_view":
             length = int(self.headers.get("Content-Length") or 0)
             try:

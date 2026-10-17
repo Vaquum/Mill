@@ -34,6 +34,8 @@ def arguments():
     parser.add_argument("--reps", type=int, default=3)
     parser.add_argument("--bar", choices=("1h_time_bars", "15m_time_bars"), default="1h_time_bars")
     parser.add_argument("--catalog", action="store_true", help="use all eligible factories for discovery")
+    parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
+    parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -45,6 +47,8 @@ def arguments():
         parser.error("output cannot overwrite the input parquet")
     if args.case == "memory" and args.rows:
         parser.error("memory cases require full input; --rows limits compute, not source decoding")
+    if args.discover_phase != "combined" and (args.case != "discover" or args.pool_artifact is None):
+        parser.error("split discovery requires --case discover and --pool-artifact")
     return args
 
 
@@ -306,7 +310,29 @@ def worker(args):
             record.doc["kernel_cache_entries"] = len(qc._KERNEL_CACHE)
             record.doc["pair_count"] = len(prim.pairs)
         elif args.case == "discover":
-            pool = measure("pool_build", lambda: discover.catalog_pool(raw) if args.catalog else discover.spec_pool(raw, spec), reps=1)
+            identity = {"source": record.doc["source"], "input": record.doc["input"],
+                        "tree": record.doc["environment"]["source_tree_sha256"], "catalog": args.catalog}
+            if args.discover_phase == "search":
+                metadata = json.loads((args.pool_artifact / "metadata.json").read_text())
+                if metadata["identity"] != identity:
+                    raise ValueError("pool artifact does not match this source, parameters and engine")
+                fields = metadata["fields"]
+                pool = discover.Pool(**{k: tuple(v) for k, v in fields.items()},
+                    ms=np.load(args.pool_artifact / "ms.npy", allow_pickle=False, mmap_mode="r"),
+                    values=np.load(args.pool_artifact / "values.npy", allow_pickle=False, mmap_mode="r"))
+            else:
+                pool = measure("pool_build", lambda: discover.catalog_pool(raw) if args.catalog else discover.spec_pool(raw, spec), reps=1)
+            record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
+            if args.discover_phase == "pool":
+                args.pool_artifact.mkdir(parents=True, exist_ok=True)
+                np.save(args.pool_artifact / "ms.npy", pool.ms, allow_pickle=False)
+                np.save(args.pool_artifact / "values.npy", pool.values, allow_pickle=False)
+                fields = {name: getattr(pool, name) for name in
+                          ("names", "natives", "factories", "sources", "params", "skipped")}
+                write_result(args.pool_artifact / "metadata.json", {"identity": identity, "fields": fields})
+                record.doc["status"] = "complete"
+                record.save()
+                return
             ms = pool.ms
             step = time_bar_seconds(bar) * 1000
             if len(ms) < 4:
@@ -321,7 +347,6 @@ def worker(args):
             record.doc["discovery"] = {"columns": len(pool.names), "pool_bytes": pool.values.nbytes,
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}
-            record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
             record.doc["parity_discovery"] = content_digest({k: v for k, v in answer.items() if k != "timing_ms"})
         elif args.case == "http":
             import base64

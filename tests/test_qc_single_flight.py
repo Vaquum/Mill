@@ -15,7 +15,8 @@ import base64
 import threading
 import time
 import urllib.request
-from http.server import ThreadingHTTPServer
+import urllib.error
+from mill.http_server import BoundedHTTPServer as ThreadingHTTPServer
 
 import pytest
 
@@ -94,3 +95,34 @@ def test_identical_concurrent_qc_computes_once(
     status, _body = _get(f"{server}{_QC_QUERY.replace('row_mode=bar', 'row_mode=all')}")
     assert status == 200
     assert len(calls) == 2
+
+
+def test_research_overload_preserves_data_request_capacity(server, monkeypatch):
+    admitted = threading.Event()
+    release = threading.Event()
+    class Admission(threading.BoundedSemaphore):
+        calls = 0
+        def acquire(self, *args, **kwargs):
+            ok = super().acquire(*args, **kwargs)
+            if ok:
+                self.calls += 1
+                if self.calls == 2:
+                    admitted.set()
+            return ok
+    monkeypatch.setattr(serve, "_RESEARCH_ADMISSION", Admission(2))
+    def blocked(frame, target):
+        assert release.wait(5)
+        return qc.report(frame, target)
+    monkeypatch.setattr(serve, "_research_report", blocked)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(2) as executor:
+        pending = [executor.submit(_get, f"{server}{_QC_QUERY}") for _ in range(2)]
+        try:
+            assert admitted.wait(5)
+            with pytest.raises(urllib.error.HTTPError) as error:
+                _get(f"{server}{_QC_QUERY}")
+            assert error.value.code == 503
+            assert _get(f"{server}{_QC_QUERY.replace('/qc?', '/data?')}")[0] == 200
+        finally:
+            release.set()
+        assert all(f.result(timeout=5)[0] == 200 for f in pending)
