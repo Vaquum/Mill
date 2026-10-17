@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -10,7 +11,7 @@ import secrets
 import threading
 import time
 import webbrowser
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -105,10 +106,12 @@ _REGISTRY_LOCK = threading.Lock()
 _POOLS: dict[tuple[str, int, str], discover.Pool] = {}
 _POOL_LOCKS: dict[tuple[str, int, str], threading.Lock] = {}
 _VIEW_POOLS_MAX = 3
-# Searches under way. Pools build in Python factories that hold the interpreter's lock, so a search
-# beside a build takes about twice as long: a build waits between factories while any search runs.
+# Searches under way, by ticket. Pools build in Python factories that hold the interpreter's lock, so a
+# search beside a build takes about twice as long: a refresh waits between factories for the searches
+# running at that moment, and later ones do not hold it longer.
 _SEARCHES = threading.Condition()
-_SEARCHING = 0
+_SEARCHING: set[int] = set()
+_TICKETS = itertools.count()
 _DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": discover.MAX_LEADERS, "max_points": 4096}
 
 _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
@@ -514,21 +517,21 @@ def _refresh_pool(
 ) -> None:
     """Build a pool while an older one answers; its key's lock is held for it."""
     try:
-        _build_pool(key, raw, spec)
+        _build_pool(key, raw, spec, _between_factories)
     finally:
         lock.release()
 
 
 def _build_pool(
-    key: tuple[str, int, str], raw: pl.DataFrame, spec: list[dict[str, Any]] | None
+    key: tuple[str, int, str], raw: pl.DataFrame, spec: list[dict[str, Any]] | None,
+    pause: Callable[[], None] | None = None,
 ) -> tuple[discover.Pool, bool, float]:
     """Build a pool under its key's lock; it replaces its bar and pool's earlier versions."""
     hit = _POOLS.get(key)
     if hit is not None:
         return hit, True, 0.0
     began = time.perf_counter()
-    built = (discover.catalog_pool(raw, _between_factories) if spec is None
-             else discover.spec_pool(raw, spec, _between_factories))
+    built = discover.catalog_pool(raw, pause) if spec is None else discover.spec_pool(raw, spec, pause)
     with _REGISTRY_LOCK:
         same = [k for k in _POOLS if k[0] == key[0] and k[2] == key[2]]
         # A later version may have landed while this one built; then this one is already behind.
@@ -546,22 +549,23 @@ def _build_pool(
 
 @contextmanager
 def _search() -> Iterator[None]:
-    """Count a search while it runs."""
-    global _SEARCHING
+    """Hold a ticket while a search runs."""
+    ticket = next(_TICKETS)
     with _SEARCHES:
-        _SEARCHING += 1
+        _SEARCHING.add(ticket)
     try:
         yield
     finally:
         with _SEARCHES:
-            _SEARCHING -= 1
+            _SEARCHING.discard(ticket)
             _SEARCHES.notify_all()
 
 
 def _between_factories() -> None:
-    """Hold a pool build until no search runs."""
+    """Hold a refresh until the searches running now have ended."""
     with _SEARCHES:
-        _SEARCHES.wait_for(lambda: _SEARCHING == 0)
+        running = set(_SEARCHING)
+        _SEARCHES.wait_for(lambda: not running & _SEARCHING)
 
 
 def _warm() -> None:
