@@ -224,7 +224,7 @@ def worker(args):
             answer = measure("discover_full", lambda: discover.discover(pool, step_ms=step,
                 windows=windows, mode="inside", lead_bars=1,
                 context=(int(ms[0]), int(ms[-1]) + step), display=(int(ms[0]), int(ms[-1]) + step),
-                top=3, max_points=256, bar_source={}, label="profile"))
+                top=3, max_points=256, bar_source=serve._BAR_DATA_SOURCES[bar], label="profile"))
             record.doc["discovery"] = {"columns": len(pool.names), "pool_bytes": pool.values.nbytes,
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}
@@ -266,7 +266,14 @@ def worker(args):
 def main():
     args = arguments()
     if args.worker:
-        worker(args)
+        try:
+            worker(args)
+        except Exception as exc:
+            if args.output.exists():
+                doc = json.loads(args.output.read_text())
+                doc.update(status="error", error=type(exc).__name__ + ": " + str(exc))
+                args.output.write_text(json.dumps(doc, indent=2) + "\n")
+            raise
         return 0
     # Kill the entire worker process group, including stuck native code, before one minute.
     process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:], "--worker"], start_new_session=True)
