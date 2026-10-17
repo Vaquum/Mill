@@ -68,6 +68,20 @@ def test_a_failing_native_factory_does_not_suppress_other_catalog_outputs():
     assert result[2].equals(good(raw, window=4))
 
 
+@pytest.mark.parametrize("swap", [False, True])
+def test_raw_column_renames_and_swaps_preserve_original_lineage(swap):
+    from mill.feature_registry import _limen_producer
+    def renamed(frame):
+        if swap:
+            return frame.rename({"open": "close", "close": "open"}).with_columns(
+                (pl.col("close")-pl.col("open")).alias("spread"))
+        return frame.rename({"close": "price"}).with_columns((pl.col("price")*2).alias("double"))
+    raw, producer = _raw(), _limen_producer(renamed)
+    graph = Graph(raw)
+    actual = graph.collect([producer(graph.frame())])[0]
+    assert actual.equals(producer(raw))
+
+
 def test_every_eligible_factory_matches_its_original_producer():
     raw = _raw()
     for name, entry in feature_registry.REGISTRY.items():

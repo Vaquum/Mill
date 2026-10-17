@@ -25,7 +25,7 @@ class Graph:
             self.prefix += "_"
 
     def frame(self):
-        return Frame(self, dict.fromkeys(self.raw.columns))
+        return Frame(self, {name: name for name in self.raw.columns})
 
     def expression(self, expr, columns):
         if not isinstance(expr, pl.Expr):
@@ -48,9 +48,9 @@ class Graph:
                     if original not in columns:
                         raise NotPlannable()
                     shared = columns[original]
-                    if shared is not None:
+                    if shared in self.nodes:
                         dependencies.add(shared)
-                        return {"Column": shared}
+                    return {"Column": shared}
                 return {k: visit(v) for k, v in node.items()}
             if isinstance(node, list):
                 return [visit(v) for v in node]
@@ -75,7 +75,7 @@ class Graph:
         needed = set()
 
         def require(name):
-            if name is not None and name not in needed:
+            if name in self.nodes and name not in needed:
                 needed.add(name)
                 for parent in self.nodes[name][1]:
                     require(parent)
@@ -95,7 +95,7 @@ class Graph:
             group = []
             for name, node in part.mapping.items():
                 temporary = f"{self.prefix}output_{len(outputs)}"
-                outputs.append(pl.col(node or name).alias(temporary))
+                outputs.append(pl.col(node).alias(temporary))
                 group.append((temporary, name))
             groups.append(group)
         combined = frame.select(outputs).collect()
