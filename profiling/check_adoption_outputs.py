@@ -31,6 +31,7 @@ def worker(args):
     import engine_sweep
     observations = []
     def capture(value):
+        original_digest = content_digest(value)
         if isinstance(value, dict) and {"candidates", "context", "target", "pool"} <= value.keys():
             original = value
             if args.pool_cache:
@@ -41,7 +42,7 @@ def worker(args):
             if args.pool_cache:
                 proof.update(replayed_digest=content_digest(original), replayed_cached=True, recorded_cached=False)
             observations.append(proof)
-        return content_digest(value)
+        return original_digest
     engine_sweep.content_digest = capture
     if args.kind == "view":
         driver, phases = engine_sweep, ("cold", "repeat", "display", "windows")
@@ -60,10 +61,14 @@ def worker(args):
     else:
         driver.worker(args.parquet, record, "1h_time_bars", args.scratch)
     assert len(observations) == len(phases)
-    args.output.write_text(json.dumps({"run": json.loads(record.read_text()),
+    run = json.loads(record.read_text())
+    if args.pool_cache:
+        assert run["parity_research"] == observations[0]["replayed_digest"]
+    args.output.write_text(json.dumps({"run": run,
         "version_field": "candidates/*/rule/manifest/metadata/limen_version",
         "before_version": "3.30.0", "after_version": "5.29.2",
         "setup_reuse": "prepared immutable pool; reconstruct the recorded cold cache flag" if args.pool_cache else None,
+        "research_thread_cap": int(os.environ.get("MILL_RESEARCH_THREADS", "4")),
         "observations": dict(zip(phases, observations))}, indent=2)+"\n")
 
 
@@ -74,6 +79,7 @@ def main():
     parser.add_argument("--parquet", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--pool-cache", type=Path)
+    parser.add_argument("--expected", type=Path)
     parser.add_argument("--worker", action="store_true")
     parser.add_argument("--scratch", type=Path)
     args = parser.parse_args()
@@ -98,6 +104,14 @@ def main():
                 pass
             child.wait(timeout=1)
         assert code == 0, "service output witness failed"
+    if args.expected:
+        actual, expected = [json.loads(p.read_text()) for p in (args.output, args.expected)]
+        assert actual["run"]["source"] == expected["run"]["source"]
+        assert actual["run"]["input"] == expected["run"]["input"]
+        assert actual["run"]["environment"]["source_tree_sha256"] == expected["run"]["environment"]["source_tree_sha256"]
+        for phase, observation in expected["observations"].items():
+            for side in ("before", "after"):
+                assert actual["observations"][phase][side] == observation[side], (phase, side)
     print(f"Captured exact {args.kind} outputs and the dependency-version-only witness")
     return 0
 
