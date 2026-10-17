@@ -43,6 +43,7 @@ from .settings import (
     memory_budget,
 )
 from .table import build_from_spec, klines
+from .serialization import encode_rows
 from .views import ALL as VIEWS
 
 _INDEX = files("mill").joinpath("assets", "index.html")
@@ -280,7 +281,7 @@ def _serialize(df: pl.DataFrame) -> bytes:
         pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("datetime"),
         *feat_exprs,
     )
-    return orjson.dumps({"columns": out.columns, "rows": out.rows()})
+    return encode_rows(out)
 
 
 def _source_version(bar: str) -> int:

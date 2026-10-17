@@ -37,7 +37,7 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
     parser.add_argument("--warm-kernels", action="store_true", help="measure compiled-kernel setup separately before cold QC")
@@ -60,7 +60,8 @@ def arguments():
         parser.error("bootstrap ablation requires --warm-kernels to compare execution separately from compilation")
     allowed = {"native": ("workload", "features", "views", "discover", "pool"),
                "pairs": ("qc",), "edges": ("qc",), "bootstrap": ("qc",),
-               "null": ("discover",), "reuse": ("discover",), "rules": ("discover",)}
+               "null": ("discover",), "reuse": ("discover",), "rules": ("discover",),
+               "json": ("workload", "features", "http")}
     if args.ablate != "none" and args.case not in allowed[args.ablate]:
         parser.error("ablation does not apply to this workload")
     if args.ablate == "native" and args.case == "discover" and args.discover_phase == "search":
@@ -214,6 +215,8 @@ def worker(args):
             expressions.evaluate = table.evaluate = discover.evaluate = eager
         elif args.ablate == "rules":
             discover.discovery_reuse.rule = lambda key, build: build()
+        elif args.ablate == "json":
+            serve.encode_rows = lambda frame: serve.orjson.dumps({"columns": frame.columns, "rows": frame.rows()})
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
@@ -286,7 +289,8 @@ def worker(args):
             measure("all_views_cold_repeated", lambda: batch(True))
             measure("all_views_steady", batch)
             record.doc["parity_workload"] = {name: {"frame": frame_digest(frame),
-                "payload": hashlib.sha256(payload).hexdigest()} for name, payload, frame in result}
+                "payload": content_digest(json.loads(payload))} for name, payload, frame in result}
+            record.doc["payload_digest_scope"] = "canonical parsed JSON; numeric values and types are preserved"
             record.doc["output_bytes"] = sum(len(payload) for _, payload, _ in result)
             record.doc["workload_views"] = [view.NAME for view in ALL]
         elif args.case == "data":
