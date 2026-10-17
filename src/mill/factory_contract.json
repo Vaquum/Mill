@@ -1,0 +1,4540 @@
+{
+  "version": 1,
+  "reference": {
+    "mill": "bb9855f0be58e3f4c0af78c6225218a4c3d32329",
+    "limen": "86968e44022cabcae83fc38fe2ed0c7105816fa2"
+  },
+  "factories": [
+    {
+      "name": "open",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "high",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "low",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "close",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "volume",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "mean",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "std",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "maker_ratio",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "no_of_trades",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "open_liquidity",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "high_liquidity",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "low_liquidity",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "close_liquidity",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "liquidity_sum",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "maker_volume",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "maker_liquidity",
+      "params": [],
+      "source": "raw"
+    },
+    {
+      "name": "absorption_intensity",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "active_lines",
+      "params": [],
+      "source": "limen.features"
+    },
+    {
+      "name": "active_quantile_count",
+      "params": [],
+      "source": "limen.features"
+    },
+    {
+      "name": "amihud_illiquidity",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "atr_percent_sma",
+      "params": [
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "atr_sma",
+      "params": [
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "body_to_range",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "breakout_features",
+      "params": [
+        {
+          "default": "breakout_long",
+          "name": "long_col",
+          "type": "str"
+        },
+        {
+          "default": "breakout_short",
+          "name": "short_col",
+          "type": "str"
+        },
+        {
+          "default": 12,
+          "name": "lookback",
+          "type": "int"
+        },
+        {
+          "default": 12,
+          "name": "horizon",
+          "type": "int"
+        },
+        {
+          "default": "breakout_pct",
+          "name": "target",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "breakout_percentile_regime",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 0.85,
+          "name": "p_hi",
+          "type": "float"
+        },
+        {
+          "default": 0.15,
+          "name": "p_lo",
+          "type": "float"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "bulk_volume_classification",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "calendar_time_features",
+      "params": [],
+      "source": "limen.features"
+    },
+    {
+      "name": "close_ma_distance_atr",
+      "params": [
+        {
+          "default": 20,
+          "name": "ma_window",
+          "type": "int"
+        },
+        {
+          "default": 14,
+          "name": "atr_window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "close_position",
+      "params": [
+        {
+          "default": 1,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "close_position_rolling",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "conserved_flux_renormalization",
+      "params": [
+        {
+          "default": "1h",
+          "name": "kline_interval",
+          "type": "str"
+        },
+        {
+          "default": 60,
+          "name": "base_window_s",
+          "type": "int"
+        },
+        {
+          "default": 6,
+          "name": "levels",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "cusum_filter",
+      "params": [
+        {
+          "default": 0.01,
+          "name": "threshold",
+          "type": "float"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "cyclical_time_features",
+      "params": [],
+      "source": "limen.features"
+    },
+    {
+      "name": "distance_from_high",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "distance_from_low",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "distance_from_ma",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "dollar_volume",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "downside_volatility_ratio",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "find_min_d",
+      "params": [
+        {
+          "default": null,
+          "name": "col",
+          "type": "str"
+        },
+        {
+          "default": 0.0,
+          "name": "d_start",
+          "type": "float"
+        },
+        {
+          "default": 1.0,
+          "name": "d_end",
+          "type": "float"
+        },
+        {
+          "default": 0.1,
+          "name": "step",
+          "type": "float"
+        },
+        {
+          "default": 0.05,
+          "name": "significance_level",
+          "type": "float"
+        },
+        {
+          "default": 1e-05,
+          "name": "threshold",
+          "type": "float"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "fractional_diff",
+      "params": [
+        {
+          "default": 0.0,
+          "name": "d",
+          "type": "float"
+        },
+        {
+          "default": 1e-05,
+          "name": "threshold",
+          "type": "float"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "gap_high",
+      "params": [],
+      "source": "limen.features"
+    },
+    {
+      "name": "garman_klass_volatility",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "hh_hl_structure_regime",
+      "params": [
+        {
+          "default": 24,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": 4,
+          "name": "score_threshold",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "hours_since_big_move",
+      "params": [
+        {
+          "default": null,
+          "name": "lookback_hours",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "hours_since_quantile_line",
+      "params": [
+        {
+          "default": null,
+          "name": "lookback_hours",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "ichimoku_cloud",
+      "params": [
+        {
+          "default": 9,
+          "name": "tenkan_period",
+          "type": "int"
+        },
+        {
+          "default": 26,
+          "name": "kijun_period",
+          "type": "int"
+        },
+        {
+          "default": 52,
+          "name": "senkou_b_period",
+          "type": "int"
+        },
+        {
+          "default": 26,
+          "name": "displacement",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "illiquidity_shock",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "is_funding_hour",
+      "params": [
+        {
+          "default": "datetime",
+          "name": "datetime_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "is_us_open_hour",
+      "params": [
+        {
+          "default": 14,
+          "name": "hour",
+          "type": "int"
+        },
+        {
+          "default": "datetime",
+          "name": "datetime_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "jump_variation_proxy",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "kaufman_efficiency_ratio",
+      "params": [
+        {
+          "default": 10,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "kline_imbalance",
+      "params": [
+        {
+          "default": 14,
+          "name": "window",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "lag_column",
+      "params": [
+        {
+          "default": null,
+          "name": "col",
+          "type": "str"
+        },
+        {
+          "default": null,
+          "name": "lag",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "lag_columns",
+      "params": [
+        {
+          "default": null,
+          "name": "lag",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "lag_range",
+      "params": [
+        {
+          "default": null,
+          "name": "col",
+          "type": "str"
+        },
+        {
+          "default": null,
+          "name": "start",
+          "type": "int"
+        },
+        {
+          "default": null,
+          "name": "end",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "lag_range_cols",
+      "params": [
+        {
+          "default": null,
+          "name": "start",
+          "type": "int"
+        },
+        {
+          "default": null,
+          "name": "end",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "liquidity_drop",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "liquidity_sum",
+          "name": "liquidity_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "liquidity_range",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high_liquidity",
+          "name": "high_liquidity_col",
+          "type": "str"
+        },
+        {
+          "default": "low_liquidity",
+          "name": "low_liquidity_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "ma_slope_regime",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 0.0,
+          "name": "threshold",
+          "type": "float"
+        },
+        {
+          "default": true,
+          "name": "normalize_by_std",
+          "type": "bool"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "maker_liquidity_share",
+      "params": [
+        {
+          "default": "maker_liquidity",
+          "name": "maker_liquidity_col",
+          "type": "str"
+        },
+        {
+          "default": "liquidity_sum",
+          "name": "liquidity_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "maker_volume_ratio",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "maker_volume",
+          "name": "maker_volume_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "maker_volume_share",
+      "params": [
+        {
+          "default": "maker_volume",
+          "name": "maker_volume_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "narrow_range",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "order_flow_imbalance",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": 20,
+          "name": "classification_window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "parkinson_vol_of_vol",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "parkinson_volatility",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "price_lines",
+      "params": [
+        {
+          "default": null,
+          "name": "max_duration_hours",
+          "type": "int"
+        },
+        {
+          "default": null,
+          "name": "min_height_pct",
+          "type": "float"
+        },
+        {
+          "default": 168,
+          "name": "big_move_lookback_hours",
+          "type": "int"
+        },
+        {
+          "default": 6,
+          "name": "momentum_lookback_hours",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "price_range_position",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "price_vs_band_regime",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": "std",
+          "name": "band",
+          "type": "str"
+        },
+        {
+          "default": 0.75,
+          "name": "k",
+          "type": "float"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "quantile_line_density",
+      "params": [
+        {
+          "default": null,
+          "name": "lookback_hours",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "quantile_price_lines",
+      "params": [
+        {
+          "default": null,
+          "name": "max_duration_hours",
+          "type": "int"
+        },
+        {
+          "default": null,
+          "name": "min_height_pct",
+          "type": "float"
+        },
+        {
+          "default": 0.75,
+          "name": "quantile_threshold",
+          "type": "float"
+        },
+        {
+          "default": 48,
+          "name": "density_lookback_hours",
+          "type": "int"
+        },
+        {
+          "default": 6,
+          "name": "momentum_lookback_hours",
+          "type": "int"
+        },
+        {
+          "default": 24,
+          "name": "height_lookback_hours",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "range_overlap",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "range_pct",
+      "params": [],
+      "source": "limen.features"
+    },
+    {
+      "name": "range_per_dollar_volume",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "realized_kurtosis",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "realized_semivariance",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "realized_skewness",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "rejection_intensity",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "relative_range_seasonality",
+      "params": [
+        {
+          "default": "datetime",
+          "name": "datetime_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "relative_volatility_seasonality",
+      "params": [
+        {
+          "default": "datetime",
+          "name": "datetime_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "relative_volume_seasonality",
+      "params": [
+        {
+          "default": "datetime",
+          "name": "datetime_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "return_autocorrelation",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "return_per_dollar_volume",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "return_volatility_correlation",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "rogers_satchell_volatility",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "rolling_zscore",
+      "params": [
+        {
+          "default": null,
+          "name": "column",
+          "type": "str"
+        },
+        {
+          "default": null,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "identity",
+          "name": "transform",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "sma_crossover",
+      "params": [
+        {
+          "default": 10,
+          "name": "short_window",
+          "type": "int"
+        },
+        {
+          "default": 30,
+          "name": "long_window",
+          "type": "int"
+        },
+        {
+          "default": 2,
+          "name": "crossover_bull",
+          "type": "int"
+        },
+        {
+          "default": -2,
+          "name": "crossover_bear",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "stochastic_k_abs",
+      "params": [
+        {
+          "default": 14,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "tail_event_intensity",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": 2.0,
+          "name": "z_threshold",
+          "type": "float"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "taker_imbalance_ratio",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        },
+        {
+          "default": "maker_ratio",
+          "name": "maker_ratio_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "time_to_funding",
+      "params": [
+        {
+          "default": 8,
+          "name": "interval_hours",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "offset_hour",
+          "type": "int"
+        },
+        {
+          "default": "datetime",
+          "name": "datetime_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "trade_density",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "no_of_trades",
+          "name": "trades_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "trade_imbalance",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "maker_volume",
+          "name": "maker_volume_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "trade_size_ratio",
+      "params": [
+        {
+          "default": 5,
+          "name": "short_window",
+          "type": "int"
+        },
+        {
+          "default": 20,
+          "name": "long_window",
+          "type": "int"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        },
+        {
+          "default": "no_of_trades",
+          "name": "trades_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "trend_coherence",
+      "params": [
+        {
+          "default": 12,
+          "name": "short_window",
+          "type": "int"
+        },
+        {
+          "default": 48,
+          "name": "medium_window",
+          "type": "int"
+        },
+        {
+          "default": 168,
+          "name": "long_window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "trend_strength",
+      "params": [
+        {
+          "default": 20,
+          "name": "fast_period",
+          "type": "int"
+        },
+        {
+          "default": 50,
+          "name": "slow_period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "volatility_of_volatility",
+      "params": [
+        {
+          "default": 12,
+          "name": "volatility_window",
+          "type": "int"
+        },
+        {
+          "default": 48,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "volatility_ratio",
+      "params": [
+        {
+          "default": 5,
+          "name": "short_window",
+          "type": "int"
+        },
+        {
+          "default": 20,
+          "name": "long_window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "volatility_spike",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "volatility_term_structure",
+      "params": [
+        {
+          "default": 12,
+          "name": "short_window",
+          "type": "int"
+        },
+        {
+          "default": 48,
+          "name": "medium_window",
+          "type": "int"
+        },
+        {
+          "default": 168,
+          "name": "long_window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "volume_regime",
+      "params": [
+        {
+          "default": 48,
+          "name": "lookback",
+          "type": "int"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "volume_to_range",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "volume_volatility_correlation",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "vpin",
+      "params": [
+        {
+          "default": 50,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": 20,
+          "name": "classification_window",
+          "type": "int"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "vwap",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "wick_imbalance",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "wick_proportion",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "window_return_regime",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 0.0,
+          "name": "r_hi",
+          "type": "float"
+        },
+        {
+          "default": 0.0,
+          "name": "r_lo",
+          "type": "float"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "yang_zhang_volatility",
+      "params": [
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.features"
+    },
+    {
+      "name": "ad",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "adosc",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        },
+        {
+          "default": 3,
+          "name": "fast_period",
+          "type": "int"
+        },
+        {
+          "default": 10,
+          "name": "slow_period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "apo",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 12,
+          "name": "fast_period",
+          "type": "int"
+        },
+        {
+          "default": 26,
+          "name": "slow_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "atr",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "avgprice",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "bbands",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 5,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 2.0,
+          "name": "nb_dev_up",
+          "type": "float"
+        },
+        {
+          "default": 2.0,
+          "name": "nb_dev_dn",
+          "type": "float"
+        },
+        {
+          "default": 0,
+          "name": "ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "body_pct",
+      "params": [],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "bollinger_bands",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 20,
+          "name": "window",
+          "type": "int"
+        },
+        {
+          "default": 2.0,
+          "name": "num_std",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "bollinger_position",
+      "params": [],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "bop",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cci",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdl2crows",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdl3blackcrows",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdl3inside",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdl3linestrike",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdl3starsinsouth",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdl3whitesoldiers",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlabandonedbaby",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 0.3,
+          "name": "penetration",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdladvancedblock",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlbelthold",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlclosingmarubozu",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlconcealbabyswall",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlcounterattack",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdldarkcloudcover",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 0.5,
+          "name": "penetration",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdldoji",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdldragonflydoji",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlengulfing",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlgravestonedoji",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlhammer",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlhangingman",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlharami",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlharamicross",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlhighwave",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlhikkake",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlhikkakemod",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlhomingpigeon",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlidentical3crows",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlinvertedhammer",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlladderbottom",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdllongleggeddoji",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdllongline",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlmarubozu",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlmatchinglow",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlmathold",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 0.5,
+          "name": "penetration",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlonneck",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlpiercing",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlrickshawman",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlrisefall3methods",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlseparatinglines",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlshootingstar",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlshortline",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlspinningtop",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlstalledpattern",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlsticksandwich",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdltakuri",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlthrusting",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdltristar",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cdlunique3river",
+      "params": [
+        {
+          "default": "open",
+          "name": "open_col",
+          "type": "str"
+        },
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "cmo",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "dema",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ema",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ht_dcperiod",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ht_dcphase",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ht_phasor",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ht_sine",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ht_trendline",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ht_trendmode",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "kama",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "linearreg",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "linearreg_angle",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "linearreg_intercept",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "linearreg_slope",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ma",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "macd",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 12,
+          "name": "fast_period",
+          "type": "int"
+        },
+        {
+          "default": 26,
+          "name": "slow_period",
+          "type": "int"
+        },
+        {
+          "default": 9,
+          "name": "signal_period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "macdext",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 12,
+          "name": "fast_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "fast_ma_type",
+          "type": "int"
+        },
+        {
+          "default": 26,
+          "name": "slow_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "slow_ma_type",
+          "type": "int"
+        },
+        {
+          "default": 9,
+          "name": "signal_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "signal_ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "macdfix",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 9,
+          "name": "signal_period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "mama",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 0.5,
+          "name": "fast_limit",
+          "type": "float"
+        },
+        {
+          "default": 0.05,
+          "name": "slow_limit",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "medprice",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "mfi",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "midpoint",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "midprice",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "mom",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 10,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "natr",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "obv",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": "volume",
+          "name": "volume_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ppo",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 12,
+          "name": "fast_period",
+          "type": "int"
+        },
+        {
+          "default": 26,
+          "name": "slow_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "price_change_pct",
+      "params": [
+        {
+          "default": 1,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "returns",
+      "params": [],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "roc",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 10,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "rocp",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 10,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "rocr",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 10,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "rocr100",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 10,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "rolling_volatility",
+      "params": [
+        {
+          "default": "close",
+          "name": "column",
+          "type": "str"
+        },
+        {
+          "default": 12,
+          "name": "window",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "rsi",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "rsi_sma",
+      "params": [
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "sar",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": 0.02,
+          "name": "acceleration",
+          "type": "float"
+        },
+        {
+          "default": 0.2,
+          "name": "maximum",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "sarext",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": 0.0,
+          "name": "start_value",
+          "type": "float"
+        },
+        {
+          "default": 0.0,
+          "name": "offset_on_reverse",
+          "type": "float"
+        },
+        {
+          "default": 0.02,
+          "name": "acceleration_init_long",
+          "type": "float"
+        },
+        {
+          "default": 0.02,
+          "name": "acceleration_long",
+          "type": "float"
+        },
+        {
+          "default": 0.2,
+          "name": "acceleration_max_long",
+          "type": "float"
+        },
+        {
+          "default": 0.02,
+          "name": "acceleration_init_short",
+          "type": "float"
+        },
+        {
+          "default": 0.02,
+          "name": "acceleration_short",
+          "type": "float"
+        },
+        {
+          "default": 0.2,
+          "name": "acceleration_max_short",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "sma",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "sma_deviation_std",
+      "params": [
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 30,
+          "name": "window",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "stddev",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 5,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 1.0,
+          "name": "nb_dev",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "stoch",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 5,
+          "name": "fastk_period",
+          "type": "int"
+        },
+        {
+          "default": 3,
+          "name": "slowk_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "slowk_ma_type",
+          "type": "int"
+        },
+        {
+          "default": 3,
+          "name": "slowd_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "slowd_ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "stochastic_oscillator",
+      "params": [
+        {
+          "default": 14,
+          "name": "window_k",
+          "type": "int"
+        },
+        {
+          "default": 3,
+          "name": "window_d",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "stochf",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 5,
+          "name": "fastk_period",
+          "type": "int"
+        },
+        {
+          "default": 3,
+          "name": "fastd_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "fastd_ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "stochrsi",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 5,
+          "name": "fastk_period",
+          "type": "int"
+        },
+        {
+          "default": 3,
+          "name": "fastd_period",
+          "type": "int"
+        },
+        {
+          "default": 0,
+          "name": "fastd_ma_type",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "t3",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 5,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 0.7,
+          "name": "vfactor",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "tema",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "trange",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "trima",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "trix",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "tsf",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "typprice",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "ultosc",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 7,
+          "name": "period1",
+          "type": "int"
+        },
+        {
+          "default": 14,
+          "name": "period2",
+          "type": "int"
+        },
+        {
+          "default": 28,
+          "name": "period3",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "var",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 5,
+          "name": "period",
+          "type": "int"
+        },
+        {
+          "default": 1.0,
+          "name": "nb_dev",
+          "type": "float"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "wclprice",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "wilder_rsi",
+      "params": [
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "willr",
+      "params": [
+        {
+          "default": "high",
+          "name": "high_col",
+          "type": "str"
+        },
+        {
+          "default": "low",
+          "name": "low_col",
+          "type": "str"
+        },
+        {
+          "default": "close",
+          "name": "close_col",
+          "type": "str"
+        },
+        {
+          "default": 14,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "window_return",
+      "params": [
+        {
+          "default": 24,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    },
+    {
+      "name": "wma",
+      "params": [
+        {
+          "default": "close",
+          "name": "price_col",
+          "type": "str"
+        },
+        {
+          "default": 30,
+          "name": "period",
+          "type": "int"
+        }
+      ],
+      "source": "limen.indicators"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ dependencies = [
     "scikit-learn",
     "scipy",
     "statsmodels",
-    "vaquum_limen @ git+https://github.com/Vaquum/Limen.git@86968e44022cabcae83fc38fe2ed0c7105816fa2",
+    "vaquum_limen @ git+https://github.com/Vaquum/Limen.git@728a6eefc19cde2cb0fa3f5312b185e2877bc330",
 ]
 
 [project.optional-dependencies]
@@ -32,7 +32,7 @@ mill-qc = "mill.run_qc:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-mill = ["assets/*.html", "py.typed"]
+mill = ["assets/*.html", "factory_contract.json", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
