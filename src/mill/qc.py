@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import hashlib
 import itertools
+import sys
 import threading
 import warnings
 import weakref
@@ -16,6 +17,8 @@ from numba import njit, prange
 from scipy import stats
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from statsmodels.tsa.stattools import acf, adfuller, kpss
+from .memo import ByteLRU
+from .settings import memory_budget
 
 
 _BLOCK_FALLBACK = 24
@@ -49,8 +52,17 @@ _PAIRWISE_MIN_N = 30
 # under the GIL; the only non-atomic step is the size-bound clear, and every
 # kernel here is deterministic, so a race can at worst recompute a value — never
 # return a wrong one.
-_KERNEL_CACHE: dict[object, object] = {}
-_KERNEL_CACHE_MAX = 200_000
+def _memo_size(value):
+    size = sys.getsizeof(value)
+    if isinstance(value, dict):
+        size += sum(_memo_size(k) + _memo_size(v) for k, v in value.items())
+    elif isinstance(value, (tuple, list)):
+        size += sum(_memo_size(v) for v in value)
+    return size
+
+
+_KERNEL_CACHE = ByteLRU(memory_budget("kernels", 32), lambda value: 2048 + _memo_size(value),
+                        max_entries=200_000)
 _MISS = object()
 _DIGEST_CACHE: dict[int, tuple] = {}
 
@@ -63,7 +75,7 @@ def _arg_key(value: object) -> object:
                 "ndarray",
                 value.shape,
                 value.dtype.str,
-                hashlib.blake2b(value.tobytes(), digest_size=16).digest(),
+                hashlib.blake2b(memoryview(np.ascontiguousarray(value)), digest_size=16).digest(),
             )
             weakref.finalize(value, _DIGEST_CACHE.pop, id(value), None)
             _DIGEST_CACHE[id(value)] = key
@@ -86,8 +98,6 @@ def _memoized(fn):
         if cached is not _MISS:
             return cached
         value = fn(*args, **kwargs)
-        if len(_KERNEL_CACHE) >= _KERNEL_CACHE_MAX:
-            _KERNEL_CACHE.clear()
         _KERNEL_CACHE[key] = value
         return value
 
@@ -550,7 +560,7 @@ def _block_size(arr: np.ndarray) -> int | None:
     return _BLOCK_MAX_LAG
 
 
-@njit
+@njit(cache=True)
 def _rankdata_1d(arr: np.ndarray) -> np.ndarray:
     n = arr.size
     order = np.argsort(arr)
@@ -567,7 +577,7 @@ def _rankdata_1d(arr: np.ndarray) -> np.ndarray:
     return ranks
 
 
-@njit
+@njit(cache=True)
 def _pearson(arr_x: np.ndarray, arr_y: np.ndarray) -> float:
     arr_x = arr_x - arr_x.mean()
     arr_y = arr_y - arr_y.mean()
@@ -577,7 +587,35 @@ def _pearson(arr_x: np.ndarray, arr_y: np.ndarray) -> float:
     return float((arr_x * arr_y).sum() / denom)
 
 
-@njit(parallel=True)
+@njit(cache=True)
+def _rank_codes(arr: np.ndarray) -> np.ndarray:
+    order = np.argsort(arr)
+    codes = np.empty(arr.size, dtype=np.int64)
+    group = 0
+    for i in range(arr.size):
+        if i and arr[order[i]] != arr[order[i - 1]]:
+            group += 1
+        codes[order[i]] = group
+    return codes
+
+
+@njit(cache=True)
+def _sample_ranks(codes: np.ndarray, idx: np.ndarray) -> np.ndarray:
+    counts = np.zeros(codes.size, dtype=np.int64)
+    for row in idx:
+        counts[codes[row]] += 1
+    ranks = np.empty(codes.size, dtype=np.float64)
+    below = 0
+    for group in range(codes.size):
+        ranks[group] = below + (counts[group] + 1) / 2.0
+        below += counts[group]
+    result = np.empty(idx.size, dtype=np.float64)
+    for i in range(idx.size):
+        result[i] = ranks[codes[idx[i]]]
+    return result
+
+
+@njit(parallel=True, cache=True)
 def _bootstrap_spearman_estimates(
     arr_x: np.ndarray,
     arr_y: np.ndarray,
@@ -585,10 +623,13 @@ def _bootstrap_spearman_estimates(
 ) -> np.ndarray:
     n_iter = idx.shape[0]
     estimates = np.empty(n_iter, dtype=np.float64)
+    codes_x, codes_y = _rank_codes(arr_x), _rank_codes(arr_y)
+    has_nan = np.isnan(arr_x).any() or np.isnan(arr_y).any()
     for i in prange(n_iter):
-        sample_x = arr_x[idx[i]]
-        sample_y = arr_y[idx[i]]
-        value = _pearson(_rankdata_1d(sample_x), _rankdata_1d(sample_y))
+        if has_nan:
+            value = _pearson(_rankdata_1d(arr_x[idx[i]]), _rankdata_1d(arr_y[idx[i]]))
+        else:
+            value = _pearson(_sample_ranks(codes_x, idx[i]), _sample_ranks(codes_y, idx[i]))
         estimates[i] = 0.0 if np.isnan(value) else value
     return estimates
 
@@ -609,15 +650,16 @@ def _bootstrap_block_indices(
     starts = np.arange(n - block + 1)
     n_blocks = max(1, (n + block - 1) // block)
     block_starts = rng.choice(starts, size=(n_iter, n_blocks), replace=True)
-    return (
+    return np.ascontiguousarray((
         block_starts[:, :, None] + np.arange(block)
-    ).reshape(n_iter, -1)[:, :n]
+    ).reshape(n_iter, -1)[:, :n])
 
 
 def _warmup_bootstrap() -> None:
     arr = np.arange(32, dtype=np.float64)
     idx = np.arange(32, dtype=np.int64).reshape(1, -1)
-    _bootstrap_spearman_estimates(arr, arr, idx)
+    with _PARALLEL_KERNEL_LOCK:
+        _bootstrap_spearman_estimates(arr, arr, idx)
 
 
 @_memoized
@@ -692,4 +734,3 @@ def _decile_metrics(x: np.ndarray, y: np.ndarray) -> tuple[float | None, float |
     return spread, same / 9.0
 
 
-_warmup_bootstrap()

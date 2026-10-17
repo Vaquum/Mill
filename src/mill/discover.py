@@ -28,6 +28,7 @@ import polars as pl
 from limen.sfd.rule_based.predicates import build_predicate
 
 from . import feature_registry
+from .table import produce
 
 MODES = ("inside", "lead")
 MAX_LEADERS = 12
@@ -58,17 +59,17 @@ class Pool:
     skipped: tuple[str, ...]
 
 
-def catalog_pool(raw: pl.DataFrame, pause: Callable[[], None] | None = None) -> Pool:
+def catalog_pool(raw: pl.DataFrame, pause: Callable[[], None] | None = None, *, cache_key=None) -> Pool:
     """Every registry producer whose parameters all have defaults, at those defaults."""
     entries = []
     for factory, entry in feature_registry.REGISTRY.items():
         params = {p["name"]: p["default"] for p in entry["params"]}
         if all(value is not None for value in params.values()):
             entries.append((factory, entry["source"], params, entry["producer"], {}))
-    return _build(raw, entries, pause)
+    return _build(raw, entries, pause, cache_key)
 
 
-def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]], pause: Callable[[], None] | None = None) -> Pool:
+def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]], pause: Callable[[], None] | None = None, *, cache_key=None) -> Pool:
     """The columns of a Mill view's spec, each with the parameters the view gives it."""
     entries = []
     for item in spec:
@@ -76,10 +77,10 @@ def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]], pause: Callable
         entry = feature_registry.REGISTRY[factory]
         params = {p["name"]: p["default"] for p in entry["params"]} | given
         entries.append((factory, entry["source"], params, entry["producer"], given))
-    return _build(raw, entries, pause)
+    return _build(raw, entries, pause, cache_key)
 
 
-def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = None) -> Pool:
+def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = None, cache_key=None) -> Pool:
     """Each entry's columns; pause, when given, runs before each producer, so a caller can hold the build there."""
     names: list[str] = []
     natives: list[str] = []
@@ -90,7 +91,7 @@ def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = 
         if pause is not None:
             pause()
         try:
-            part = producer(raw, **given)
+            part = producer(raw, **given) if cache_key is None else produce(raw, factory, given, cache_key)
         except Exception:
             skipped.append(factory)
             continue

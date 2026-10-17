@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import threading
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
@@ -16,12 +15,14 @@ from .bars import (
     time_bar_seconds,
     time_bar_series,
 )
-from .cache_store import cache_path, read_fresh, write_cache
+from .cache_store import cache_path, file_identity as source_identity, read_fresh, write_cache
 from .frames import normalize_datetime, read_parquet, write_parquet
-from .settings import arrow_latest_path
+from .settings import arrow_latest_path, memory_budget
+from .memo import ByteLRU, Flights
 
 
-_LIMEN_LOCK = threading.Lock()
+_DATA = ByteLRU(memory_budget("raw", 64), lambda value: value[1].estimated_size())
+_DATA_FLIGHTS = Flights()
 
 
 def _date_part(value: str | None) -> date | None:
@@ -53,6 +54,10 @@ def _limit_rows(data: pl.DataFrame, limit: int | None) -> pl.DataFrame:
 
 def _closed(data: pl.DataFrame, seconds: int, written_ns: int) -> pl.DataFrame:
     """The bars that had closed when the store wrote its file: it also writes the open bar, and rewrites it as trades arrive."""
+    times = data["datetime"].dt.epoch("ms")
+    if times.is_sorted():
+        stop = times.search_sorted(written_ns // 1_000_000 - seconds * 1000, side="right")
+        return data.slice(0, int(stop))
     return data.filter(pl.col("datetime").dt.epoch("ms") + seconds * 1000 <= written_ns // 1_000_000)
 
 
@@ -172,21 +177,29 @@ class GetData:
         source: Path,
     ) -> pl.DataFrame:
         path = cache_path(label, criteria)
-        cached = read_fresh(path, source)
-        if cached is not None:
-            return self._store(cached)
-        with _LIMEN_LOCK:
+        key = str(path.resolve())
+        identity = source_identity(source)
+        hit = _DATA.get(key)
+        if hit is not None and (identity is None or hit[0] == identity):
+            return self._store(hit[1].clone())
+        with _DATA_FLIGHTS.hold(key):
+            identity = source_identity(source)
+            hit = _DATA.get(key)
+            if hit is not None and (identity is None or hit[0] == identity):
+                return self._store(hit[1].clone())
             cached = read_fresh(path, source)
             if cached is not None:
-                return self._store(cached)
+                _DATA[key] = (identity, cached)
+                return self._store(cached.clone())
             # The source's version before reading it: a write during the read leaves the cache stale.
             try:
                 stamp = source.stat().st_mtime_ns
             except FileNotFoundError:
                 stamp = None
             data = fetch()
-            write_cache(path, data, criteria, stamp)
-            return self._store(data)
+            write_cache(path, data, criteria, stamp, identity)
+            _DATA[key] = (identity, data)
+            return self._store(data.clone())
 
     def _store(self, data: pl.DataFrame) -> pl.DataFrame:
         self.data = data

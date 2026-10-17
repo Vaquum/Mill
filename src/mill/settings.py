@@ -12,6 +12,13 @@ DEFAULT_ARROW_DIR = "/opt/arrow"
 ARROW_LATEST_NAME = "latest.arrow"
 
 
+def memory_budget(name: str, default_mib: int) -> int:
+    value = int(os.environ.get(f"MILL_{name.upper()}_MIB", default_mib))
+    if value < 0:
+        raise ValueError(f"MILL_{name.upper()}_MIB must be nonnegative")
+    return value * 1024**2
+
+
 def cache_root() -> Path:
     override = os.environ.get("MILL_CACHE_DIR")
     return Path(override) if override else Path.home() / ".cache" / APP_SLUG

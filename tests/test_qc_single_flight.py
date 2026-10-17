@@ -68,7 +68,7 @@ def test_identical_concurrent_qc_computes_once(
         time.sleep(0.3)
         return real_report(df, target)
 
-    monkeypatch.setattr(serve.qc, "report", slow_counting_report)
+    monkeypatch.setattr(serve, "_research_report", slow_counting_report)
 
     results: list[tuple[int, bytes]] = []
     threads = [
