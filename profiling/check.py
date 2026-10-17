@@ -13,7 +13,7 @@ def interrupted(signum, frame):
 def main():
     for sig in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, interrupted)
-    child = subprocess.Popen([sys.executable, "-m", "pytest", "-q"],
+    child = subprocess.Popen([sys.executable, "-m", "pytest", "-q", *sys.argv[1:]],
                              cwd=Path(__file__).resolve().parents[1], start_new_session=True)
     try:
         return child.wait(timeout=50)
