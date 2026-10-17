@@ -17,7 +17,7 @@ import tempfile
 import time
 
 
-CASES = ("startup", "data", "features", "factories", "views", "qc", "discover", "http", "memory")
+CASES = ("startup", "data", "features", "factories", "views", "qc", "discover", "pool", "http", "memory")
 FACTORIES = ("rsi", "mom", "roc", "rocp", "cci", "cmo", "willr", "atr",
              "natr", "trix", "apo", "ppo", "bop", "mfi", "kama", "tema",
              "dema", "wma", "sma", "ema", "midpoint", "linearreg", "tsf",
@@ -320,6 +320,22 @@ def worker(args):
             measure("report_json", lambda: json.dumps(report, allow_nan=False).encode())
             record.doc["kernel_cache_entries"] = len(qc._KERNEL_CACHE)
             record.doc["pair_count"] = len(prim.pairs)
+        elif args.case == "pool":
+            from mill import pool_store
+            digest = serve._frame_digest(raw)
+            partial = []
+            def prepare():
+                while True:
+                    began = time.perf_counter_ns()
+                    try:
+                        return pool_store.pool_for(raw, bar, None, digest, allow_stale=False)[0]
+                    except pool_store.PoolPending:
+                        partial.append((time.perf_counter_ns() - began) / 1e6)
+            pool = measure("service_catalog_prepare", prepare, reps=1)
+            measure("service_catalog_mmap_hit", lambda: pool_store.pool_for(raw, bar, None, digest))
+            record.doc["partial_preparation_steps_ms"] = partial
+            record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
+            record.doc["mapped_values"] = isinstance(pool.values, np.memmap)
         elif args.case == "discover":
             identity = {"source": record.doc["source"], "input": record.doc["input"],
                         "tree": record.doc["environment"]["source_tree_sha256"], "catalog": args.catalog}
