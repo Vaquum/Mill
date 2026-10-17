@@ -31,6 +31,8 @@ def arguments():
     parser.add_argument("--rows", type=int, default=0, help="0 means all source rows")
     parser.add_argument("--k", type=int, default=8)
     parser.add_argument("--reps", type=int, default=3)
+    parser.add_argument("--bar", choices=("1h_time_bars", "15m_time_bars"), default="1h_time_bars")
+    parser.add_argument("--catalog", action="store_true", help="use all eligible factories for discovery")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.rows < 0 or not 1 <= args.k <= len(FACTORIES) or not 1 <= args.reps <= 20:
@@ -59,6 +61,8 @@ class Recorder:
         tmp.replace(self.args.output)
 
     def measure(self, name, fn, reps=None, **metadata):
+        self.doc["active_measurement"] = name
+        self.save()
         samples, result = [], None
         for _ in range(self.args.reps if reps is None else reps):
             began = time.perf_counter_ns()
@@ -66,6 +70,7 @@ class Recorder:
             samples.append((time.perf_counter_ns() - began) / 1e6)
         self.doc["measurements"].append({"name": name, "samples_ms": samples,
                                          "median_ms": statistics.median(samples), **metadata})
+        self.doc.pop("active_measurement", None)
         self.save()
         return result
 
@@ -98,6 +103,7 @@ def worker(args):
         from mill.get_data import GetData
         from mill.table import build_from_spec
         from mill.settings import arrow_latest_path
+        from mill.bars import arrow_series, time_bar_seconds
         record.doc["import_ms"] = (time.perf_counter_ns() - began) / 1e6
         record.doc["environment"] = environment()
         record.doc["source"] = {"file": args.parquet.name,
@@ -115,19 +121,20 @@ def worker(args):
                                "columns": raw.width, "frame_bytes": raw.estimated_size(),
                                "start": str(raw["datetime"][0]), "end": str(raw["datetime"][-1]),
                                "k": args.k, "reps": args.reps}
-        bar = "1h_time_bars"
-        path = arrow_latest_path("time_1h")
+        bar = args.bar
+        series = arrow_series(bar)
+        path = arrow_latest_path(series)
         path.parent.mkdir(parents=True)
         raw.with_columns(pl.col("datetime").dt.epoch("ns").alias("ts")).drop("datetime").write_ipc(
             path, compression="uncompressed", record_batch_size=max(1, raw.height))
         # Make every fixture bar closed, including sources with future timestamps.
-        stamp = max(time.time_ns(), int(raw["datetime"].dt.epoch("ns")[-1]) + 3_600_000_000_000)
+        stamp = max(time.time_ns(), int(raw["datetime"].dt.epoch("ns")[-1]) + time_bar_seconds(bar) * 1_000_000_000)
         os.utime(path, ns=(stamp, stamp))
         spec = [{"factory": name, "params": {}} for name in FACTORIES[:args.k]]
         measure = record.measure
         if args.case == "data":
             loader = GetData()
-            measure("arrow_read_normalize_select", lambda: loader._load_arrow("time_1h", None, None))
+            measure("arrow_read_normalize_select", lambda: loader._load_arrow(series, None, None))
             measure("get_data_cold_cache", lambda: loader.get_time_bars(bar), reps=1)
             measure("get_data_disk_cache_hit", lambda: loader.get_time_bars(bar))
             measure("get_data_tail_100_cold", lambda: loader.get_time_bars(bar, n_rows=100), reps=1)
@@ -209,9 +216,9 @@ def worker(args):
             record.doc["kernel_cache_entries"] = len(qc._KERNEL_CACHE)
             record.doc["pair_count"] = len(prim.pairs)
         elif args.case == "discover":
-            pool = measure("spec_pool_build", lambda: discover.spec_pool(raw, spec))
+            pool = measure("pool_build", lambda: discover.catalog_pool(raw) if args.catalog else discover.spec_pool(raw, spec), reps=1)
             ms = pool.ms
-            step = 3_600_000
+            step = time_bar_seconds(bar) * 1000
             windows = [(int(ms[i]), int(ms[min(i + 2, len(ms)-1)]))
                        for i in range(100, len(ms) - 3, max(100, len(ms) // 40))]
             answer = measure("discover_full", lambda: discover.discover(pool, step_ms=step,
