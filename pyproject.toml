@@ -15,14 +15,17 @@ dependencies = [
     "scikit-learn",
     "scipy",
     "statsmodels",
-    "vaquum_limen @ git+https://github.com/Vaquum/Limen.git@728a6eefc19cde2cb0fa3f5312b185e2877bc330 ; python_version < '3.14'",
+    "vaquum_limen[data] @ git+https://github.com/Vaquum/Limen.git@728a6eefc19cde2cb0fa3f5312b185e2877bc330 ; python_version < '3.14'",
     "vaquum_limen @ git+https://github.com/Vaquum/Limen.git@86968e44022cabcae83fc38fe2ed0c7105816fa2 ; python_version >= '3.14'",
 ]
 
 [project.optional-dependencies]
 test = [
+    # The immutable legacy reference eagerly imports its model implementations.
+    "lightgbm<5,>=4.6",
     "pytest",
     "pyyaml",
+    "xgboost<4,>=2.1",
 ]
 
 [project.scripts]

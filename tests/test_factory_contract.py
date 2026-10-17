@@ -19,6 +19,8 @@ def test_dependency_upgrade_preserves_existing_interpreter_admission(version, co
     selected = [r for r in requirements if r.name == "vaquum_limen"
                 and (r.marker is None or r.marker.evaluate({"python_version": version}))]
     assert len(selected) == 1 and selected[0].url.endswith("@"+commit)
+    if version < "3.14":
+        assert selected[0].extras == {"data"}, "GetData requires Limen's Arrow data dependencies"
 
 
 def test_existing_public_factory_catalog_is_unchanged():
