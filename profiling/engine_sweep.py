@@ -99,7 +99,8 @@ def environment():
     try:
         import mill
         checkout = Path(mill.__file__).resolve().parents[2]
-        sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True, timeout=5).strip()
+        sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True, timeout=5,
+                                      stderr=subprocess.DEVNULL).strip()
     except (OSError, subprocess.SubprocessError):
         sha = None
     return {"python": sys.version, "platform": platform.platform(),
@@ -141,7 +142,10 @@ def frame_digest(frame):
     digest = hashlib.sha256(content_digest(dict(frame.schema)).encode())
     for column in frame:
         digest.update(column.is_null().to_numpy().tobytes())
-        digest.update(column.fill_null(0).to_numpy().tobytes())
+        values = column.to_physical()
+        if values.null_count():
+            values = values.fill_null(False if values.dtype == bool else 0)
+        digest.update(values.to_numpy().tobytes())
     return digest.hexdigest()
 
 
