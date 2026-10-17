@@ -17,7 +17,7 @@
     "data_access": "GetData.from_parquet for snapshots; actual GetData.get_time_bars for isolated Arrow fixtures. No external HistoricalData calls.",
     "timings": "Sequential fresh processes; raw samples retained. Repeated timings use medians; first/cold operations use one sample. Cold means application cache, not flushed OS page cache. Host is shared; variability is not hidden.",
     "memory": "Fresh-process high-water RSS includes imports, whole source input, fixture writes and transient work; not a steady-state or incremental allocation claim. Python tracemalloc is a separate serializer-only run and excludes native allocations. All recorded scaling sources use their complete rows, not --rows.",
-    "coverage": "Eight built-in views, all seven target calculators, 226-factory registry at two row counts, 1/8/30-feature QC, catalog discovery with 40 events and 3 returned candidates, raw-cache refresh/races, and short loopback HTTP batches at concurrency 1/4/8. QC statistical measurements use next_return and bar mode.",
+    "coverage": "Eight built-in views, all seven target calculators, 226-factory registry at two row counts, QC requests with 1/8/30 factories (1/8/31 output features), catalog discovery with 40 events and 3 returned candidates, raw-cache refresh/races, and short loopback HTTP batches at concurrency 1/4/8. QC statistical measurements use next_return and bar mode.",
     "boundaries": [
       "No production Linux/3.12 benchmark or sustained saturation/p99 study",
       "No concurrent discovery memory measurement",
@@ -119,7 +119,7 @@
       "evidence": [
         "qc-20k-1.json: cold 1315.281 ms",
         "qc-20k-8.json: cold 3147.676 ms; edge 2583.577 ms; 28 pairs 491.523 ms",
-        "qc-20k-30.json: cold 19136.942 ms; edge 10208.000 ms; 435 pairs 8668.187 ms",
+        "qc-20k-30.json: cold 19136.942 ms; edge 10208.000 ms; 465 pairs 8668.187 ms",
         "qc-20k-8.json: warm kernel report 3.143 ms; precomputed report 0.063 ms"
       ],
       "consequence": "Memoization makes repeated inputs fast, but a changed row or context changes content hashes. Bootstrap uses 200 draws over up to 20k observations per feature, and every feature pair computes Spearman and KNN mutual information. Kernel launch serialization protects the Numba workqueue.",
@@ -292,8 +292,8 @@
         "src/mill/qc.py:_pairwise_rows"
       ],
       "evidence": [
-        "qc-20k-30.json: 4525 subsets of sizes 1,2,3 take 180.651 ms after precompute",
-        "qc-20k-30.json: full 30-feature report_for takes 0.318 ms"
+        "qc-20k-30.json: 4991 subsets of sizes 1,2,3 take 180.651 ms after precompute",
+        "qc-20k-30.json: full 31-feature report_for takes 0.318 ms"
       ],
       "consequence": "Precompute removes repeated statistical kernels, not the number of emitted reports. Enumerating every subset size still produces exponentially many outputs; pair aggregation within a subset is quadratic in subset width.",
       "proposed_action": "Keep sweeps lazy and require an explicit combination/output budget for consumers. Reuse one primitive pool per immutable context rather than calling report for each subset.",
@@ -390,6 +390,29 @@
       ],
       "deliverable": "Set production-equivalent latency/resource budgets and regression monitoring.",
       "proof": "Sustained mixed-consumer measurements with explicit payload, concurrency, freshness and p99 targets."
+    }
+  ],
+  "qc_scaling": [
+    {
+      "record": "qc-20k-1.json",
+      "requested_factories": 1,
+      "output_features": 1,
+      "pair_count": 0,
+      "subset_count_sizes_1_2_3": 1
+    },
+    {
+      "record": "qc-20k-8.json",
+      "requested_factories": 8,
+      "output_features": 8,
+      "pair_count": 28,
+      "subset_count_sizes_1_2_3": 92
+    },
+    {
+      "record": "qc-20k-30.json",
+      "requested_factories": 30,
+      "output_features": 31,
+      "pair_count": 465,
+      "subset_count_sizes_1_2_3": 4991
     }
   ]
 }
