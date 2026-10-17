@@ -84,13 +84,16 @@ class Recorder:
     def measure(self, name, fn, reps=None, **metadata):
         self.doc["active_measurement"] = name
         self.save()
-        samples, result = [], None
+        samples, cpu_samples, result = [], [], None
         for _ in range(self.args.reps if reps is None else reps):
             began = time.perf_counter_ns()
+            cpu_began = time.process_time_ns()
             result = fn()
             samples.append((time.perf_counter_ns() - began) / 1e6)
+            cpu_samples.append((time.process_time_ns() - cpu_began) / 1e6)
         self.doc["measurements"].append({"name": name, "samples_ms": samples,
-                                         "median_ms": statistics.median(samples), **metadata})
+                                         "median_ms": statistics.median(samples),
+                                         "process_cpu_samples_ms": cpu_samples, **metadata})
         self.doc.pop("active_measurement", None)
         self.save()
         return result
@@ -108,7 +111,8 @@ def environment():
     except (OSError, subprocess.SubprocessError):
         sha = None
     return {"python": sys.version, "platform": platform.platform(),
-            "cpu_count": os.cpu_count(), "polars_threads": pl.thread_pool_size(),
+            "cpu_count": os.cpu_count(), "host_load_1m": os.getloadavg()[0],
+            "polars_threads": pl.thread_pool_size(),
             "numba_threads": numba.get_num_threads(), "numba_layer": numba.threading_layer(),
             "versions": {name: version(name) for name in
                          ("polars", "numpy", "numba", "scipy", "scikit-learn", "statsmodels", "vaquum_limen")},
@@ -162,9 +166,14 @@ def worker(args):
         for key, name in (("MILL_ARROW_DIR", "arrow"), ("MILL_CACHE_DIR", "cache"), ("MILL_CONFIG_DIR", "config")):
             os.environ[key] = str(Path(directory) / name)
         began = time.perf_counter_ns()
-        from mill import serve
-        record.doc["serve_import_ms"] = (time.perf_counter_ns() - began) / 1e6
-        from mill import qc, discover, targets, feature_registry
+        if args.case == "discover":
+            from mill import discover, feature_registry
+            serve = qc = targets = None
+            record.doc["import_scope"] = "discovery dependencies only; no frontend or QC warmup"
+        else:
+            from mill import serve
+            record.doc["serve_import_ms"] = (time.perf_counter_ns() - began) / 1e6
+            from mill import qc, discover, targets, feature_registry
         import numpy as np
         import polars as pl
         from mill.get_data import GetData
@@ -344,7 +353,8 @@ def worker(args):
             answer = measure("discover_full", lambda: discover.discover(pool, step_ms=step,
                 windows=windows, mode="inside", lead_bars=1,
                 context=(int(ms[0]), int(ms[-1]) + step), display=(int(ms[0]), int(ms[-1]) + step),
-                top=3, max_points=256, bar_source=serve._BAR_DATA_SOURCES[bar], label="profile"))
+                top=3, max_points=256, bar_source={"method": "limen.data.HistoricalData.get_arrow_file",
+                    "params": {"file_path": f"/opt/arrow/{series}/latest.arrow"}}, label="profile"))
             record.doc["discovery"] = {"columns": len(pool.names), "pool_bytes": pool.values.nbytes,
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}
