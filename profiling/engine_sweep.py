@@ -97,7 +97,8 @@ def environment():
     import numba
     import polars as pl
     try:
-        checkout = Path(__file__).resolve().parents[1]
+        import mill
+        checkout = Path(mill.__file__).resolve().parents[2]
         sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True, timeout=5).strip()
     except (OSError, subprocess.SubprocessError):
         sha = None
@@ -109,7 +110,10 @@ def environment():
             "limen_origin": json.loads(distribution("vaquum_limen").read_text("direct_url.json") or "null"),
             "thread_environment": {k: os.environ.get(k) for k in
                                    ("POLARS_MAX_THREADS", "NUMBA_NUM_THREADS", "OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS")},
-            "engine_sha": sha}
+            "engine_sha": sha,
+            "source_tree_sha256": content_digest({
+                str(p.relative_to(Path(mill.__file__).parent)): source_digest(p)
+                for p in sorted(Path(mill.__file__).parent.rglob("*.py"))})}
 
 
 def source_digest(path):
@@ -117,6 +121,27 @@ def source_digest(path):
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
+    return digest.hexdigest()
+
+
+def content_digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                     default=str).encode()).hexdigest()
+
+
+def matrix_digest(values):
+    import numpy as np
+    digest = hashlib.sha256(str(values.shape).encode())
+    for column in values.T:
+        digest.update(np.ascontiguousarray(column).tobytes())
+    return digest.hexdigest()
+
+
+def frame_digest(frame):
+    digest = hashlib.sha256(content_digest(dict(frame.schema)).encode())
+    for column in frame:
+        digest.update(column.is_null().to_numpy().tobytes())
+        digest.update(column.fill_null(0).to_numpy().tobytes())
     return digest.hexdigest()
 
 
@@ -165,8 +190,15 @@ def worker(args):
         if args.case == "data":
             loader = GetData()
             measure("arrow_read_normalize_select", lambda: loader._load_arrow(series, None, None))
-            measure("get_data_cold_cache", lambda: loader.get_time_bars(bar), reps=1)
-            measure("get_data_disk_cache_hit", lambda: loader.get_time_bars(bar))
+            data = measure("get_data_cold_cache", lambda: loader.get_time_bars(bar), reps=1)
+            record.doc["parity_data"] = frame_digest(data)
+            measure("get_data_memory_hit", lambda: loader.get_time_bars(bar))
+            def disk_hit():
+                from mill import get_data
+                if hasattr(get_data, "_DATA"):
+                    get_data._DATA.clear()
+                return loader.get_time_bars(bar)
+            measure("get_data_disk_cache_hit", disk_hit)
             measure("get_data_tail_100_cold", lambda: loader.get_time_bars(bar, n_rows=100), reps=1)
             measure("raw_for_first", lambda: serve._raw_for(bar), reps=1)
             measure("raw_for_memory_hit", lambda: serve._raw_for(bar))
@@ -194,6 +226,8 @@ def worker(args):
             target = measure("target_next_return", lambda: targets.apply(raw, "next_return").select("datetime", "next_return"))
             joined = measure("join_target", lambda: frame.join(target, on="datetime", how="left"))
             payload = measure("serialize_json", lambda: serve._serialize(joined))
+            record.doc["parity_frame"] = frame_digest(joined)
+            record.doc["parity_payload"] = content_digest(json.loads(payload))
             record.doc["result"] = {"columns": joined.width, "frame_bytes": joined.estimated_size(), "payload_bytes": len(payload)}
             measure("ensure_cold", lambda: serve._ensure(bar, "next_return", spec), reps=1)
             measure("ensure_memory_hit", lambda: serve._ensure(bar, "next_return", spec))
@@ -260,6 +294,7 @@ def worker(args):
             measure("qc_report_for_precomputed", lambda: qc.report_for(prim))
             measure("qc_sweep_sizes_1_2_3", lambda: sum(1 for _ in qc.sweep(prim, (1, 2, 3))))
             report = qc.report_for(prim)
+            record.doc["parity_report"] = content_digest(report)
             measure("grade_map", lambda: serve.grading.grade_map(report, n_rows=frame.height, target="next_return"))
             measure("report_json", lambda: json.dumps(report, allow_nan=False).encode())
             record.doc["kernel_cache_entries"] = len(qc._KERNEL_CACHE)
@@ -280,6 +315,8 @@ def worker(args):
             record.doc["discovery"] = {"columns": len(pool.names), "pool_bytes": pool.values.nbytes,
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}
+            record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
+            record.doc["parity_discovery"] = content_digest({k: v for k, v in answer.items() if k != "timing_ms"})
         elif args.case == "http":
             import base64
             from concurrent.futures import ThreadPoolExecutor
