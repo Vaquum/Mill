@@ -111,6 +111,17 @@ def test_sorted_radius_counts_match_kdtree_at_floating_point_boundaries():
     np.testing.assert_array_equal(radius_counts(values, np.sort(values), radii), expected)
 
 
+def test_fused_bootstrap_matches_original_at_the_full_sampling_cap():
+    rng = np.random.default_rng(88219)
+    x, y = rng.normal(size=(2, qc._BOOTSTRAP_MAX_N))
+    x = np.round(x, 1)
+    idx = qc._bootstrap_block_indices(x.size, 24, 7, 2281)
+    expected = [qc._pearson(qc._rankdata_1d(x[rows]), qc._rankdata_1d(y[rows])) for rows in idx]
+    with qc._PARALLEL_KERNEL_LOCK:
+        actual = qc._bootstrap_spearman_estimates(x, y, idx)
+    np.testing.assert_array_equal(actual, expected)
+
+
 def test_preparations_are_reused_only_for_identical_rows_and_remain_bounded(monkeypatch):
     rng = np.random.default_rng(882)
     arrays = {str(i): rng.normal(size=200) for i in range(8)}
