@@ -1,5 +1,7 @@
 # Mill engine performance
 
+The [kernel-adoption report](adoption.md) adds 18 matched workload pairs against the same optimized Mill code. It measures the released Limen kernels behind the unchanged 226-factory API, with 2,486 factory/case and 77 target/case comparisons. Catalog preparation and first HTTP delivery improve; service-wide latency remains inconsistent under host contention. The two experiments are separate; do not compound their ratios.
+
 The [factorization report](factorization.md) adds 30 matched workload pairs and 33 matched component ablations against `847cd48`, with exact output parity. It includes setup, cold/warm paths, source transitions, CPU time, memory and regressions. See its [behavior contract](factorization-contract.md), [raw evidence](factorization.json) and [dependency map](engine.mmd). Both sides retain Limen 3.30.0 to isolate Mill's changes.
 
 The table below is the earlier optimization pass; its single-sample limits remain unchanged.

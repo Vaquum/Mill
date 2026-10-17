@@ -1,0 +1,31 @@
+import json
+from pathlib import Path
+import signal
+import sys
+import time
+sys.path.insert(0, '/Users/mikkokotila/dev/Mill/profiling')
+import engine_sweep
+from mill import pool_store
+
+stats = {'calls': 0, 'wall_ms': 0., 'process_cpu_ms': 0.}
+original = pool_store._trim
+def trim(*args, **kwargs):
+    wall, cpu = time.perf_counter_ns(), time.process_time_ns()
+    try:
+        return original(*args, **kwargs)
+    finally:
+        stats['calls'] += 1
+        stats['wall_ms'] += (time.perf_counter_ns()-wall)/1e6
+        stats['process_cpu_ms'] += (time.process_time_ns()-cpu)/1e6
+pool_store._trim = trim
+signal.alarm(49)
+sys.argv = ['engine_sweep.py', '--case', 'pool', '--k', '8', '--reps', '1', '--bar', '1h_time_bars',
+    '--parquet', '/Users/mikkokotila/.cache/mill/1h_time_bars_9a5b8be319f4d65e.parquet',
+    '--output', '/tmp/mill-adopt-final/pool-io-diagnostic-after-20k-1.json']
+args = engine_sweep.arguments()
+engine_sweep.worker(args)
+result = json.loads(args.output.read_text())
+result['pool_trim_profile'] = stats
+result['diagnostic_scope'] = 'One instrumented full 20k catalog; dependencies pre-imported to install timer; import_ms is not a complete cold import. No speedup comparison.'
+engine_sweep.write_result(args.output, result)
+print(json.dumps(stats))

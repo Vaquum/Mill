@@ -41,6 +41,15 @@ def verify(root, fingerprint):
     assert document["version_witness_driver_sha256"] == sha(root/"profiling/check_adoption_outputs.py")
     witnesses = {name: json.loads((root/path).read_text()) for name,path in document["version_witnesses"].items()}
     assert set(witnesses) == {"research-discover-83k", "catalog-service-20k"}
+    io = json.loads((root/document["pool_io_diagnostic"]).read_text())
+    reference = json.loads((root/document["pool_io_reference"]).read_text())
+    assert io["status"] == "complete" and io["environment"]["source_tree_sha256"] == fingerprint
+    assert sha(root/document["pool_io_driver"]) == document["pool_io_driver_sha256"]
+    assert io["profiler_sha256"] == drivers["profiling/engine_sweep.py"]
+    assert io["input"]["rows"] == io["input"]["source_rows"] == 20784
+    assert io["source"] == reference["source"]
+    assert io["parity_pool"] == reference["parity_pool"]
+    assert io["parity_pool_metadata"] == reference["parity_pool_metadata"]
     for proof in witnesses.values():
         assert proof["before_version"] == "3.30.0" and proof["after_version"] == "5.29.2"
         assert proof["version_field"] == "candidates/*/rule/manifest/metadata/limen_version"

@@ -1,0 +1,2675 @@
+{
+  "schema": 1,
+  "case": "factories",
+  "status": "complete",
+  "worker_pid": 43654,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        33.218875
+      ],
+      "median_ms": 33.218875,
+      "process_cpu_samples_ms": [
+        8.891
+      ]
+    },
+    {
+      "name": "factory:open",
+      "samples_ms": [
+        0.2185
+      ],
+      "median_ms": 0.2185,
+      "process_cpu_samples_ms": [
+        0.116
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:high",
+      "samples_ms": [
+        0.142916
+      ],
+      "median_ms": 0.142916,
+      "process_cpu_samples_ms": [
+        0.143
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:low",
+      "samples_ms": [
+        0.112292
+      ],
+      "median_ms": 0.112292,
+      "process_cpu_samples_ms": [
+        0.113
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:close",
+      "samples_ms": [
+        0.059667
+      ],
+      "median_ms": 0.059667,
+      "process_cpu_samples_ms": [
+        0.059
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:volume",
+      "samples_ms": [
+        0.062333
+      ],
+      "median_ms": 0.062333,
+      "process_cpu_samples_ms": [
+        0.062
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:mean",
+      "samples_ms": [
+        0.049209
+      ],
+      "median_ms": 0.049209,
+      "process_cpu_samples_ms": [
+        0.049
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:std",
+      "samples_ms": [
+        0.125
+      ],
+      "median_ms": 0.125,
+      "process_cpu_samples_ms": [
+        0.124
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_ratio",
+      "samples_ms": [
+        1.74775
+      ],
+      "median_ms": 1.74775,
+      "process_cpu_samples_ms": [
+        0.186
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:no_of_trades",
+      "samples_ms": [
+        0.116084
+      ],
+      "median_ms": 0.116084,
+      "process_cpu_samples_ms": [
+        0.117
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:open_liquidity",
+      "samples_ms": [
+        0.049958
+      ],
+      "median_ms": 0.049958,
+      "process_cpu_samples_ms": [
+        0.05
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:high_liquidity",
+      "samples_ms": [
+        0.05725
+      ],
+      "median_ms": 0.05725,
+      "process_cpu_samples_ms": [
+        0.058
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:low_liquidity",
+      "samples_ms": [
+        0.045875
+      ],
+      "median_ms": 0.045875,
+      "process_cpu_samples_ms": [
+        0.046
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:close_liquidity",
+      "samples_ms": [
+        0.0375
+      ],
+      "median_ms": 0.0375,
+      "process_cpu_samples_ms": [
+        0.038
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:liquidity_sum",
+      "samples_ms": [
+        7.620208
+      ],
+      "median_ms": 7.620208,
+      "process_cpu_samples_ms": [
+        0.153
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_volume",
+      "samples_ms": [
+        0.07775
+      ],
+      "median_ms": 0.07775,
+      "process_cpu_samples_ms": [
+        0.078
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_liquidity",
+      "samples_ms": [
+        0.194959
+      ],
+      "median_ms": 0.194959,
+      "process_cpu_samples_ms": [
+        0.133
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:absorption_intensity",
+      "samples_ms": [
+        1.785083
+      ],
+      "median_ms": 1.785083,
+      "process_cpu_samples_ms": [
+        1.359
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:amihud_illiquidity",
+      "samples_ms": [
+        10.803208
+      ],
+      "median_ms": 10.803208,
+      "process_cpu_samples_ms": [
+        0.981
+      ],
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:atr_percent_sma",
+      "samples_ms": [
+        10.729667
+      ],
+      "median_ms": 10.729667,
+      "process_cpu_samples_ms": [
+        2.209
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:atr_sma",
+      "samples_ms": [
+        15.38225
+      ],
+      "median_ms": 15.38225,
+      "process_cpu_samples_ms": [
+        2.309
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:body_to_range",
+      "samples_ms": [
+        7.2755
+      ],
+      "median_ms": 7.2755,
+      "process_cpu_samples_ms": [
+        0.948
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:breakout_percentile_regime",
+      "samples_ms": [
+        14.616959
+      ],
+      "median_ms": 14.616959,
+      "process_cpu_samples_ms": [
+        2.696
+      ],
+      "columns": 2,
+      "frame_bytes": 245966
+    },
+    {
+      "name": "factory:bulk_volume_classification",
+      "samples_ms": [
+        61.535792
+      ],
+      "median_ms": 61.535792,
+      "process_cpu_samples_ms": [
+        5.1
+      ],
+      "columns": 2,
+      "frame_bytes": 337740
+    },
+    {
+      "name": "factory:calendar_time_features",
+      "samples_ms": [
+        23.599625
+      ],
+      "median_ms": 23.599625,
+      "process_cpu_samples_ms": [
+        4.461
+      ],
+      "columns": 10,
+      "frame_bytes": 228624
+    },
+    {
+      "name": "factory:close_ma_distance_atr",
+      "samples_ms": [
+        21.787542
+      ],
+      "median_ms": 21.787542,
+      "process_cpu_samples_ms": [
+        4.204
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:close_position",
+      "samples_ms": [
+        22.815417
+      ],
+      "median_ms": 22.815417,
+      "process_cpu_samples_ms": [
+        0.992
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:close_position_rolling",
+      "samples_ms": [
+        9.184292
+      ],
+      "median_ms": 9.184292,
+      "process_cpu_samples_ms": [
+        0.846
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:cusum_filter",
+      "samples_ms": [
+        21.180833
+      ],
+      "median_ms": 21.180833,
+      "process_cpu_samples_ms": [
+        8.365
+      ],
+      "columns": 1,
+      "frame_bytes": 20784
+    },
+    {
+      "name": "factory:cyclical_time_features",
+      "samples_ms": [
+        29.321209
+      ],
+      "median_ms": 29.321209,
+      "process_cpu_samples_ms": [
+        9.612
+      ],
+      "columns": 16,
+      "frame_bytes": 2660352
+    },
+    {
+      "name": "factory:distance_from_high",
+      "samples_ms": [
+        3.368167
+      ],
+      "median_ms": 3.368167,
+      "process_cpu_samples_ms": [
+        1.333
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:distance_from_low",
+      "samples_ms": [
+        0.777833
+      ],
+      "median_ms": 0.777833,
+      "process_cpu_samples_ms": [
+        0.764
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:distance_from_ma",
+      "samples_ms": [
+        10.469375
+      ],
+      "median_ms": 10.469375,
+      "process_cpu_samples_ms": [
+        1.65
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:dollar_volume",
+      "samples_ms": [
+        1.526
+      ],
+      "median_ms": 1.526,
+      "process_cpu_samples_ms": [
+        0.561
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:downside_volatility_ratio",
+      "samples_ms": [
+        17.23775
+      ],
+      "median_ms": 17.23775,
+      "process_cpu_samples_ms": [
+        2.75
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:gap_high",
+      "samples_ms": [
+        10.818667
+      ],
+      "median_ms": 10.818667,
+      "process_cpu_samples_ms": [
+        0.704
+      ],
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:garman_klass_volatility",
+      "samples_ms": [
+        9.7105
+      ],
+      "median_ms": 9.7105,
+      "process_cpu_samples_ms": [
+        2.655
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:hh_hl_structure_regime",
+      "samples_ms": [
+        97.494417
+      ],
+      "median_ms": 97.494417,
+      "process_cpu_samples_ms": [
+        2.801
+      ],
+      "columns": 1,
+      "frame_bytes": 67280
+    },
+    {
+      "name": "factory:ichimoku_cloud",
+      "samples_ms": [
+        17.656792
+      ],
+      "median_ms": 17.656792,
+      "process_cpu_samples_ms": [
+        5.225
+      ],
+      "columns": 5,
+      "frame_bytes": 841758
+    },
+    {
+      "name": "factory:illiquidity_shock",
+      "samples_ms": [
+        3.158417
+      ],
+      "median_ms": 3.158417,
+      "process_cpu_samples_ms": [
+        1.541
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:is_funding_hour",
+      "samples_ms": [
+        4.4595
+      ],
+      "median_ms": 4.4595,
+      "process_cpu_samples_ms": [
+        1.214
+      ],
+      "columns": 1,
+      "frame_bytes": 20784
+    },
+    {
+      "name": "factory:is_us_open_hour",
+      "samples_ms": [
+        0.588709
+      ],
+      "median_ms": 0.588709,
+      "process_cpu_samples_ms": [
+        0.628
+      ],
+      "columns": 1,
+      "frame_bytes": 20784
+    },
+    {
+      "name": "factory:jump_variation_proxy",
+      "samples_ms": [
+        10.037125
+      ],
+      "median_ms": 10.037125,
+      "process_cpu_samples_ms": [
+        2.523
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:kaufman_efficiency_ratio",
+      "samples_ms": [
+        10.288583
+      ],
+      "median_ms": 10.288583,
+      "process_cpu_samples_ms": [
+        1.825
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:kline_imbalance",
+      "samples_ms": [
+        9.928958
+      ],
+      "median_ms": 9.928958,
+      "process_cpu_samples_ms": [
+        2.03
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:liquidity_drop",
+      "samples_ms": [
+        13.373791
+      ],
+      "median_ms": 13.373791,
+      "process_cpu_samples_ms": [
+        0.877
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:liquidity_range",
+      "samples_ms": [
+        10.438459
+      ],
+      "median_ms": 10.438459,
+      "process_cpu_samples_ms": [
+        1.075
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:ma_slope_regime",
+      "samples_ms": [
+        3.765541
+      ],
+      "median_ms": 3.765541,
+      "process_cpu_samples_ms": [
+        2.772
+      ],
+      "columns": 1,
+      "frame_bytes": 61288
+    },
+    {
+      "name": "factory:maker_liquidity_share",
+      "samples_ms": [
+        0.933125
+      ],
+      "median_ms": 0.933125,
+      "process_cpu_samples_ms": [
+        0.465
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_volume_ratio",
+      "samples_ms": [
+        3.845334
+      ],
+      "median_ms": 3.845334,
+      "process_cpu_samples_ms": [
+        0.776
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:maker_volume_share",
+      "samples_ms": [
+        0.355917
+      ],
+      "median_ms": 0.355917,
+      "process_cpu_samples_ms": [
+        0.374
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:narrow_range",
+      "samples_ms": [
+        9.796583
+      ],
+      "median_ms": 9.796583,
+      "process_cpu_samples_ms": [
+        1.939
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:order_flow_imbalance",
+      "samples_ms": [
+        31.397542
+      ],
+      "median_ms": 31.397542,
+      "process_cpu_samples_ms": [
+        5.704
+      ],
+      "columns": 3,
+      "frame_bytes": 506610
+    },
+    {
+      "name": "factory:parkinson_vol_of_vol",
+      "samples_ms": [
+        8.716125
+      ],
+      "median_ms": 8.716125,
+      "process_cpu_samples_ms": [
+        2.553
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:parkinson_volatility",
+      "samples_ms": [
+        15.263541
+      ],
+      "median_ms": 15.263541,
+      "process_cpu_samples_ms": [
+        1.757
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:price_range_position",
+      "samples_ms": [
+        78.315083
+      ],
+      "median_ms": 78.315083,
+      "process_cpu_samples_ms": [
+        2.055
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:price_vs_band_regime",
+      "samples_ms": [
+        19.617709
+      ],
+      "median_ms": 19.617709,
+      "process_cpu_samples_ms": [
+        2.165
+      ],
+      "columns": 1,
+      "frame_bytes": 69068
+    },
+    {
+      "name": "factory:range_overlap",
+      "samples_ms": [
+        19.824291
+      ],
+      "median_ms": 19.824291,
+      "process_cpu_samples_ms": [
+        1.02
+      ],
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:range_pct",
+      "samples_ms": [
+        2.934708
+      ],
+      "median_ms": 2.934708,
+      "process_cpu_samples_ms": [
+        0.651
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:range_per_dollar_volume",
+      "samples_ms": [
+        3.636875
+      ],
+      "median_ms": 3.636875,
+      "process_cpu_samples_ms": [
+        0.93
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:realized_kurtosis",
+      "samples_ms": [
+        7.830458
+      ],
+      "median_ms": 7.830458,
+      "process_cpu_samples_ms": [
+        3.158
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:realized_semivariance",
+      "samples_ms": [
+        8.221917
+      ],
+      "median_ms": 8.221917,
+      "process_cpu_samples_ms": [
+        2.274
+      ],
+      "columns": 2,
+      "frame_bytes": 337740
+    },
+    {
+      "name": "factory:realized_skewness",
+      "samples_ms": [
+        8.311792
+      ],
+      "median_ms": 8.311792,
+      "process_cpu_samples_ms": [
+        3.293
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:rejection_intensity",
+      "samples_ms": [
+        15.830125
+      ],
+      "median_ms": 15.830125,
+      "process_cpu_samples_ms": [
+        1.77
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:relative_range_seasonality",
+      "samples_ms": [
+        37.980792
+      ],
+      "median_ms": 37.980792,
+      "process_cpu_samples_ms": [
+        3.931
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:relative_volatility_seasonality",
+      "samples_ms": [
+        10.603584
+      ],
+      "median_ms": 10.603584,
+      "process_cpu_samples_ms": [
+        3.142
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:relative_volume_seasonality",
+      "samples_ms": [
+        6.3805
+      ],
+      "median_ms": 6.3805,
+      "process_cpu_samples_ms": [
+        2.263
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:return_autocorrelation",
+      "samples_ms": [
+        5.256709
+      ],
+      "median_ms": 5.256709,
+      "process_cpu_samples_ms": [
+        2.641
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:return_per_dollar_volume",
+      "samples_ms": [
+        4.913959
+      ],
+      "median_ms": 4.913959,
+      "process_cpu_samples_ms": [
+        0.555
+      ],
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:return_volatility_correlation",
+      "samples_ms": [
+        16.0965
+      ],
+      "median_ms": 16.0965,
+      "process_cpu_samples_ms": [
+        3.281
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:rogers_satchell_volatility",
+      "samples_ms": [
+        4.411875
+      ],
+      "median_ms": 4.411875,
+      "process_cpu_samples_ms": [
+        2.391
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:sma_crossover",
+      "samples_ms": [
+        12.823416
+      ],
+      "median_ms": 12.823416,
+      "process_cpu_samples_ms": [
+        2.303
+      ],
+      "columns": 2,
+      "frame_bytes": 106518
+    },
+    {
+      "name": "factory:stochastic_k_abs",
+      "samples_ms": [
+        6.0475
+      ],
+      "median_ms": 6.0475,
+      "process_cpu_samples_ms": [
+        3.82
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:tail_event_intensity",
+      "samples_ms": [
+        6.060916
+      ],
+      "median_ms": 6.060916,
+      "process_cpu_samples_ms": [
+        2.761
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:taker_imbalance_ratio",
+      "samples_ms": [
+        0.604709
+      ],
+      "median_ms": 0.604709,
+      "process_cpu_samples_ms": [
+        0.605
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:time_to_funding",
+      "samples_ms": [
+        1.38075
+      ],
+      "median_ms": 1.38075,
+      "process_cpu_samples_ms": [
+        1.382
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:trade_density",
+      "samples_ms": [
+        12.907583
+      ],
+      "median_ms": 12.907583,
+      "process_cpu_samples_ms": [
+        1.014
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trade_imbalance",
+      "samples_ms": [
+        7.222458
+      ],
+      "median_ms": 7.222458,
+      "process_cpu_samples_ms": [
+        1.682
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trade_size_ratio",
+      "samples_ms": [
+        43.390167
+      ],
+      "median_ms": 43.390167,
+      "process_cpu_samples_ms": [
+        2.626
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trend_coherence",
+      "samples_ms": [
+        3.422583
+      ],
+      "median_ms": 3.422583,
+      "process_cpu_samples_ms": [
+        1.628
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trend_strength",
+      "samples_ms": [
+        3.196375
+      ],
+      "median_ms": 3.196375,
+      "process_cpu_samples_ms": [
+        1.181
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volatility_of_volatility",
+      "samples_ms": [
+        4.824208
+      ],
+      "median_ms": 4.824208,
+      "process_cpu_samples_ms": [
+        3.46
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volatility_ratio",
+      "samples_ms": [
+        13.201875
+      ],
+      "median_ms": 13.201875,
+      "process_cpu_samples_ms": [
+        3.186
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volatility_spike",
+      "samples_ms": [
+        10.329084
+      ],
+      "median_ms": 10.329084,
+      "process_cpu_samples_ms": [
+        1.912
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:volatility_term_structure",
+      "samples_ms": [
+        4.426708
+      ],
+      "median_ms": 4.426708,
+      "process_cpu_samples_ms": [
+        2.942
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volume_regime",
+      "samples_ms": [
+        3.391875
+      ],
+      "median_ms": 3.391875,
+      "process_cpu_samples_ms": [
+        1.384
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volume_to_range",
+      "samples_ms": [
+        11.778167
+      ],
+      "median_ms": 11.778167,
+      "process_cpu_samples_ms": [
+        0.978
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volume_volatility_correlation",
+      "samples_ms": [
+        10.22575
+      ],
+      "median_ms": 10.22575,
+      "process_cpu_samples_ms": [
+        4.687
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:vpin",
+      "samples_ms": [
+        36.668583
+      ],
+      "median_ms": 36.668583,
+      "process_cpu_samples_ms": [
+        6.355
+      ],
+      "columns": 3,
+      "frame_bytes": 506610
+    },
+    {
+      "name": "factory:vwap",
+      "samples_ms": [
+        9.706292
+      ],
+      "median_ms": 9.706292,
+      "process_cpu_samples_ms": [
+        3.319
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wick_imbalance",
+      "samples_ms": [
+        3.176542
+      ],
+      "median_ms": 3.176542,
+      "process_cpu_samples_ms": [
+        0.681
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wick_proportion",
+      "samples_ms": [
+        9.792375
+      ],
+      "median_ms": 9.792375,
+      "process_cpu_samples_ms": [
+        1.113
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:window_return_regime",
+      "samples_ms": [
+        3.561667
+      ],
+      "median_ms": 3.561667,
+      "process_cpu_samples_ms": [
+        1.149
+      ],
+      "columns": 2,
+      "frame_bytes": 227751
+    },
+    {
+      "name": "factory:yang_zhang_volatility",
+      "samples_ms": [
+        12.029708
+      ],
+      "median_ms": 12.029708,
+      "process_cpu_samples_ms": [
+        3.765
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:ad",
+      "samples_ms": [
+        4.130209
+      ],
+      "median_ms": 4.130209,
+      "process_cpu_samples_ms": [
+        0.913
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:adosc",
+      "samples_ms": [
+        10.036625
+      ],
+      "median_ms": 10.036625,
+      "process_cpu_samples_ms": [
+        2.629
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:apo",
+      "samples_ms": [
+        13.904875
+      ],
+      "median_ms": 13.904875,
+      "process_cpu_samples_ms": [
+        11.299
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:atr",
+      "samples_ms": [
+        13.678208
+      ],
+      "median_ms": 13.678208,
+      "process_cpu_samples_ms": [
+        4.461
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:avgprice",
+      "samples_ms": [
+        0.392791
+      ],
+      "median_ms": 0.392791,
+      "process_cpu_samples_ms": [
+        0.4
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:bbands",
+      "samples_ms": [
+        92.271
+      ],
+      "median_ms": 92.271,
+      "process_cpu_samples_ms": [
+        8.854
+      ],
+      "columns": 3,
+      "frame_bytes": 504012
+    },
+    {
+      "name": "factory:body_pct",
+      "samples_ms": [
+        2.155458
+      ],
+      "median_ms": 2.155458,
+      "process_cpu_samples_ms": [
+        0.383
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:bollinger_bands",
+      "samples_ms": [
+        1.452417
+      ],
+      "median_ms": 1.452417,
+      "process_cpu_samples_ms": [
+        1.976
+      ],
+      "columns": 3,
+      "frame_bytes": 506610
+    },
+    {
+      "name": "factory:bop",
+      "samples_ms": [
+        3.998042
+      ],
+      "median_ms": 3.998042,
+      "process_cpu_samples_ms": [
+        0.72
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:cci",
+      "samples_ms": [
+        18.476459
+      ],
+      "median_ms": 18.476459,
+      "process_cpu_samples_ms": [
+        2.286
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:cdl2crows",
+      "samples_ms": [
+        56.878125
+      ],
+      "median_ms": 56.878125,
+      "process_cpu_samples_ms": [
+        40.731
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3blackcrows",
+      "samples_ms": [
+        180.949417
+      ],
+      "median_ms": 180.949417,
+      "process_cpu_samples_ms": [
+        60.175
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3inside",
+      "samples_ms": [
+        59.597875
+      ],
+      "median_ms": 59.597875,
+      "process_cpu_samples_ms": [
+        45.768
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3linestrike",
+      "samples_ms": [
+        66.204875
+      ],
+      "median_ms": 66.204875,
+      "process_cpu_samples_ms": [
+        42.643
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3starsinsouth",
+      "samples_ms": [
+        215.581708
+      ],
+      "median_ms": 215.581708,
+      "process_cpu_samples_ms": [
+        92.22
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3whitesoldiers",
+      "samples_ms": [
+        3.9855
+      ],
+      "median_ms": 3.9855,
+      "process_cpu_samples_ms": [
+        2.129
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlabandonedbaby",
+      "samples_ms": [
+        75.339916
+      ],
+      "median_ms": 75.339916,
+      "process_cpu_samples_ms": [
+        55.907
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdladvancedblock",
+      "samples_ms": [
+        34.817584
+      ],
+      "median_ms": 34.817584,
+      "process_cpu_samples_ms": [
+        2.769
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlbelthold",
+      "samples_ms": [
+        104.04175
+      ],
+      "median_ms": 104.04175,
+      "process_cpu_samples_ms": [
+        35.589
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlclosingmarubozu",
+      "samples_ms": [
+        60.653125
+      ],
+      "median_ms": 60.653125,
+      "process_cpu_samples_ms": [
+        38.319
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlconcealbabyswall",
+      "samples_ms": [
+        1167.39825
+      ],
+      "median_ms": 1167.39825,
+      "process_cpu_samples_ms": [
+        87.27
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlcounterattack",
+      "samples_ms": [
+        332.726291
+      ],
+      "median_ms": 332.726291,
+      "process_cpu_samples_ms": [
+        52.198
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdldarkcloudcover",
+      "samples_ms": [
+        439.4875
+      ],
+      "median_ms": 439.4875,
+      "process_cpu_samples_ms": [
+        22.729
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdldoji",
+      "samples_ms": [
+        236.621
+      ],
+      "median_ms": 236.621,
+      "process_cpu_samples_ms": [
+        14.931
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdldragonflydoji",
+      "samples_ms": [
+        525.228625
+      ],
+      "median_ms": 525.228625,
+      "process_cpu_samples_ms": [
+        34.663
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlengulfing",
+      "samples_ms": [
+        327.333333
+      ],
+      "median_ms": 327.333333,
+      "process_cpu_samples_ms": [
+        15.16
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlgravestonedoji",
+      "samples_ms": [
+        117.61625
+      ],
+      "median_ms": 117.61625,
+      "process_cpu_samples_ms": [
+        33.283
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhammer",
+      "samples_ms": [
+        226.933291
+      ],
+      "median_ms": 226.933291,
+      "process_cpu_samples_ms": [
+        53.182
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhangingman",
+      "samples_ms": [
+        244.30425
+      ],
+      "median_ms": 244.30425,
+      "process_cpu_samples_ms": [
+        55.794
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlharami",
+      "samples_ms": [
+        100.189584
+      ],
+      "median_ms": 100.189584,
+      "process_cpu_samples_ms": [
+        30.116
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlharamicross",
+      "samples_ms": [
+        136.107792
+      ],
+      "median_ms": 136.107792,
+      "process_cpu_samples_ms": [
+        30.587
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhighwave",
+      "samples_ms": [
+        102.363458
+      ],
+      "median_ms": 102.363458,
+      "process_cpu_samples_ms": [
+        32.624
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhikkake",
+      "samples_ms": [
+        8.285167
+      ],
+      "median_ms": 8.285167,
+      "process_cpu_samples_ms": [
+        8.2
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhikkakemod",
+      "samples_ms": [
+        57.807416
+      ],
+      "median_ms": 57.807416,
+      "process_cpu_samples_ms": [
+        30.3
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhomingpigeon",
+      "samples_ms": [
+        41.190042
+      ],
+      "median_ms": 41.190042,
+      "process_cpu_samples_ms": [
+        32.98
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlidentical3crows",
+      "samples_ms": [
+        224.579125
+      ],
+      "median_ms": 224.579125,
+      "process_cpu_samples_ms": [
+        87.14
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlinvertedhammer",
+      "samples_ms": [
+        436.570833
+      ],
+      "median_ms": 436.570833,
+      "process_cpu_samples_ms": [
+        50.194
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlladderbottom",
+      "samples_ms": [
+        181.724708
+      ],
+      "median_ms": 181.724708,
+      "process_cpu_samples_ms": [
+        33.53
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdllongleggeddoji",
+      "samples_ms": [
+        98.736917
+      ],
+      "median_ms": 98.736917,
+      "process_cpu_samples_ms": [
+        35.012
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdllongline",
+      "samples_ms": [
+        256.927083
+      ],
+      "median_ms": 256.927083,
+      "process_cpu_samples_ms": [
+        52.582
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlmarubozu",
+      "samples_ms": [
+        337.340417
+      ],
+      "median_ms": 337.340417,
+      "process_cpu_samples_ms": [
+        41.514
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlmatchinglow",
+      "samples_ms": [
+        60.732958
+      ],
+      "median_ms": 60.732958,
+      "process_cpu_samples_ms": [
+        20.615
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlmathold",
+      "samples_ms": [
+        441.337
+      ],
+      "median_ms": 441.337,
+      "process_cpu_samples_ms": [
+        98.101
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlonneck",
+      "samples_ms": [
+        287.424
+      ],
+      "median_ms": 287.424,
+      "process_cpu_samples_ms": [
+        33.572
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlpiercing",
+      "samples_ms": [
+        86.548041
+      ],
+      "median_ms": 86.548041,
+      "process_cpu_samples_ms": [
+        39.257
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlrickshawman",
+      "samples_ms": [
+        131.060625
+      ],
+      "median_ms": 131.060625,
+      "process_cpu_samples_ms": [
+        53.825
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlrisefall3methods",
+      "samples_ms": [
+        127.717334
+      ],
+      "median_ms": 127.717334,
+      "process_cpu_samples_ms": [
+        86.725
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlseparatinglines",
+      "samples_ms": [
+        56.957041
+      ],
+      "median_ms": 56.957041,
+      "process_cpu_samples_ms": [
+        48.82
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlshootingstar",
+      "samples_ms": [
+        69.932542
+      ],
+      "median_ms": 69.932542,
+      "process_cpu_samples_ms": [
+        50.945
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlshortline",
+      "samples_ms": [
+        54.934417
+      ],
+      "median_ms": 54.934417,
+      "process_cpu_samples_ms": [
+        49.256
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlspinningtop",
+      "samples_ms": [
+        29.437542
+      ],
+      "median_ms": 29.437542,
+      "process_cpu_samples_ms": [
+        25.438
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlstalledpattern",
+      "samples_ms": [
+        2.411167
+      ],
+      "median_ms": 2.411167,
+      "process_cpu_samples_ms": [
+        1.946
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlsticksandwich",
+      "samples_ms": [
+        23.335084
+      ],
+      "median_ms": 23.335084,
+      "process_cpu_samples_ms": [
+        20.225
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdltakuri",
+      "samples_ms": [
+        49.047708
+      ],
+      "median_ms": 49.047708,
+      "process_cpu_samples_ms": [
+        37.947
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlthrusting",
+      "samples_ms": [
+        38.845458
+      ],
+      "median_ms": 38.845458,
+      "process_cpu_samples_ms": [
+        30.578
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdltristar",
+      "samples_ms": [
+        29.860042
+      ],
+      "median_ms": 29.860042,
+      "process_cpu_samples_ms": [
+        22.293
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlunique3river",
+      "samples_ms": [
+        72.850417
+      ],
+      "median_ms": 72.850417,
+      "process_cpu_samples_ms": [
+        36.964
+      ],
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cmo",
+      "samples_ms": [
+        24.578292
+      ],
+      "median_ms": 24.578292,
+      "process_cpu_samples_ms": [
+        11.745
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:dema",
+      "samples_ms": [
+        14.65
+      ],
+      "median_ms": 14.65,
+      "process_cpu_samples_ms": [
+        9.182
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ema",
+      "samples_ms": [
+        6.379625
+      ],
+      "median_ms": 6.379625,
+      "process_cpu_samples_ms": [
+        5.421
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_dcperiod",
+      "samples_ms": [
+        33.085666
+      ],
+      "median_ms": 33.085666,
+      "process_cpu_samples_ms": [
+        27.589
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_dcphase",
+      "samples_ms": [
+        71.703042
+      ],
+      "median_ms": 71.703042,
+      "process_cpu_samples_ms": [
+        62.786
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_phasor",
+      "samples_ms": [
+        40.907709
+      ],
+      "median_ms": 40.907709,
+      "process_cpu_samples_ms": [
+        29.334
+      ],
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:ht_sine",
+      "samples_ms": [
+        103.099125
+      ],
+      "median_ms": 103.099125,
+      "process_cpu_samples_ms": [
+        66.323
+      ],
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:ht_trendline",
+      "samples_ms": [
+        71.342666
+      ],
+      "median_ms": 71.342666,
+      "process_cpu_samples_ms": [
+        54.441
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_trendmode",
+      "samples_ms": [
+        172.979625
+      ],
+      "median_ms": 172.979625,
+      "process_cpu_samples_ms": [
+        95.848
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:kama",
+      "samples_ms": [
+        26.571125
+      ],
+      "median_ms": 26.571125,
+      "process_cpu_samples_ms": [
+        16.633
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg",
+      "samples_ms": [
+        0.623584
+      ],
+      "median_ms": 0.623584,
+      "process_cpu_samples_ms": [
+        0.623
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg_angle",
+      "samples_ms": [
+        2.382375
+      ],
+      "median_ms": 2.382375,
+      "process_cpu_samples_ms": [
+        2.384
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg_intercept",
+      "samples_ms": [
+        0.688917
+      ],
+      "median_ms": 0.688917,
+      "process_cpu_samples_ms": [
+        0.653
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg_slope",
+      "samples_ms": [
+        0.5815
+      ],
+      "median_ms": 0.5815,
+      "process_cpu_samples_ms": [
+        0.581
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ma",
+      "samples_ms": [
+        5.6105
+      ],
+      "median_ms": 5.6105,
+      "process_cpu_samples_ms": [
+        5.404
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:macd",
+      "samples_ms": [
+        18.219333
+      ],
+      "median_ms": 18.219333,
+      "process_cpu_samples_ms": [
+        12.841
+      ],
+      "columns": 3,
+      "frame_bytes": 498816
+    },
+    {
+      "name": "factory:macdext",
+      "samples_ms": [
+        48.763209
+      ],
+      "median_ms": 48.763209,
+      "process_cpu_samples_ms": [
+        17.181
+      ],
+      "columns": 3,
+      "frame_bytes": 498816
+    },
+    {
+      "name": "factory:macdfix",
+      "samples_ms": [
+        29.238792
+      ],
+      "median_ms": 29.238792,
+      "process_cpu_samples_ms": [
+        13.036
+      ],
+      "columns": 3,
+      "frame_bytes": 498816
+    },
+    {
+      "name": "factory:mama",
+      "samples_ms": [
+        118.765042
+      ],
+      "median_ms": 118.765042,
+      "process_cpu_samples_ms": [
+        38.276
+      ],
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:medprice",
+      "samples_ms": [
+        5.036334
+      ],
+      "median_ms": 5.036334,
+      "process_cpu_samples_ms": [
+        0.555
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:mfi",
+      "samples_ms": [
+        31.2745
+      ],
+      "median_ms": 31.2745,
+      "process_cpu_samples_ms": [
+        3.395
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:midpoint",
+      "samples_ms": [
+        215.929625
+      ],
+      "median_ms": 215.929625,
+      "process_cpu_samples_ms": [
+        33.309
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:midprice",
+      "samples_ms": [
+        298.765792
+      ],
+      "median_ms": 298.765792,
+      "process_cpu_samples_ms": [
+        56.696
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:mom",
+      "samples_ms": [
+        8.329708
+      ],
+      "median_ms": 8.329708,
+      "process_cpu_samples_ms": [
+        0.706
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:natr",
+      "samples_ms": [
+        68.408417
+      ],
+      "median_ms": 68.408417,
+      "process_cpu_samples_ms": [
+        5.3
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:obv",
+      "samples_ms": [
+        1.984042
+      ],
+      "median_ms": 1.984042,
+      "process_cpu_samples_ms": [
+        0.956
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ppo",
+      "samples_ms": [
+        47.617084
+      ],
+      "median_ms": 47.617084,
+      "process_cpu_samples_ms": [
+        11.717
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:price_change_pct",
+      "samples_ms": [
+        4.633042
+      ],
+      "median_ms": 4.633042,
+      "process_cpu_samples_ms": [
+        0.765
+      ],
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:returns",
+      "samples_ms": [
+        3.433375
+      ],
+      "median_ms": 3.433375,
+      "process_cpu_samples_ms": [
+        0.484
+      ],
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:roc",
+      "samples_ms": [
+        26.16475
+      ],
+      "median_ms": 26.16475,
+      "process_cpu_samples_ms": [
+        1.307
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rocp",
+      "samples_ms": [
+        3.409583
+      ],
+      "median_ms": 3.409583,
+      "process_cpu_samples_ms": [
+        0.96
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rocr",
+      "samples_ms": [
+        148.29425
+      ],
+      "median_ms": 148.29425,
+      "process_cpu_samples_ms": [
+        1.183
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rocr100",
+      "samples_ms": [
+        19.304291
+      ],
+      "median_ms": 19.304291,
+      "process_cpu_samples_ms": [
+        1.0
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rolling_volatility",
+      "samples_ms": [
+        0.6025
+      ],
+      "median_ms": 0.6025,
+      "process_cpu_samples_ms": [
+        0.603
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:rsi",
+      "samples_ms": [
+        15.993875
+      ],
+      "median_ms": 15.993875,
+      "process_cpu_samples_ms": [
+        11.414
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:rsi_sma",
+      "samples_ms": [
+        7.158292
+      ],
+      "median_ms": 7.158292,
+      "process_cpu_samples_ms": [
+        2.092
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:sar",
+      "samples_ms": [
+        13.30675
+      ],
+      "median_ms": 13.30675,
+      "process_cpu_samples_ms": [
+        8.806
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:sarext",
+      "samples_ms": [
+        254.005583
+      ],
+      "median_ms": 254.005583,
+      "process_cpu_samples_ms": [
+        11.432
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:sma",
+      "samples_ms": [
+        13.585334
+      ],
+      "median_ms": 13.585334,
+      "process_cpu_samples_ms": [
+        5.562
+      ],
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:sma_deviation_std",
+      "samples_ms": [
+        8.502
+      ],
+      "median_ms": 8.502,
+      "process_cpu_samples_ms": [
+        1.388
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:stddev",
+      "samples_ms": [
+        63.345209
+      ],
+      "median_ms": 63.345209,
+      "process_cpu_samples_ms": [
+        14.377
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:stoch",
+      "samples_ms": [
+        218.568458
+      ],
+      "median_ms": 218.568458,
+      "process_cpu_samples_ms": [
+        28.989
+      ],
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:stochastic_oscillator",
+      "samples_ms": [
+        86.834084
+      ],
+      "median_ms": 86.834084,
+      "process_cpu_samples_ms": [
+        4.251
+      ],
+      "columns": 2,
+      "frame_bytes": 337740
+    },
+    {
+      "name": "factory:stochf",
+      "samples_ms": [
+        55.172875
+      ],
+      "median_ms": 55.172875,
+      "process_cpu_samples_ms": [
+        23.276
+      ],
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:stochrsi",
+      "samples_ms": [
+        131.279041
+      ],
+      "median_ms": 131.279041,
+      "process_cpu_samples_ms": [
+        33.198
+      ],
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:t3",
+      "samples_ms": [
+        66.90775
+      ],
+      "median_ms": 66.90775,
+      "process_cpu_samples_ms": [
+        24.447
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:tema",
+      "samples_ms": [
+        15.255459
+      ],
+      "median_ms": 15.255459,
+      "process_cpu_samples_ms": [
+        12.644
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:trange",
+      "samples_ms": [
+        12.519292
+      ],
+      "median_ms": 12.519292,
+      "process_cpu_samples_ms": [
+        1.013
+      ],
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:trima",
+      "samples_ms": [
+        13.1785
+      ],
+      "median_ms": 13.1785,
+      "process_cpu_samples_ms": [
+        10.544
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:trix",
+      "samples_ms": [
+        37.734542
+      ],
+      "median_ms": 37.734542,
+      "process_cpu_samples_ms": [
+        17.37
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:tsf",
+      "samples_ms": [
+        1.59
+      ],
+      "median_ms": 1.59,
+      "process_cpu_samples_ms": [
+        1.143
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:typprice",
+      "samples_ms": [
+        0.749041
+      ],
+      "median_ms": 0.749041,
+      "process_cpu_samples_ms": [
+        0.489
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ultosc",
+      "samples_ms": [
+        358.394166
+      ],
+      "median_ms": 358.394166,
+      "process_cpu_samples_ms": [
+        64.845
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:var",
+      "samples_ms": [
+        10.782
+      ],
+      "median_ms": 10.782,
+      "process_cpu_samples_ms": [
+        10.011
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wclprice",
+      "samples_ms": [
+        0.569
+      ],
+      "median_ms": 0.569,
+      "process_cpu_samples_ms": [
+        0.368
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wilder_rsi",
+      "samples_ms": [
+        11.860916
+      ],
+      "median_ms": 11.860916,
+      "process_cpu_samples_ms": [
+        10.93
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:willr",
+      "samples_ms": [
+        6.415458
+      ],
+      "median_ms": 6.415458,
+      "process_cpu_samples_ms": [
+        3.317
+      ],
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:window_return",
+      "samples_ms": [
+        0.412917
+      ],
+      "median_ms": 0.412917,
+      "process_cpu_samples_ms": [
+        0.416
+      ],
+      "columns": 1,
+      "frame_bytes": 166275
+    },
+    {
+      "name": "factory:wma",
+      "samples_ms": [
+        9.855709
+      ],
+      "median_ms": 9.855709,
+      "process_cpu_samples_ms": [
+        7.731
+      ],
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "catalog_pool",
+      "samples_ms": [
+        7877.295667
+      ],
+      "median_ms": 7877.295667,
+      "process_cpu_samples_ms": [
+        2961.858
+      ]
+    }
+  ],
+  "peak_rss_bytes": 387072000,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "serve_import_ms": 3617.916042,
+  "ablation": "none",
+  "import_ms": 5558.740625,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 70.17724609375,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "5.29.2"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "vcs": "git",
+        "commit_id": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
+        "requested_revision": "728a6eefc19cde2cb0fa3f5312b185e2877bc330"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "12cfe767ee299127e5e564a7b134655ddc046f41",
+    "source_tree_sha256": "f111359b54083e0879e0dc2c40d358e3775ea593d674adbedc14e43f60a95cd1"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 8,
+    "reps": 1
+  },
+  "fixture_prepare_ms": 4.130417,
+  "registry_count": 226,
+  "skipped": [
+    {
+      "factory": "active_lines",
+      "reason": "TypeError: active_lines() missing 2 required positional arguments: 'long_lines' and 'short_lines'"
+    },
+    {
+      "factory": "active_quantile_count",
+      "reason": "TypeError: active_quantile_count() missing 2 required positional arguments: 'long_lines_q' and 'short_lines_q'"
+    },
+    {
+      "factory": "breakout_features",
+      "reason": "ColumnNotFoundError: unable to find column \"breakout_long\"; valid columns: [\"datetime\", \"open\", \"high\", \"low\", \"close\", \"volume\", \"mean\", \"std\", \"maker_ratio\", \"no_of_trades\", \"open_liquidity\", \"high_liquidity\", \"low_liquidity\", \"close_liquidity\", \"liquidity_sum\", \"maker_volume\", \"maker_liquidity\"]"
+    },
+    {
+      "factory": "conserved_flux_renormalization",
+      "reason": "ColumnNotFoundError: unable to find column \"price\"; valid columns: [\"datetime\", \"open\", \"high\", \"low\", \"close\", \"volume\", \"mean\", \"std\", \"maker_ratio\", \"no_of_trades\", \"open_liquidity\", \"high_liquidity\", \"low_liquidity\", \"close_liquidity\", \"liquidity_sum\", \"maker_volume\", \"maker_liquidity\"]"
+    },
+    {
+      "factory": "find_min_d",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "fractional_diff",
+      "reason": "ValueError: fractional_diff cols must be a non-empty list of column names"
+    },
+    {
+      "factory": "hours_since_big_move",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "hours_since_quantile_line",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_column",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_columns",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_range",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_range_cols",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "price_lines",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "quantile_line_density",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "quantile_price_lines",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "rolling_zscore",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "bollinger_position",
+      "reason": "ColumnNotFoundError: unable to find column \"bb_upper\"; valid columns: [\"datetime\", \"open\", \"high\", \"low\", \"close\", \"volume\", \"mean\", \"std\", \"maker_ratio\", \"no_of_trades\", \"open_liquidity\", \"high_liquidity\", \"low_liquidity\", \"close_liquidity\", \"liquidity_sum\", \"maker_volume\", \"maker_liquidity\"]"
+    }
+  ],
+  "pool": {
+    "columns": 259,
+    "bytes": 43064448,
+    "skipped": [
+      "active_lines",
+      "active_quantile_count",
+      "breakout_features",
+      "conserved_flux_renormalization",
+      "fractional_diff",
+      "bollinger_position"
+    ]
+  }
+}
