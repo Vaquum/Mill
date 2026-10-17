@@ -299,3 +299,22 @@ def test_shared_null_counts_match_reference_for_shared_and_unique_missingness(un
     ranks = discover.column_ranks(values)
     y = rng.integers(0, 2, size=997).astype(float)
     np.testing.assert_array_equal(discover.shift_null(y, ranks, 17), _original_null(y, ranks, 17))
+
+
+def test_compact_ranks_are_lossless_and_keep_double_precision_statistics():
+    rng = np.random.default_rng(8851)
+    values = np.round(rng.normal(size=(10003, 37)), 1)
+    values[rng.random(values.shape) < .03] = np.nan
+    full = discover.column_ranks(values)
+    compact = discover.column_ranks(values, compact=True)
+    assert compact.dtype == np.float32 and compact.nbytes * 2 == full.nbytes
+    np.testing.assert_array_equal(compact.astype(np.float64), full)
+    y = rng.integers(0, 2, size=len(values)).astype(float)
+    np.testing.assert_array_equal(discover._screen_auc(y, compact), discover.auc(y, full))
+    np.testing.assert_array_equal(discover.shift_null(y, compact, 13, promote_ranks=True), discover.shift_null(y, full, 13))
+    assert discover.rank_correlation(compact[:, 0], compact[:, 1]) == discover.rank_correlation(full[:, 0], full[:, 1])
+    valid = np.isfinite(full[:, 0])
+    assert discover.bootstrap_interval(compact[valid, 0], y[valid], 24, 77) == discover.bootstrap_interval(full[valid, 0], y[valid], 24, 77)
+    assert discover._rank_dtype(2**23, True) == pl.Float32
+    assert discover._rank_dtype(2**23+1, True) == pl.Float64
+    assert discover._rank_dtype(10, False) == pl.Float64

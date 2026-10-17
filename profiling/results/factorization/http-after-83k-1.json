@@ -1,0 +1,523 @@
+{
+  "schema": 1,
+  "case": "http",
+  "status": "complete",
+  "worker_pid": 75771,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        18.775625
+      ],
+      "median_ms": 18.775625,
+      "process_cpu_samples_ms": [
+        19.99
+      ]
+    },
+    {
+      "name": "http_data_first",
+      "samples_ms": [
+        483.954792
+      ],
+      "median_ms": 483.954792,
+      "process_cpu_samples_ms": [
+        496.902
+      ]
+    },
+    {
+      "name": "http_data_warm",
+      "samples_ms": [
+        2.917458,
+        3.052333,
+        2.359875
+      ],
+      "median_ms": 2.917458,
+      "process_cpu_samples_ms": [
+        3.722,
+        4.063,
+        3.494
+      ]
+    },
+    {
+      "name": "http_identical_cold_batch_c4",
+      "samples_ms": [
+        57.26675
+      ],
+      "median_ms": 57.26675,
+      "process_cpu_samples_ms": [
+        94.766
+      ]
+    },
+    {
+      "name": "http_warm_batch_c1",
+      "samples_ms": [
+        34.382958
+      ],
+      "median_ms": 34.382958,
+      "process_cpu_samples_ms": [
+        49.424
+      ]
+    },
+    {
+      "name": "http_warm_batch_c4",
+      "samples_ms": [
+        27.826916
+      ],
+      "median_ms": 27.826916,
+      "process_cpu_samples_ms": [
+        56.727
+      ]
+    },
+    {
+      "name": "http_warm_batch_c8",
+      "samples_ms": [
+        34.257625
+      ],
+      "median_ms": 34.257625,
+      "process_cpu_samples_ms": [
+        66.406
+      ]
+    }
+  ],
+  "peak_rss_bytes": 511885312,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "serve_import_ms": 1613.478166,
+  "ablation": "none",
+  "import_ms": 1866.652916,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 24.06640625,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "90fd88027eb06c74de57fbd7c3141d0ab653a47b",
+    "source_tree_sha256": "e205ef6c55c9408b97997f67dd67e0bd47b8383d2c2dbbdc132590e8e9e90de6"
+  },
+  "source": {
+    "file": "15m_time_bars_84b0a8617eeeb5d8.parquet",
+    "sha256": "e53f3e8f71a9b738a368e11f8e5942d098bfda6ff8e764ce115fb22e52c4f08c"
+  },
+  "input": {
+    "source_rows": 83136,
+    "rows": 83136,
+    "columns": 17,
+    "frame_bytes": 11306496,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:45:00+00:00",
+    "bar": "15m_time_bars",
+    "k": 8,
+    "reps": 3
+  },
+  "fixture_prepare_ms": 3.803125,
+  "identical_cold_build_calls": 1,
+  "http_c1": [
+    {
+      "ms": 2.099041,
+      "bytes": 7695285
+    },
+    {
+      "ms": 1.855208,
+      "bytes": 7695285
+    },
+    {
+      "ms": 1.665875,
+      "bytes": 7695285
+    },
+    {
+      "ms": 1.792292,
+      "bytes": 7695285
+    },
+    {
+      "ms": 1.786334,
+      "bytes": 7695285
+    },
+    {
+      "ms": 1.762625,
+      "bytes": 7695285
+    },
+    {
+      "ms": 1.774083,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.113833,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.051375,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.002916,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.04775,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.043291,
+      "bytes": 7695285
+    },
+    {
+      "ms": 1.996708,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.125625,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.7565,
+      "bytes": 7695285
+    },
+    {
+      "ms": 4.127292,
+      "bytes": 7695285
+    }
+  ],
+  "http_c4": [
+    {
+      "ms": 6.230417,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.873917,
+      "bytes": 7695285
+    },
+    {
+      "ms": 10.7235,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.032916,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.433417,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.647666,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.898167,
+      "bytes": 7695285
+    },
+    {
+      "ms": 4.934375,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.772166,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.168667,
+      "bytes": 7695285
+    },
+    {
+      "ms": 9.323,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.387375,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.398125,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.59575,
+      "bytes": 7695285
+    },
+    {
+      "ms": 4.71075,
+      "bytes": 7695285
+    },
+    {
+      "ms": 4.443125,
+      "bytes": 7695285
+    }
+  ],
+  "http_c8": [
+    {
+      "ms": 7.982125,
+      "bytes": 7695285
+    },
+    {
+      "ms": 10.823083,
+      "bytes": 7695285
+    },
+    {
+      "ms": 12.454333,
+      "bytes": 7695285
+    },
+    {
+      "ms": 8.308584,
+      "bytes": 7695285
+    },
+    {
+      "ms": 8.333208,
+      "bytes": 7695285
+    },
+    {
+      "ms": 10.834542,
+      "bytes": 7695285
+    },
+    {
+      "ms": 12.553333,
+      "bytes": 7695285
+    },
+    {
+      "ms": 32.33525,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.32775,
+      "bytes": 7695285
+    },
+    {
+      "ms": 12.287125,
+      "bytes": 7695285
+    },
+    {
+      "ms": 8.388459,
+      "bytes": 7695285
+    },
+    {
+      "ms": 9.748666,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.317042,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.964417,
+      "bytes": 7695285
+    },
+    {
+      "ms": 8.197916,
+      "bytes": 7695285
+    },
+    {
+      "ms": 6.692625,
+      "bytes": 7695285
+    }
+  ],
+  "http_during_qc": {
+    "data": [
+      {
+        "ms": 3.79625,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.087375,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.158041,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.589125,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.508792,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.678917,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.534459,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.448167,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.147709,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.525459,
+        "bytes": 7695285
+      },
+      {
+        "ms": 7.37675,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.355834,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.765417,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.741375,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.322333,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.720667,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.557208,
+        "bytes": 7695285
+      },
+      {
+        "ms": 1.926584,
+        "bytes": 7695285
+      },
+      {
+        "ms": 9.651458,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.536417,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.957958,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.202209,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.666542,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.547166,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.296958,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.298916,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.174542,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.16975,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.8155,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.443583,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.542209,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.572583,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.214333,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.303542,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.113083,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.358666,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.052833,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.429417,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.941625,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.100792,
+        "bytes": 7695285
+      },
+      {
+        "ms": 9.938959,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.303542,
+        "bytes": 7695285
+      },
+      {
+        "ms": 7.41725,
+        "bytes": 7695285
+      }
+    ],
+    "qc": {
+      "ms": 1168.169,
+      "bytes": 4741,
+      "report_digest": "4088d0402d1ca3b3ac06b96968dcd1c4698a7f30326870ea5022348a56419ab9"
+    },
+    "p50_ms": 3.429417,
+    "p95_ms": 7.4132,
+    "max_ms": 9.938959
+  },
+  "parity_http_data": "63722817bbea7a62e433686c5a86c99ceb34a5d117414130feb8f4bfd01b3f32",
+  "parity_http_qc": "4088d0402d1ca3b3ac06b96968dcd1c4698a7f30326870ea5022348a56419ab9"
+}

@@ -37,9 +37,10 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json", "context", "compact", "auc"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
+    parser.add_argument("--transition-searches", action="store_true", help="measure an explicitly synthetic appended pool row outside the original context")
     parser.add_argument("--warm-kernels", action="store_true", help="measure compiled-kernel setup separately before cold QC")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
@@ -61,12 +62,20 @@ def arguments():
     allowed = {"native": ("workload", "features", "views", "discover", "pool"),
                "pairs": ("qc",), "edges": ("qc",), "bootstrap": ("qc",),
                "null": ("discover",), "reuse": ("discover",), "rules": ("discover",),
-               "json": ("workload", "features", "http")}
+               "json": ("workload", "features", "http"), "context": ("discover",), "compact": ("discover",), "auc": ("discover",)}
     if args.ablate != "none" and args.case not in allowed[args.ablate]:
         parser.error("ablation does not apply to this workload")
     if args.ablate == "native" and args.case == "discover" and args.discover_phase == "search":
         parser.error("native ablation requires building a pool")
+    if args.related_searches and args.transition_searches:
+        parser.error("related and transition searches use separate bounded invocations")
+    if args.transition_searches and (args.case != "discover" or args.discover_phase != "search" or args.reps != 1):
+        parser.error("source transitions require a persisted search pool and --reps 1; repeat whole invocations")
     return args
+
+
+def source_bound_context_key(source_key, row_bits, pool, index):
+    return (source_key, row_bits) if source_key is not None else None
 
 
 def peak_bytes():
@@ -176,6 +185,7 @@ def frame_digest(frame):
 
 def worker(args):
     record = Recorder(args)
+    record.doc["profiler_sha256"] = source_digest(Path(__file__))
     # Set before Mill imports; all cache/store/config mutations stay in this directory.
     scratch = nullcontext(str(args.scratch)) if args.scratch else tempfile.TemporaryDirectory(prefix="mill_engine_sweep_")
     with scratch as directory:
@@ -217,6 +227,13 @@ def worker(args):
             discover.discovery_reuse.rule = lambda key, build: build()
         elif args.ablate == "json":
             serve.encode_rows = lambda frame: serve.orjson.dumps({"columns": frame.columns, "rows": frame.rows()})
+        elif args.ablate == "context":
+            discover.discovery_reuse.context_key = source_bound_context_key
+        elif args.ablate == "compact":
+            original_ranks = discover.column_ranks
+            discover.column_ranks = lambda values, **kwargs: original_ranks(values, compact=False)
+        elif args.ablate == "auc":
+            discover._FAST_AUC_BOOTSTRAP = False
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
@@ -243,7 +260,18 @@ def worker(args):
                 ast.fix_missing_locations(node)
             namespace = dict(module.__dict__)
             exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), "exec"), namespace)
-            setattr(module, name, namespace[name])
+            if args.ablate == "null":
+                original_null = namespace[name]
+                class DoubleTiles:
+                    def __init__(self, values):
+                        self.values, self.shape = values, values.shape
+                    def __getitem__(self, key):
+                        return self.values[key].astype(np.float64, copy=False)
+                def reference_null(y, ranks, shift, *, promote_ranks=False):
+                    return original_null(y, DoubleTiles(ranks) if promote_ranks else ranks, shift)
+                setattr(module, name, reference_null)
+            else:
+                setattr(module, name, namespace[name])
             record.doc["ablation_reference_sha256"] = source_digest(source)
         record.doc["import_ms"] = (time.perf_counter_ns() - began) / 1e6
         record.doc["environment"] = environment()
@@ -407,6 +435,7 @@ def worker(args):
             measure("report_json", lambda: json.dumps(report, allow_nan=False).encode())
             record.doc["kernel_cache_entries"] = len(qc._KERNEL_CACHE)
             record.doc["pair_count"] = len(prim.pairs)
+            record.doc["feature_columns"] = len(prim.feature_cols)
         elif args.case == "pool":
             from mill import pool_store
             digest = serve._frame_digest(raw)
@@ -422,6 +451,8 @@ def worker(args):
             measure("service_catalog_mmap_hit", lambda: pool_store.pool_for(raw, bar, None, digest))
             record.doc["partial_preparation_steps_ms"] = partial
             record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
+            record.doc["parity_pool_metadata"] = content_digest({name: getattr(pool, name) for name in
+                ("names", "natives", "factories", "sources", "params", "skipped")})
             record.doc["mapped_values"] = isinstance(pool.values, np.memmap)
         elif args.case == "discover":
             identity = {"source": record.doc["source"], "input": record.doc["input"],
@@ -445,6 +476,8 @@ def worker(args):
             else:
                 pool = measure("pool_build", lambda: discover.catalog_pool(raw) if args.catalog else discover.spec_pool(raw, spec), reps=1)
             record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
+            record.doc["parity_pool_metadata"] = content_digest({name: getattr(pool, name) for name in
+                ("names", "natives", "factories", "sources", "params", "skipped")})
             if args.discover_phase == "pool":
                 args.pool_artifact.mkdir(parents=True, exist_ok=True)
                 np.save(args.pool_artifact / "ms.npy", pool.ms, allow_pickle=False)
@@ -475,6 +508,35 @@ def worker(args):
                     discover.discovery_reuse.clear()
                 return search()
             answer = measure("discover_full", cold_search)
+            original_pool_bytes, original_pool_columns = pool.values.nbytes, len(pool.names)
+            if args.transition_searches:
+                began = time.perf_counter_ns()
+                advanced = Path(directory) / "advanced-pool"
+                advanced.mkdir()
+                n, width = pool.values.shape
+                extended = np.lib.format.open_memmap(advanced / "values.npy", mode="w+", dtype=pool.values.dtype,
+                                                    shape=(n+1, width), fortran_order=True)
+                for j in range(width):
+                    extended[:n, j], extended[n, j] = pool.values[:, j], pool.values[-1, j]
+                extended.flush()
+                del extended
+                np.save(advanced / "ms.npy", np.r_[pool.ms, pool.ms[-1]+step], allow_pickle=False)
+                fields = {name: getattr(pool, name) for name in
+                          ("names", "natives", "factories", "sources", "params", "skipped")}
+                if hasattr(discover, "mapped_pool"):
+                    pool = discover.mapped_pool(advanced, fields)
+                else:
+                    pool = discover.Pool(**fields, values=np.load(advanced / "values.npy", mmap_mode="r", allow_pickle=False),
+                                         ms=np.load(advanced / "ms.npy", mmap_mode="r", allow_pickle=False))
+                record.doc["transition_fixture"] = {"synthetic": True, "appended_rows": 1,
+                    "appended_values": "repeat final pool row; outside the original statistical context",
+                    "cache_state": "original query executed; advanced snapshot never previously searched",
+                    "setup_ms": (time.perf_counter_ns()-began)/1e6}
+                transitioned = measure("discover_source_advance", lambda: search(
+                    display=(int(pool.ms[0]), int(pool.ms[-1])+step)), reps=1)
+                record.doc["parity_transition"] = content_digest({k: v for k, v in transitioned.items() if k != "timing_ms"})
+                record.doc["transition_discovery"] = {"rows": int(pool.ms.size), "pool_bytes": pool.values.nbytes,
+                    "timing_last_ms": transitioned["timing_ms"], "context_rows": transitioned["context"]["bars"]}
             if args.related_searches:
                 related = {"repeat": measure("discover_repeat", search),
                     "display": measure("discover_display_change", lambda: search(top=1, max_points=128,
@@ -486,7 +548,7 @@ def worker(args):
                 related["windows"] = measure("discover_changed_windows", new_windows)
                 record.doc["parity_related"] = {name: content_digest({k: v for k, v in result.items()
                     if k != "timing_ms"}) for name, result in related.items()}
-            record.doc["discovery"] = {"columns": len(pool.names), "pool_bytes": pool.values.nbytes,
+            record.doc["discovery"] = {"columns": original_pool_columns, "pool_bytes": original_pool_bytes,
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}
             record.doc["parity_discovery"] = content_digest({k: v for k, v in answer.items() if k != "timing_ms"})
@@ -541,13 +603,15 @@ def worker(args):
             prefix = f"http://127.0.0.1:{server.server_port}"
             route = "/data?" + urlencode({"bars": bar, "target": "next_return", "features": json.dumps(spec)})
             auth = {"Authorization": "Basic " + base64.b64encode(b"profile:local").decode()}
-            def request(route):
+            def request(route, validate=False):
                 began = time.perf_counter_ns()
                 with urlopen(Request(prefix + route, headers=auth), timeout=15) as response:
                     payload = response.read()
                 out = {"ms": (time.perf_counter_ns() - began) / 1e6, "bytes": len(payload)}
                 if route.startswith("/qc?"):
                     out["report_digest"] = content_digest(json.loads(payload))
+                if validate:
+                    out["data_digest"] = content_digest(json.loads(payload))
                 return out
             try:
                 measure("http_data_first", lambda: request(route), reps=1)
@@ -588,6 +652,9 @@ def worker(args):
                     "p50_ms": float(np.percentile([s["ms"] for s in samples], 50)),
                     "p95_ms": float(np.percentile([s["ms"] for s in samples], 95)),
                     "max_ms": max(s["ms"] for s in samples)}
+                # Output validation is outside the timed request batches.
+                record.doc["parity_http_data"] = request(route, validate=True)["data_digest"]
+                record.doc["parity_http_qc"] = qc_result["report_digest"]
             finally:
                 if hasattr(serve, "_RESEARCH"):
                     serve._RESEARCH.close()

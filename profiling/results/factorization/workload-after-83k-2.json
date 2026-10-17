@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "case": "workload",
+  "status": "complete",
+  "worker_pid": 27074,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        18.71075
+      ],
+      "median_ms": 18.71075,
+      "process_cpu_samples_ms": [
+        19.891
+      ]
+    },
+    {
+      "name": "all_views_cold_first",
+      "samples_ms": [
+        534.903375
+      ],
+      "median_ms": 534.903375,
+      "process_cpu_samples_ms": [
+        752.997
+      ]
+    },
+    {
+      "name": "all_views_cold_repeated",
+      "samples_ms": [
+        670.375083,
+        1019.738708,
+        1017.160875
+      ],
+      "median_ms": 1017.160875,
+      "process_cpu_samples_ms": [
+        784.287,
+        847.863,
+        805.59
+      ]
+    },
+    {
+      "name": "all_views_steady",
+      "samples_ms": [
+        0.251875,
+        0.162542,
+        0.156083
+      ],
+      "median_ms": 0.162542,
+      "process_cpu_samples_ms": [
+        0.253,
+        0.163,
+        0.156
+      ]
+    }
+  ],
+  "peak_rss_bytes": 887160832,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "serve_import_ms": 2442.506792,
+  "ablation": "none",
+  "import_ms": 2802.863833,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 22.9013671875,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "e5b9e05867d164aa662a15808c4e73fc8c0ae718",
+    "source_tree_sha256": "e205ef6c55c9408b97997f67dd67e0bd47b8383d2c2dbbdc132590e8e9e90de6"
+  },
+  "source": {
+    "file": "15m_time_bars_84b0a8617eeeb5d8.parquet",
+    "sha256": "e53f3e8f71a9b738a368e11f8e5942d098bfda6ff8e764ce115fb22e52c4f08c"
+  },
+  "input": {
+    "source_rows": 83136,
+    "rows": 83136,
+    "columns": 17,
+    "frame_bytes": 11306496,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:45:00+00:00",
+    "bar": "15m_time_bars",
+    "k": 8,
+    "reps": 3
+  },
+  "fixture_prepare_ms": 3.313333,
+  "parity_workload": {
+    "gen3": {
+      "frame": "f4bd5623f475f0566ede2c328a5ad2a243ec858edff3f057fd60026411929c66",
+      "payload": "b2affbefa575f4201cd8cbcc482ab1d6fecf87565cad35672ab97ffa9d940ab3"
+    },
+    "gen4": {
+      "frame": "386c510f620f1604e11888b18150ea2748bb7d15d34f59cba9191f1d606e905c",
+      "payload": "3c7f3b1080ed0c59743c03084dbc5eac6ef29387d5978865a13cdf05df7c7497"
+    },
+    "jolt": {
+      "frame": "0d6e7fccf022b2661ac02b1d8a22688dbc998f77ab045cad1a132812cbff4899",
+      "payload": "892fc1eaf66938c87be030e7936624f1e3bea46c5e156e2f4250043412c0ed8d"
+    },
+    "log_return": {
+      "frame": "f35dcce6084b3df006070b412fb2af3882f679e05fbca61cbe980c9cecac136b",
+      "payload": "4b94e35c4d0ea6604bdce10b1619096c8b7f5e0ae0a80f0960317b1af87f1c96"
+    },
+    "nth_time_period": {
+      "frame": "5bbde0c46f346c36d72a337cba467f8cf732a13ac40ddf8eba0223a1fd08929e",
+      "payload": "df0e7c320783696c5286ce79088d23abee5928a8deea7853d3f0224c400fa277"
+    },
+    "ochlv": {
+      "frame": "b76a2a32f3d8671236390df959c3466790c6b3656d53e1c7a034a12bf7f36a67",
+      "payload": "11a6af2523457562f53f18311518343d14ee743ec222bc67b54584a8f38ef6d2"
+    },
+    "roc": {
+      "frame": "12d90981c70cf5d7765596524f43a8442ba3d3f024d19ef203cd8ff60e61ed4f",
+      "payload": "71e00f4473d2964b0b3ea2c89a04bc2da9369b0912c32a905d8feca28d6f3952"
+    },
+    "super": {
+      "frame": "2b2f5071885a72b5b3966e5fb3de77e589b43c1295c4314d83a20b83f7729b5b",
+      "payload": "2c2fcca685165dd93b362f417fe44940763793b38f19f927cebbeed9e8df70fa"
+    }
+  },
+  "payload_digest_scope": "canonical parsed JSON; numeric values and types are preserved",
+  "output_bytes": 58479140,
+  "workload_views": [
+    "gen3",
+    "gen4",
+    "jolt",
+    "log_return",
+    "nth_time_period",
+    "ochlv",
+    "roc",
+    "super"
+  ]
+}

@@ -1,0 +1,547 @@
+{
+  "schema": 1,
+  "case": "http",
+  "status": "complete",
+  "worker_pid": 77063,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        116.653708
+      ],
+      "median_ms": 116.653708,
+      "process_cpu_samples_ms": [
+        35.995
+      ]
+    },
+    {
+      "name": "http_data_first",
+      "samples_ms": [
+        510.222833
+      ],
+      "median_ms": 510.222833,
+      "process_cpu_samples_ms": [
+        498.736
+      ]
+    },
+    {
+      "name": "http_data_warm",
+      "samples_ms": [
+        4.308458,
+        4.557083,
+        4.171208
+      ],
+      "median_ms": 4.308458,
+      "process_cpu_samples_ms": [
+        5.046,
+        5.396,
+        4.351
+      ]
+    },
+    {
+      "name": "http_identical_cold_batch_c4",
+      "samples_ms": [
+        67.058584
+      ],
+      "median_ms": 67.058584,
+      "process_cpu_samples_ms": [
+        100.398
+      ]
+    },
+    {
+      "name": "http_warm_batch_c1",
+      "samples_ms": [
+        52.321792
+      ],
+      "median_ms": 52.321792,
+      "process_cpu_samples_ms": [
+        64.986
+      ]
+    },
+    {
+      "name": "http_warm_batch_c4",
+      "samples_ms": [
+        26.716833
+      ],
+      "median_ms": 26.716833,
+      "process_cpu_samples_ms": [
+        66.137
+      ]
+    },
+    {
+      "name": "http_warm_batch_c8",
+      "samples_ms": [
+        21.02025
+      ],
+      "median_ms": 21.02025,
+      "process_cpu_samples_ms": [
+        67.057
+      ]
+    }
+  ],
+  "peak_rss_bytes": 519520256,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "serve_import_ms": 4455.062958,
+  "ablation": "none",
+  "import_ms": 4951.464458,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 22.767578125,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "90fd88027eb06c74de57fbd7c3141d0ab653a47b",
+    "source_tree_sha256": "e205ef6c55c9408b97997f67dd67e0bd47b8383d2c2dbbdc132590e8e9e90de6"
+  },
+  "source": {
+    "file": "15m_time_bars_84b0a8617eeeb5d8.parquet",
+    "sha256": "e53f3e8f71a9b738a368e11f8e5942d098bfda6ff8e764ce115fb22e52c4f08c"
+  },
+  "input": {
+    "source_rows": 83136,
+    "rows": 83136,
+    "columns": 17,
+    "frame_bytes": 11306496,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:45:00+00:00",
+    "bar": "15m_time_bars",
+    "k": 8,
+    "reps": 3
+  },
+  "fixture_prepare_ms": 23.204875,
+  "identical_cold_build_calls": 1,
+  "http_c1": [
+    {
+      "ms": 3.37525,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.053959,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.233916,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.720542,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.475875,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.096917,
+      "bytes": 7695285
+    },
+    {
+      "ms": 2.974583,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.218958,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.058041,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.209708,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.467375,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.118458,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.041417,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.096792,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.556583,
+      "bytes": 7695285
+    },
+    {
+      "ms": 3.251,
+      "bytes": 7695285
+    }
+  ],
+  "http_c4": [
+    {
+      "ms": 7.899292,
+      "bytes": 7695285
+    },
+    {
+      "ms": 8.560542,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.369,
+      "bytes": 7695285
+    },
+    {
+      "ms": 9.7745,
+      "bytes": 7695285
+    },
+    {
+      "ms": 6.116209,
+      "bytes": 7695285
+    },
+    {
+      "ms": 6.647583,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.831125,
+      "bytes": 7695285
+    },
+    {
+      "ms": 6.553375,
+      "bytes": 7695285
+    },
+    {
+      "ms": 6.361875,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.247875,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.332209,
+      "bytes": 7695285
+    },
+    {
+      "ms": 5.25025,
+      "bytes": 7695285
+    },
+    {
+      "ms": 6.391375,
+      "bytes": 7695285
+    },
+    {
+      "ms": 4.441833,
+      "bytes": 7695285
+    },
+    {
+      "ms": 4.580875,
+      "bytes": 7695285
+    },
+    {
+      "ms": 4.172958,
+      "bytes": 7695285
+    }
+  ],
+  "http_c8": [
+    {
+      "ms": 8.930625,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.706,
+      "bytes": 7695285
+    },
+    {
+      "ms": 9.197709,
+      "bytes": 7695285
+    },
+    {
+      "ms": 11.891958,
+      "bytes": 7695285
+    },
+    {
+      "ms": 12.844875,
+      "bytes": 7695285
+    },
+    {
+      "ms": 8.460583,
+      "bytes": 7695285
+    },
+    {
+      "ms": 10.677291,
+      "bytes": 7695285
+    },
+    {
+      "ms": 10.867084,
+      "bytes": 7695285
+    },
+    {
+      "ms": 9.257833,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.605042,
+      "bytes": 7695285
+    },
+    {
+      "ms": 9.941125,
+      "bytes": 7695285
+    },
+    {
+      "ms": 9.588792,
+      "bytes": 7695285
+    },
+    {
+      "ms": 8.406625,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.182917,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.675417,
+      "bytes": 7695285
+    },
+    {
+      "ms": 7.334209,
+      "bytes": 7695285
+    }
+  ],
+  "http_during_qc": {
+    "data": [
+      {
+        "ms": 4.352666,
+        "bytes": 7695285
+      },
+      {
+        "ms": 8.336709,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.875667,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.125334,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.062375,
+        "bytes": 7695285
+      },
+      {
+        "ms": 1.876042,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.418666,
+        "bytes": 7695285
+      },
+      {
+        "ms": 5.069125,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.964792,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.367416,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.854042,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.632125,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.506708,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.297125,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.273042,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.3045,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.3945,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.0795,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.395833,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.52325,
+        "bytes": 7695285
+      },
+      {
+        "ms": 6.001208,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.670959,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.712417,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.389875,
+        "bytes": 7695285
+      },
+      {
+        "ms": 7.076125,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.639375,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.275292,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.042666,
+        "bytes": 7695285
+      },
+      {
+        "ms": 1.906167,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.33675,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.8465,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.590167,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.695833,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.916541,
+        "bytes": 7695285
+      },
+      {
+        "ms": 2.980833,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.774167,
+        "bytes": 7695285
+      },
+      {
+        "ms": 1.951375,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.182583,
+        "bytes": 7695285
+      },
+      {
+        "ms": 1.966541,
+        "bytes": 7695285
+      },
+      {
+        "ms": 3.075334,
+        "bytes": 7695285
+      },
+      {
+        "ms": 4.369125,
+        "bytes": 7695285
+      },
+      {
+        "ms": 5.741292,
+        "bytes": 7695285
+      },
+      {
+        "ms": 12.005375,
+        "bytes": 7695285
+      },
+      {
+        "ms": 29.998083,
+        "bytes": 7695285
+      },
+      {
+        "ms": 12.525083,
+        "bytes": 7695285
+      },
+      {
+        "ms": 28.258167,
+        "bytes": 7695285
+      },
+      {
+        "ms": 14.180625,
+        "bytes": 7695285
+      },
+      {
+        "ms": 9.10125,
+        "bytes": 7695285
+      },
+      {
+        "ms": 16.4345,
+        "bytes": 7695285
+      }
+    ],
+    "qc": {
+      "ms": 1411.470166,
+      "bytes": 4741,
+      "report_digest": "4088d0402d1ca3b3ac06b96968dcd1c4698a7f30326870ea5022348a56419ab9"
+    },
+    "p50_ms": 3.182583,
+    "p95_ms": 15.532949999999987,
+    "max_ms": 29.998083
+  },
+  "parity_http_data": "63722817bbea7a62e433686c5a86c99ceb34a5d117414130feb8f4bfd01b3f32",
+  "parity_http_qc": "4088d0402d1ca3b3ac06b96968dcd1c4698a7f30326870ea5022348a56419ab9"
+}

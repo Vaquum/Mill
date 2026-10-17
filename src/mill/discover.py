@@ -46,6 +46,7 @@ _BOOTSTRAP_BATCH = 8
 _BEYOND_ONE_IN = 20
 # FFT and direct sums agree far closer than this; a near tie counts against the column.
 _TIE = 1e-9
+_FAST_AUC_BOOTSTRAP = True
 
 
 @dataclass(frozen=True)
@@ -206,12 +207,30 @@ def runs(flags: np.ndarray) -> list[tuple[int, int]]:
     return list(zip(np.flatnonzero(edges == 1).tolist(), np.flatnonzero(edges == -1).tolist()))
 
 
-def column_ranks(values: np.ndarray) -> np.ndarray:
+def _rank_dtype(n: int, compact: bool):
+    # Average ranks are integers or halves. Float32 represents every such
+    # value through 2**23 exactly; larger contexts retain Float64 storage.
+    return pl.Float32 if compact and n <= 2**23 else pl.Float64
+
+
+def column_ranks(values: np.ndarray, *, compact: bool = False) -> np.ndarray:
     """Average ranks of each column among its finite rows; NaN where undefined."""
     if values.shape[1] == 0:
         return values.copy()
     frame = pl.from_numpy(values).fill_nan(None)
-    return frame.select(pl.all().rank("average")).to_numpy().astype(np.float64, copy=False)
+    return frame.select(pl.all().rank("average").cast(_rank_dtype(values.shape[0], compact))).to_numpy()
+
+
+def _screen_auc(y, ranks):
+    if ranks.dtype != np.float32:
+        return auc(y, ranks)
+    # Promote one tile, rather than allocating a second full Float64 matrix.
+    # Binary labels and bounded half-integer ranks make every sum exact.
+    result = np.empty(ranks.shape[1], dtype=np.float64)
+    for start in range(0, ranks.shape[1], _FFT_CHUNK):
+        block = ranks[:, start:start+_FFT_CHUNK].astype(np.float64)
+        result[start:start+block.shape[1]] = auc(y, block)
+    return result
 
 
 def auc(y: np.ndarray, ranks: np.ndarray) -> np.ndarray:
@@ -226,7 +245,7 @@ def auc(y: np.ndarray, ranks: np.ndarray) -> np.ndarray:
     return out
 
 
-def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
+def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int, *, promote_ranks: bool = False) -> np.ndarray:
     """The best separation |AUC - 0.5| in the pool for every allowed circular shift of y.
 
     Shifts closer than min_shift to zero (either way) are excluded, so with
@@ -253,6 +272,8 @@ def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
         n0 = valid.sum() - n1
         for c0 in range(0, len(columns), _FFT_CHUNK):
             block = ranks[:, columns[c0:c0 + _FFT_CHUNK]]
+            if promote_ranks:
+                block = block.astype(np.float64, copy=False)
             s1 = np.fft.irfft(fy[:, None] * np.fft.rfft(np.nan_to_num(block), axis=0), n=n, axis=0)[shifts]
             with np.errstate(invalid="ignore", divide="ignore"):
                 sep = np.abs((s1 - n1 * (n1 + 1) / 2) / (n1 * n0) - 0.5)
@@ -315,6 +336,20 @@ def bootstrap_interval(x: np.ndarray, y: np.ndarray, block: int, seed: int) -> t
     if binary:
         codes = np.empty(n, dtype=np.int64)
         codes[order] = np.repeat(np.arange(groups.size), np.diff(np.r_[groups, n]))
+        if _FAST_AUC_BOOTSTRAP and n <= 2**23:
+            # At this bound all counts fit Int32 and every half-integer win
+            # total fits Float64 exactly. Preserve the original RNG starts.
+            from .auc_bootstrap import draws as exact_draws
+            positive = y == 1
+            positive_groups = np.unique(codes[positive]).astype(np.int32)
+            slots = np.full(n, -1, dtype=np.int32)
+            slots[positive] = np.searchsorted(positive_groups, codes[positive]).astype(np.int32)
+            draws = exact_draws(codes.astype(np.int32), slots, positive_groups, starts, block, groups.size)
+            draws = draws[np.isfinite(draws)]
+            if not draws.size:
+                return None
+            lo, hi = np.quantile(draws, [0.05, 0.95])
+            return float(lo), float(hi)
         labels = codes * 2 + y.astype(np.int64)
     draws = np.empty(_BOOTSTRAP_DRAWS)
     for offset in range(0, _BOOTSTRAP_DRAWS, _BOOTSTRAP_BATCH):
@@ -506,12 +541,12 @@ def _analyze(pool, index, y, intervals, rank_key):
     def build_ranks():
         values = (pool.values[index[0]:index[-1] + 1]
                   if index.size and index[-1] - index[0] + 1 == index.size else pool.values[index])
-        return column_ranks(values)
+        return column_ranks(values, compact=True)
     ranks = discovery_reuse.ranks(rank_key, build_ranks)
     timing = {"rank": time.perf_counter() - clock0}
 
     clock1 = time.perf_counter()
-    point = auc(y, ranks)
+    point = _screen_auc(y, ranks)
     separation = np.abs(point - 0.5)
     ranked = np.flatnonzero(np.isfinite(separation))
     ranked = ranked[np.argsort(-separation[ranked], kind="stable")]
@@ -520,7 +555,7 @@ def _analyze(pool, index, y, intervals, rank_key):
     clock2 = time.perf_counter()
     longest = max(b - a for a, b in runs(y.astype(bool)))
     min_shift = longest
-    null = shift_null(y, ranks, min_shift)
+    null = shift_null(y, ranks, min_shift, promote_ranks=ranks.dtype == np.float32)
     timing["null"] = time.perf_counter() - clock2
     critical = critical_separation(null)
 
@@ -567,15 +602,17 @@ def discover(
     y = marked[index].astype(np.float64)
     intervals = len(events) >= MIN_EVENTS_FOR_INTERVALS
     source_key = discovery_reuse.pool_key(pool)
-    rank_key = (source_key, np.packbits(rows).tobytes()) if source_key is not None else None
+    row_bits = np.packbits(rows).tobytes() if source_key is not None else None
+    rank_key = discovery_reuse.context_key(source_key, row_bits, pool, index)
     constants = (_SCREEN_LEADERS, _CLUSTER_RHO, _BOOTSTRAP_DRAWS, _MIN_BLOCK, _BEYOND_ONE_IN,
-                 _FFT_CHUNK, _BOOTSTRAP_BATCH, MAX_LEADERS, MIN_EVENTS_FOR_INTERVALS, _TIE)
-    key = (rank_key, np.packbits(marked).tobytes(), constants) if rank_key is not None else None
+                 _FFT_CHUNK, _BOOTSTRAP_BATCH, MAX_LEADERS, MIN_EVENTS_FOR_INTERVALS, _TIE, _FAST_AUC_BOOTSTRAP)
+    key = (rank_key, np.packbits(y.astype(bool)).tobytes(), intervals, constants) if rank_key is not None else None
+    rule_scope = (source_key, row_bits, np.packbits(marked).tobytes()) if source_key is not None else None
     state, timing = discovery_reuse.analysis(key, lambda: _analyze(pool, index, y, intervals, rank_key))
     clock3 = time.perf_counter()
     leaders = [_describe(state["leaders"][i], pool, state["kept"][i], marked, rows, events, step_ms,
                          context, display, max_points, bar_source, label,
-                         (key, state["kept"][i], _PERSISTENCE) if key is not None else None)
+                         (rule_scope, state["kept"][i], _PERSISTENCE) if rule_scope is not None else None)
                for i in state["order"][:top]]
     timing["stage_two"] += time.perf_counter() - clock3
     timing["total"] = time.perf_counter() - clock0

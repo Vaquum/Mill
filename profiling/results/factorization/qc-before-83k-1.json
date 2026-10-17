@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "case": "qc",
+  "status": "complete",
+  "worker_pid": 39293,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        19.040709
+      ],
+      "median_ms": 19.040709,
+      "process_cpu_samples_ms": [
+        19.433
+      ]
+    },
+    {
+      "name": "compiled_kernel_setup",
+      "samples_ms": [
+        107.1355
+      ],
+      "median_ms": 107.1355,
+      "process_cpu_samples_ms": [
+        93.952
+      ]
+    },
+    {
+      "name": "qc_precompute_cold",
+      "samples_ms": [
+        15846.670875
+      ],
+      "median_ms": 15846.670875,
+      "process_cpu_samples_ms": [
+        16041.444
+      ]
+    },
+    {
+      "name": "qc_report_warm_kernel_cache",
+      "samples_ms": [
+        38.157125
+      ],
+      "median_ms": 38.157125,
+      "process_cpu_samples_ms": [
+        39.796
+      ]
+    },
+    {
+      "name": "qc_report_for_precomputed",
+      "samples_ms": [
+        0.3675
+      ],
+      "median_ms": 0.3675,
+      "process_cpu_samples_ms": [
+        0.368
+      ]
+    },
+    {
+      "name": "qc_sweep_sizes_1_2_3",
+      "samples_ms": [
+        147.023917
+      ],
+      "median_ms": 147.023917,
+      "process_cpu_samples_ms": [
+        144.916
+      ]
+    },
+    {
+      "name": "grade_map",
+      "samples_ms": [
+        0.614083
+      ],
+      "median_ms": 0.614083,
+      "process_cpu_samples_ms": [
+        0.594
+      ]
+    },
+    {
+      "name": "report_json",
+      "samples_ms": [
+        0.227167
+      ],
+      "median_ms": 0.227167,
+      "process_cpu_samples_ms": [
+        0.227
+      ]
+    }
+  ],
+  "peak_rss_bytes": 546979840,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "serve_import_ms": 2163.782542,
+  "ablation": "none",
+  "import_ms": 2482.14775,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 27.5546875,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": null,
+    "source_tree_sha256": "945d66a832bc92a7b23f9bec8f98f8ecb73fc72a084e249e1a1a62fc8bc7267c"
+  },
+  "source": {
+    "file": "15m_time_bars_84b0a8617eeeb5d8.parquet",
+    "sha256": "e53f3e8f71a9b738a368e11f8e5942d098bfda6ff8e764ce115fb22e52c4f08c"
+  },
+  "input": {
+    "source_rows": 83136,
+    "rows": 83136,
+    "columns": 17,
+    "frame_bytes": 11306496,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:45:00+00:00",
+    "bar": "15m_time_bars",
+    "k": 30,
+    "reps": 1
+  },
+  "fixture_prepare_ms": 4.849084,
+  "bootstrap_signatures_before": [
+    "(Array(float64, 1, 'C', False, aligned=True), Array(float64, 1, 'C', False, aligned=True), Array(int64, 2, 'C', False, aligned=True))"
+  ],
+  "qc_cold_sections_ms": {
+    "_block_size": 191.732082,
+    "_edge_map": 4224.172,
+    "_regime_map": 451.17925,
+    "_health_map": 214.392834,
+    "_pair_map": 10760.376917
+  },
+  "bootstrap_signatures_after": [
+    "(Array(float64, 1, 'C', False, aligned=True), Array(float64, 1, 'C', False, aligned=True), Array(int64, 2, 'C', False, aligned=True))"
+  ],
+  "parity_report": "2d1a208b8d8b95cf579cd0e371c91d0b6981c73238a3153ea35ee764082bcb73",
+  "kernel_cache_entries": 682,
+  "pair_count": 465,
+  "feature_columns": 31
+}

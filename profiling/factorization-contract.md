@@ -41,12 +41,27 @@ Scratch has at most eight lanes; no allocation occurs inside the draw loop.
 Related discovery runs share context ranks and the numerical analysis separately
 from rendering. Admission requires read-only pool maps with identities captured
 before and after opening, plus complete metadata, shape and dtype. Atomic file
-replacement cannot relabel an existing mapping. Rank keys include exact context
-row bits; analysis keys also include marked-row bits and every statistical
-constant. Display, top count, point count, labels and manifests are rendered
+replacement cannot relabel an existing mapping. Within a source version, rank
+admission includes exact context row bits. Across versions, the selected values
+are hashed column by column before sharing ranks; timestamps or append-only
+assumptions cannot establish equality. Analysis keys also include compact target
+bits and every statistical constant. Display, top count, point count, labels and manifests are rendered
 from current arguments. Mutable library pools are uncached. Retained ranks and
-analysis containers have independent 256/16 MiB budgets; returned containers
-cannot mutate retained state. Changed worker data environments clear both.
+analysis containers have independent 256/16 MiB budgets. Context admission and
+full-series rule results have separate 4/16 MiB budgets. Rules depend on the
+current full snapshot, selected rows, marked rows and persistence settings, even
+when historical numerical analysis is reused. Returned containers cannot mutate
+retained state. Changed worker data environments clear all four caches.
+
+Internal average ranks use Float32 only through 2**23 rows: integer/half-integer
+ranks are exact in that representation. Screen reductions and FFT inputs promote
+bounded 16-column tiles to Float64 explicitly; NumPy's Float32 FFT must not be
+assumed to promote. Larger contexts retain Float64. Public column_ranks retains
+its Float64 default. Binary discovery AUC bootstrap uses the original seeded
+circular block starts, difference counts, rank-group totals and sparse positive
+counts. Its integer counts and Float64 half-integer sums are exact through the
+same bound. Nonbinary/larger inputs retain the original path. Scratch is allocated
+outside the draw loop, and compilation occurs lazily only when intervals apply.
 
 Measurement gates: repeated matched full-history runs against the reference,
 including cold setup, feature building, target joins, output serialization,
