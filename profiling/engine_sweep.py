@@ -345,6 +345,8 @@ def main():
                 if code == -signal.SIGALRM:
                     finish("timeout_49s")
                     return 124
+                if code != 0:
+                    finish("error")
                 return code
             except BaseException as exc:
                 if process.poll() is None:

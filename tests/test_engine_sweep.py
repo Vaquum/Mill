@@ -51,6 +51,15 @@ def test_input_is_never_the_output(parquet, tmp_path):
     assert result.returncode == 2 and parquet.read_bytes() == before
 
 
+def test_worker_failure_is_recorded(parquet, tmp_path):
+    output = tmp_path / "error.json"
+    result = subprocess.run(command(parquet, output, "discover", "--rows", "3"),
+                            cwd=tmp_path, capture_output=True, timeout=45)
+    record = json.loads(output.read_text())
+    assert result.returncode != 0 and record["status"] == "error"
+    assert "at least four input bars" in record["error"]
+
+
 def test_supervisor_sigterm_kills_worker_and_removes_fixtures(parquet, tmp_path):
     output = tmp_path / "result.json"
     scratch = tmp_path / "scratch"
