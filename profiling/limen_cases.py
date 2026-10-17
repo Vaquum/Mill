@@ -6,7 +6,8 @@ import warnings
 from datetime import datetime, timedelta, timezone
 
 
-CASES = ("empty", "one", "short", "ties", "missing", "infinite", "nondefault", "float32", "integer")
+CASES = ("empty", "one", "short", "ties", "missing", "infinite", "nondefault", "float32", "integer",
+         "near_full_window", "overlong_window")
 
 
 def digest(value):
@@ -113,6 +114,9 @@ def snapshot():
         results = {}
         for item in catalog:
             kwargs = parameters(item["params"]) if case == "nondefault" else {}
+            if case in ("near_full_window", "overlong_window"):
+                kwargs = {p["name"]: 70 if case == "near_full_window" else 100
+                          for p in item["params"] if p["type"] == "int" and "period" in p["name"]}
             try:
                 frame = feature_registry.REGISTRY[item["name"]]["producer"](raw, **kwargs)
                 results[item["name"]] = {"schema": str(frame.schema), "digest": frame_digest(frame)}

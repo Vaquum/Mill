@@ -1,4 +1,5 @@
 """Compare the full factory contract against the pinned reference on this runtime."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -66,7 +67,12 @@ def main():
             assert left["rows"] == right["rows"] and left["input_digest"] == right["input_digest"]
             differences += [{"case": case, "factory": name, "before": value, "after": right["results"][name]}
                 for name,value in left["results"].items() if value != right["results"][name]]
+        from verify_factorization import tree
+        root = Path(__file__).resolve().parents[1]
         result = {"reference": before, "current": after, "differences": differences,
+                  "source_tree_sha256": tree(root),
+                  "factory_contract_sha256": hashlib.sha256((root/"src/mill/factory_contract.json").read_bytes()).hexdigest(),
+                  "reference_integrity": verify(reference),
                   "checks": len(before["catalog"])*len(before["cases"])}
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2)+"\n")

@@ -22,8 +22,13 @@ def verify(root, fingerprint):
     assert document["upstream_commit"] == CURRENT
     assert json.loads(distribution("vaquum_limen").read_text("direct_url.json"))["vcs_info"]["commit_id"] == CURRENT
     functional = json.loads((root/document["functional_comparison"]).read_text())
-    assert not functional["differences"] and functional["checks"] == 226*9
+    assert not functional["differences"] and functional["checks"] == 226*11
+    assert functional["source_tree_sha256"] == fingerprint
+    assert functional["factory_contract_sha256"] == document["factory_contract_sha256"]
+    assert len(functional["reference"]["cases"]) == 11
+    assert len(functional["reference"]["catalog"]) == 226
     assert functional["reference"]["catalog"] == functional["current"]["catalog"]
+    assert functional["current"]["catalog"] == json.loads((root/"src/mill/factory_contract.json").read_text())["factories"]
     for name,left in functional["reference"]["cases"].items():
         assert left == functional["current"]["cases"][name]
     drivers = {path: sha(root/path) for path in
