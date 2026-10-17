@@ -112,3 +112,36 @@ def test_mutable_library_pools_are_never_reused(tmp_path):
     before = _answer(mutable, options)
     mutable.values[:, 0] *= -1
     assert _answer(mutable, options) != before
+
+
+def test_source_advances_outside_context_reuse_stats_but_refresh_full_series_rules(tmp_path, monkeypatch):
+    discovery_reuse.clear()
+    old, fields = _pool(tmp_path / "old")
+    options = _options(old)
+    newer = tmp_path / "new"
+    newer.mkdir()
+    np.save(newer / "values.npy", np.vstack([old.values, old.values[-10:]]))
+    np.save(newer / "ms.npy", np.r_[old.ms, old.ms[-1]+np.arange(1, 11)*3_600_000])
+    new = discover.mapped_pool(newer, fields)
+    counts = []
+    original = discover.shift_null
+    with monkeypatch.context() as patch:
+        patch.setattr(discover, "shift_null", lambda *args: (counts.append(1), original(*args))[1])
+        _answer(old, options)
+        updated = options | {"display": (int(new.ms[0]), int(new.ms[-1])+3_600_000)}
+        actual = _answer(new, updated)
+        assert len(counts) == 1
+    assert actual == _answer(replace(new, _identity=None), updated)
+    # Corrections inside the historical context invalidate numerical results.
+    changed = tmp_path / "changed"
+    changed.mkdir()
+    values = new.values.copy()
+    values[20, 0] += 100
+    np.save(changed / "values.npy", values)
+    np.save(changed / "ms.npy", new.ms)
+    corrected = discover.mapped_pool(changed, fields)
+    with monkeypatch.context() as patch:
+        patch.setattr(discover, "shift_null", lambda *args: (counts.append(1), original(*args))[1])
+        actual = _answer(corrected, updated)
+        assert len(counts) == 2
+    assert actual == _answer(replace(corrected, _identity=None), updated)
