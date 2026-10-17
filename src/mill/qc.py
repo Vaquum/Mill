@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import polars as pl
-from numba import get_num_threads, get_thread_id, njit, prange
+from numba import njit, prange
 from scipy import stats
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from statsmodels.tsa.stattools import acf, adfuller, kpss
@@ -641,38 +641,42 @@ def _bootstrap_spearman_estimates(
     # in one index pass and reduce directly from the rank tables: sampled
     # rank arrays, repeated means and centered/multiplied arrays are redundant.
     nx, ny = codes_x.max() + 1, codes_y.max() + 1
-    work_x = np.empty((get_num_threads(), nx), dtype=np.float64)
-    work_y = np.empty((get_num_threads(), ny), dtype=np.float64)
-    for i in prange(n_iter):
-        if has_nan:
-            value = _pearson(_rankdata_1d(arr_x[idx[i]]), _rankdata_1d(arr_y[idx[i]]))
-        else:
-            rx, ry = work_x[get_thread_id()], work_y[get_thread_id()]
-            rx[:] = 0
-            ry[:] = 0
-            for row in idx[i]:
-                rx[codes_x[row]] += 1
-                ry[codes_y[row]] += 1
-            below = 0.
-            for group in range(nx):
-                count = rx[group]
-                rx[group] = below + (count + 1) / 2.
-                below += count
-            below = 0.
-            for group in range(ny):
-                count = ry[group]
-                ry[group] = below + (count + 1) / 2.
-                below += count
-            mean = (idx.shape[1] + 1) / 2.
-            xx, yy, xy = 0., 0., 0.
-            for row in idx[i]:
-                x, y = rx[codes_x[row]] - mean, ry[codes_y[row]] - mean
-                xx += x*x
-                yy += y*y
-                xy += x*y
-            denominator = np.sqrt(xx*yy)
-            value = xy / denominator if denominator else 0.
-        estimates[i] = 0.0 if np.isnan(value) else value
+    # Fixed lanes keep scratch bounded and avoid runtime thread-ID globals,
+    # which prevent Numba from persisting this kernel's compiled code.
+    lanes = min(8, n_iter)
+    work_x = np.empty((lanes, nx), dtype=np.float64)
+    work_y = np.empty((lanes, ny), dtype=np.float64)
+    for lane in prange(lanes):
+        rx, ry = work_x[lane], work_y[lane]
+        for i in range(lane, n_iter, lanes):
+            if has_nan:
+                value = _pearson(_rankdata_1d(arr_x[idx[i]]), _rankdata_1d(arr_y[idx[i]]))
+            else:
+                rx[:] = 0
+                ry[:] = 0
+                for row in idx[i]:
+                    rx[codes_x[row]] += 1
+                    ry[codes_y[row]] += 1
+                below = 0.
+                for group in range(nx):
+                    count = rx[group]
+                    rx[group] = below + (count + 1) / 2.
+                    below += count
+                below = 0.
+                for group in range(ny):
+                    count = ry[group]
+                    ry[group] = below + (count + 1) / 2.
+                    below += count
+                mean = (idx.shape[1] + 1) / 2.
+                xx, yy, xy = 0., 0., 0.
+                for row in idx[i]:
+                    x, y = rx[codes_x[row]] - mean, ry[codes_y[row]] - mean
+                    xx += x*x
+                    yy += y*y
+                    xy += x*y
+                denominator = np.sqrt(xx*yy)
+                value = xy / denominator if denominator else 0.
+            estimates[i] = 0.0 if np.isnan(value) else value
     return estimates
 
 
