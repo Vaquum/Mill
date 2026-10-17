@@ -1,0 +1,143 @@
+{
+  "command": "python -X importtime -c import_mill.serve",
+  "note": "Separate process; cumulative import times overlap and must not be added. Warm OS cache; import tracing has overhead.",
+  "top_cumulative": [
+    {
+      "self_us": 1316,
+      "cumulative_us": 4149794,
+      "module": "mill.serve"
+    },
+    {
+      "self_us": 1161,
+      "cumulative_us": 1988213,
+      "module": "mill.discover"
+    },
+    {
+      "self_us": 16,
+      "cumulative_us": 1979920,
+      "module": "limen.sfd.rule_based.predicates"
+    },
+    {
+      "self_us": 132,
+      "cumulative_us": 1979905,
+      "module": "limen.sfd.rule_based"
+    },
+    {
+      "self_us": 9,
+      "cumulative_us": 1978953,
+      "module": "limen.sfd"
+    },
+    {
+      "self_us": 398,
+      "cumulative_us": 1978945,
+      "module": "limen"
+    },
+    {
+      "self_us": 1603493,
+      "cumulative_us": 1950262,
+      "module": "mill.qc"
+    },
+    {
+      "self_us": 277,
+      "cumulative_us": 1464071,
+      "module": "limen.experiment"
+    },
+    {
+      "self_us": 550,
+      "cumulative_us": 1378498,
+      "module": "limen.experiment.experiment_core"
+    },
+    {
+      "self_us": 23,
+      "cumulative_us": 1167356,
+      "module": "limen.utils.param_space"
+    },
+    {
+      "self_us": 479,
+      "cumulative_us": 1167334,
+      "module": "limen.utils"
+    },
+    {
+      "self_us": 31,
+      "cumulative_us": 1162568,
+      "module": "limen.metrics.continuous_metrics"
+    },
+    {
+      "self_us": 477,
+      "cumulative_us": 1162538,
+      "module": "limen.metrics"
+    },
+    {
+      "self_us": 377,
+      "cumulative_us": 1158012,
+      "module": "limen.metrics.binary_metrics"
+    },
+    {
+      "self_us": 547,
+      "cumulative_us": 1157636,
+      "module": "sklearn.metrics"
+    }
+  ],
+  "top_self": [
+    {
+      "self_us": 1603493,
+      "cumulative_us": 1950262,
+      "module": "mill.qc"
+    },
+    {
+      "self_us": 64205,
+      "cumulative_us": 474799,
+      "module": "scipy.stats._stats_py"
+    },
+    {
+      "self_us": 40609,
+      "cumulative_us": 131635,
+      "module": "scipy.stats._continuous_distns"
+    },
+    {
+      "self_us": 38601,
+      "cumulative_us": 89272,
+      "module": "scipy.signal._support_alternative_backends"
+    },
+    {
+      "self_us": 33309,
+      "cumulative_us": 34442,
+      "module": "pyarrow.lib"
+    },
+    {
+      "self_us": 26619,
+      "cumulative_us": 26619,
+      "module": "sklearn.decomposition._base"
+    },
+    {
+      "self_us": 25174,
+      "cumulative_us": 56800,
+      "module": "scipy.stats._morestats"
+    },
+    {
+      "self_us": 23566,
+      "cumulative_us": 48862,
+      "module": "scipy.ndimage._support_alternative_backends"
+    },
+    {
+      "self_us": 19883,
+      "cumulative_us": 35450,
+      "module": "charset_normalizer.api"
+    },
+    {
+      "self_us": 18072,
+      "cumulative_us": 18379,
+      "module": "scipy.special._support_alternative_backends"
+    },
+    {
+      "self_us": 14289,
+      "cumulative_us": 14289,
+      "module": "sklearn.utils.arrayfuncs"
+    },
+    {
+      "self_us": 13669,
+      "cumulative_us": 13669,
+      "module": "sklearn._cyutility"
+    }
+  ]
+}

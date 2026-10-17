@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "case": "features",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "build_features",
+      "samples_ms": [
+        98.170958,
+        100.6985,
+        102.939584,
+        99.765792,
+        100.046042
+      ],
+      "median_ms": 100.046042
+    },
+    {
+      "name": "target_next_return",
+      "samples_ms": [
+        0.363917,
+        0.233542,
+        0.454167,
+        0.237208,
+        0.273834
+      ],
+      "median_ms": 0.273834
+    },
+    {
+      "name": "join_target",
+      "samples_ms": [
+        2.021,
+        1.013375,
+        0.849333,
+        0.723541,
+        0.826916
+      ],
+      "median_ms": 0.849333
+    },
+    {
+      "name": "serialize_json",
+      "samples_ms": [
+        57.939375,
+        56.498125,
+        59.250334,
+        58.312416,
+        56.053792
+      ],
+      "median_ms": 57.939375
+    },
+    {
+      "name": "ensure_cold",
+      "samples_ms": [
+        158.564125
+      ],
+      "median_ms": 158.564125
+    },
+    {
+      "name": "ensure_memory_hit",
+      "samples_ms": [
+        0.091917,
+        0.024042,
+        0.018833,
+        0.015875,
+        0.015584
+      ],
+      "median_ms": 0.018833
+    },
+    {
+      "name": "ensure_plus_one_feature",
+      "samples_ms": [
+        157.253958
+      ],
+      "median_ms": 157.253958
+    }
+  ],
+  "peak_rss_bytes": 454475776,
+  "import_ms": 5252.505458,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "6e864599aeac276cd874600309fafa95afdb2351"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "k": 8,
+    "reps": 5
+  },
+  "result": {
+    "columns": 10,
+    "frame_bytes": 1675970,
+    "payload_bytes": 2141406
+  }
+}

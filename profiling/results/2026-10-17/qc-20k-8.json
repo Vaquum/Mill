@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "case": "qc",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "qc_precompute_cold",
+      "samples_ms": [
+        3147.675833
+      ],
+      "median_ms": 3147.675833
+    },
+    {
+      "name": "qc_report_warm_kernel_cache",
+      "samples_ms": [
+        3.512959,
+        3.16375,
+        3.142875,
+        3.127791,
+        2.939917
+      ],
+      "median_ms": 3.142875
+    },
+    {
+      "name": "qc_report_for_precomputed",
+      "samples_ms": [
+        0.08525,
+        0.0685,
+        0.063167,
+        0.061166,
+        0.060792
+      ],
+      "median_ms": 0.063167
+    },
+    {
+      "name": "qc_sweep_sizes_1_2_3",
+      "samples_ms": [
+        2.5065,
+        2.121667,
+        2.244375,
+        2.222917,
+        2.16475
+      ],
+      "median_ms": 2.222917
+    },
+    {
+      "name": "grade_map",
+      "samples_ms": [
+        0.35575,
+        0.115292,
+        0.111209,
+        0.105916,
+        0.115083
+      ],
+      "median_ms": 0.115083
+    },
+    {
+      "name": "report_json",
+      "samples_ms": [
+        0.065792,
+        0.054541,
+        0.051833,
+        0.051709,
+        0.051667
+      ],
+      "median_ms": 0.051833
+    }
+  ],
+  "peak_rss_bytes": 452624384,
+  "import_ms": 3421.351833,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "6e864599aeac276cd874600309fafa95afdb2351"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "k": 8,
+    "reps": 5
+  },
+  "qc_cold_sections_ms": {
+    "_block_size": 11.927,
+    "_edge_map": 2583.577,
+    "_regime_map": 30.035959,
+    "_health_map": 29.546583,
+    "_pair_map": 491.523125
+  },
+  "kernel_cache_entries": 96,
+  "pair_count": 28
+}

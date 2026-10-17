@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext
 import hashlib
 import json
 import os
@@ -34,11 +35,16 @@ def arguments():
     parser.add_argument("--bar", choices=("1h_time_bars", "15m_time_bars"), default="1h_time_bars")
     parser.add_argument("--catalog", action="store_true", help="use all eligible factories for discovery")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.rows < 0 or not 1 <= args.k <= len(FACTORIES) or not 1 <= args.reps <= 20:
         parser.error("rows >= 0, 1 <= k <= 30, and 1 <= reps <= 20 required")
     if not args.parquet.is_file():
         parser.error("parquet source must exist")
+    if args.output.resolve() == args.parquet.resolve():
+        parser.error("output cannot overwrite the input parquet")
+    if args.case == "memory" and args.rows:
+        parser.error("memory cases require full input; --rows limits compute, not source decoding")
     return args
 
 
@@ -50,7 +56,8 @@ def peak_bytes():
 class Recorder:
     def __init__(self, args):
         self.args = args
-        self.doc = {"schema": 1, "case": args.case, "status": "running", "measurements": []}
+        self.doc = {"schema": 1, "case": args.case, "status": "running", "worker_pid": os.getpid(),
+                    "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup", "measurements": []}
         self.save()
 
     def save(self):
@@ -79,6 +86,11 @@ def environment():
     from importlib.metadata import distribution, version
     import numba
     import polars as pl
+    try:
+        checkout = Path(__file__).resolve().parents[1]
+        sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True, timeout=5).strip()
+    except (OSError, subprocess.SubprocessError):
+        sha = None
     return {"python": sys.version, "platform": platform.platform(),
             "cpu_count": os.cpu_count(), "polars_threads": pl.thread_pool_size(),
             "numba_threads": numba.get_num_threads(), "numba_layer": numba.threading_layer(),
@@ -87,13 +99,22 @@ def environment():
             "limen_origin": json.loads(distribution("vaquum_limen").read_text("direct_url.json") or "null"),
             "thread_environment": {k: os.environ.get(k) for k in
                                    ("POLARS_MAX_THREADS", "NUMBA_NUM_THREADS", "OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS")},
-            "engine_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, timeout=5).strip()}
+            "engine_sha": sha}
+
+
+def source_digest(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def worker(args):
     record = Recorder(args)
     # Set before Mill imports; all cache/store/config mutations stay in this directory.
-    with tempfile.TemporaryDirectory(prefix="mill_engine_sweep_") as directory:
+    scratch = nullcontext(str(args.scratch)) if args.scratch else tempfile.TemporaryDirectory(prefix="mill_engine_sweep_")
+    with scratch as directory:
         for key, name in (("MILL_ARROW_DIR", "arrow"), ("MILL_CACHE_DIR", "cache"), ("MILL_CONFIG_DIR", "config")):
             os.environ[key] = str(Path(directory) / name)
         began = time.perf_counter_ns()
@@ -106,13 +127,12 @@ def worker(args):
         from mill.bars import arrow_series, time_bar_seconds
         record.doc["import_ms"] = (time.perf_counter_ns() - began) / 1e6
         record.doc["environment"] = environment()
-        record.doc["source"] = {"file": args.parquet.name,
-                                "sha256": hashlib.sha256(args.parquet.read_bytes()).hexdigest()}
-        record.save()
         if args.case == "startup":
+            record.doc["peak_rss_scope"] = "imports only; source parquet is not opened"
             record.doc["status"] = "complete"
             record.save()
             return
+        record.doc["source"] = {"file": args.parquet.name, "sha256": source_digest(args.parquet)}
         raw = GetData().from_parquet(args.parquet)
         source_rows = raw.height
         if args.rows:
@@ -216,11 +236,16 @@ def worker(args):
                 return run
             from contextlib import ExitStack
             qc.clear_kernel_cache()
+            record.doc["bootstrap_signatures_before"] = [str(s) for s in qc._bootstrap_spearman_estimates.signatures]
             with ExitStack() as stack:
                 for name in ("_health_map", "_pair_map", "_edge_map", "_regime_map", "_block_size"):
                     stack.enter_context(patch.object(qc, name, timed(name, getattr(qc, name))))
                 prim = measure("qc_precompute_cold", lambda: qc.precompute(frame, "next_return"), reps=1)
             record.doc["qc_cold_sections_ms"] = sections
+            record.doc["bootstrap_signatures_after"] = [str(s) for s in qc._bootstrap_spearman_estimates.signatures]
+            if args.k <= 8:
+                qc.clear_kernel_cache()
+                measure("qc_precompute_second_cold", lambda: qc.precompute(frame, "next_return"), reps=1)
             measure("qc_report_warm_kernel_cache", lambda: qc.report(frame, "next_return"))
             measure("qc_report_for_precomputed", lambda: qc.report_for(prim))
             measure("qc_sweep_sizes_1_2_3", lambda: sum(1 for _ in qc.sweep(prim, (1, 2, 3))))
@@ -233,8 +258,11 @@ def worker(args):
             pool = measure("pool_build", lambda: discover.catalog_pool(raw) if args.catalog else discover.spec_pool(raw, spec), reps=1)
             ms = pool.ms
             step = time_bar_seconds(bar) * 1000
+            if len(ms) < 4:
+                raise ValueError("discovery needs at least four input bars")
+            first = min(100, max(1, len(ms) // 10))
             windows = [(int(ms[i]), int(ms[min(i + 2, len(ms)-1)]))
-                       for i in range(100, len(ms) - 3, max(100, len(ms) // 40))]
+                       for i in range(first, len(ms) - 2, max(3, len(ms) // 40))]
             answer = measure("discover_full", lambda: discover.discover(pool, step_ms=step,
                 windows=windows, mode="inside", lead_bars=1,
                 context=(int(ms[0]), int(ms[-1]) + step), display=(int(ms[0]), int(ms[-1]) + step),
@@ -286,6 +314,8 @@ def worker(args):
 def main():
     args = arguments()
     if args.worker:
+        # Default SIGALRM terminates even stuck native code if the supervisor disappears.
+        signal.alarm(49)
         try:
             worker(args)
         except Exception as exc:
@@ -295,23 +325,38 @@ def main():
                 args.output.write_text(json.dumps(doc, indent=2) + "\n")
             raise
         return 0
-    # Kill the entire worker process group, including stuck native code, before one minute.
-    process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:], "--worker"], start_new_session=True)
-    try:
-        code = process.wait(timeout=50)
-    except subprocess.TimeoutExpired:
-        os.killpg(process.pid, signal.SIGKILL)
-        process.wait()
+    def finish(status):
         if args.output.exists():
             doc = json.loads(args.output.read_text())
-            doc["status"] = "timeout_50s"
+            doc["status"] = status
             args.output.write_text(json.dumps(doc, indent=2) + "\n")
-        return 124
-    except BaseException:
-        os.killpg(process.pid, signal.SIGKILL)
-        process.wait()
-        raise
-    return code
+
+    def interrupted(signum, frame):
+        raise InterruptedError(f"supervisor received signal {signum}")
+
+    handlers = {s: signal.signal(s, interrupted) for s in (signal.SIGTERM, signal.SIGHUP)}
+    try:
+        # Parent ownership makes fixture cleanup survive a forcibly terminated worker.
+        with tempfile.TemporaryDirectory(prefix="mill_engine_sweep_") as scratch:
+            process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:],
+                                        "--worker", "--scratch", scratch], start_new_session=True)
+            try:
+                code = process.wait(timeout=50)
+                if code == -signal.SIGALRM:
+                    finish("timeout_49s")
+                    return 124
+                return code
+            except BaseException as exc:
+                if process.poll() is None:
+                    os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+                finish("timeout_50s" if isinstance(exc, subprocess.TimeoutExpired) else "interrupted")
+                if isinstance(exc, subprocess.TimeoutExpired):
+                    return 124
+                raise
+    finally:
+        for sig, handler in handlers.items():
+            signal.signal(sig, handler)
 
 
 if __name__ == "__main__":

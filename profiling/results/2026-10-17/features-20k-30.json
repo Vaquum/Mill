@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "case": "features",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "build_features",
+      "samples_ms": [
+        352.008209,
+        451.13,
+        652.998458
+      ],
+      "median_ms": 451.13
+    },
+    {
+      "name": "target_next_return",
+      "samples_ms": [
+        1.796792,
+        3.812,
+        2.171583
+      ],
+      "median_ms": 2.171583
+    },
+    {
+      "name": "join_target",
+      "samples_ms": [
+        22.731042,
+        19.493416,
+        12.001417
+      ],
+      "median_ms": 19.493416
+    },
+    {
+      "name": "serialize_json",
+      "samples_ms": [
+        375.076083,
+        251.326625,
+        253.764125
+      ],
+      "median_ms": 253.764125
+    },
+    {
+      "name": "ensure_cold",
+      "samples_ms": [
+        630.534167
+      ],
+      "median_ms": 630.534167
+    },
+    {
+      "name": "ensure_memory_hit",
+      "samples_ms": [
+        0.079625,
+        0.029375,
+        0.0245
+      ],
+      "median_ms": 0.029375
+    },
+    {
+      "name": "ensure_plus_one_feature",
+      "samples_ms": [
+        644.296792
+      ],
+      "median_ms": 644.296792
+    }
+  ],
+  "peak_rss_bytes": 516587520,
+  "import_ms": 5281.108959,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "b47a6e22bfbd7647012a2dc7ac8a89063748b949"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 30,
+    "reps": 3
+  },
+  "result": {
+    "columns": 33,
+    "frame_bytes": 5510618,
+    "payload_bytes": 7333848
+  }
+}

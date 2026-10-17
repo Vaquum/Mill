@@ -1,0 +1,2026 @@
+{
+  "schema": 1,
+  "case": "factories",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "factory:open",
+      "samples_ms": [
+        0.03375
+      ],
+      "median_ms": 0.03375,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:high",
+      "samples_ms": [
+        0.038209
+      ],
+      "median_ms": 0.038209,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:low",
+      "samples_ms": [
+        0.02125
+      ],
+      "median_ms": 0.02125,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:close",
+      "samples_ms": [
+        0.08675
+      ],
+      "median_ms": 0.08675,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:volume",
+      "samples_ms": [
+        0.051083
+      ],
+      "median_ms": 0.051083,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:mean",
+      "samples_ms": [
+        0.020833
+      ],
+      "median_ms": 0.020833,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:std",
+      "samples_ms": [
+        0.017542
+      ],
+      "median_ms": 0.017542,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_ratio",
+      "samples_ms": [
+        0.01625
+      ],
+      "median_ms": 0.01625,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:no_of_trades",
+      "samples_ms": [
+        0.015625
+      ],
+      "median_ms": 0.015625,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:open_liquidity",
+      "samples_ms": [
+        0.014709
+      ],
+      "median_ms": 0.014709,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:high_liquidity",
+      "samples_ms": [
+        0.013917
+      ],
+      "median_ms": 0.013917,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:low_liquidity",
+      "samples_ms": [
+        0.014333
+      ],
+      "median_ms": 0.014333,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:close_liquidity",
+      "samples_ms": [
+        0.01375
+      ],
+      "median_ms": 0.01375,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:liquidity_sum",
+      "samples_ms": [
+        0.014334
+      ],
+      "median_ms": 0.014334,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_volume",
+      "samples_ms": [
+        0.015875
+      ],
+      "median_ms": 0.015875,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_liquidity",
+      "samples_ms": [
+        0.014
+      ],
+      "median_ms": 0.014,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:absorption_intensity",
+      "samples_ms": [
+        1.117083
+      ],
+      "median_ms": 1.117083,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:amihud_illiquidity",
+      "samples_ms": [
+        0.447958
+      ],
+      "median_ms": 0.447958,
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:atr_percent_sma",
+      "samples_ms": [
+        1.200084
+      ],
+      "median_ms": 1.200084,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:atr_sma",
+      "samples_ms": [
+        1.018167
+      ],
+      "median_ms": 1.018167,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:body_to_range",
+      "samples_ms": [
+        0.182666
+      ],
+      "median_ms": 0.182666,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:breakout_percentile_regime",
+      "samples_ms": [
+        1.612375
+      ],
+      "median_ms": 1.612375,
+      "columns": 2,
+      "frame_bytes": 245966
+    },
+    {
+      "name": "factory:bulk_volume_classification",
+      "samples_ms": [
+        3.328125
+      ],
+      "median_ms": 3.328125,
+      "columns": 2,
+      "frame_bytes": 337740
+    },
+    {
+      "name": "factory:calendar_time_features",
+      "samples_ms": [
+        1.728291
+      ],
+      "median_ms": 1.728291,
+      "columns": 10,
+      "frame_bytes": 228624
+    },
+    {
+      "name": "factory:close_ma_distance_atr",
+      "samples_ms": [
+        2.300875
+      ],
+      "median_ms": 2.300875,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:close_position",
+      "samples_ms": [
+        0.326125
+      ],
+      "median_ms": 0.326125,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:close_position_rolling",
+      "samples_ms": [
+        0.547084
+      ],
+      "median_ms": 0.547084,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:cusum_filter",
+      "samples_ms": [
+        5.435917
+      ],
+      "median_ms": 5.435917,
+      "columns": 1,
+      "frame_bytes": 20784
+    },
+    {
+      "name": "factory:cyclical_time_features",
+      "samples_ms": [
+        1.725292
+      ],
+      "median_ms": 1.725292,
+      "columns": 16,
+      "frame_bytes": 2660352
+    },
+    {
+      "name": "factory:distance_from_high",
+      "samples_ms": [
+        0.633458
+      ],
+      "median_ms": 0.633458,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:distance_from_low",
+      "samples_ms": [
+        0.560709
+      ],
+      "median_ms": 0.560709,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:distance_from_ma",
+      "samples_ms": [
+        1.069041
+      ],
+      "median_ms": 1.069041,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:dollar_volume",
+      "samples_ms": [
+        0.180834
+      ],
+      "median_ms": 0.180834,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:downside_volatility_ratio",
+      "samples_ms": [
+        1.860667
+      ],
+      "median_ms": 1.860667,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:gap_high",
+      "samples_ms": [
+        0.228542
+      ],
+      "median_ms": 0.228542,
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:garman_klass_volatility",
+      "samples_ms": [
+        1.090334
+      ],
+      "median_ms": 1.090334,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:hh_hl_structure_regime",
+      "samples_ms": [
+        1.204334
+      ],
+      "median_ms": 1.204334,
+      "columns": 1,
+      "frame_bytes": 67280
+    },
+    {
+      "name": "factory:ichimoku_cloud",
+      "samples_ms": [
+        1.939125
+      ],
+      "median_ms": 1.939125,
+      "columns": 5,
+      "frame_bytes": 841758
+    },
+    {
+      "name": "factory:illiquidity_shock",
+      "samples_ms": [
+        0.845125
+      ],
+      "median_ms": 0.845125,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:is_funding_hour",
+      "samples_ms": [
+        1.102
+      ],
+      "median_ms": 1.102,
+      "columns": 1,
+      "frame_bytes": 20784
+    },
+    {
+      "name": "factory:is_us_open_hour",
+      "samples_ms": [
+        0.548083
+      ],
+      "median_ms": 0.548083,
+      "columns": 1,
+      "frame_bytes": 20784
+    },
+    {
+      "name": "factory:jump_variation_proxy",
+      "samples_ms": [
+        1.524958
+      ],
+      "median_ms": 1.524958,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:kaufman_efficiency_ratio",
+      "samples_ms": [
+        1.126
+      ],
+      "median_ms": 1.126,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:kline_imbalance",
+      "samples_ms": [
+        1.045042
+      ],
+      "median_ms": 1.045042,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:liquidity_drop",
+      "samples_ms": [
+        0.298
+      ],
+      "median_ms": 0.298,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:liquidity_range",
+      "samples_ms": [
+        0.366625
+      ],
+      "median_ms": 0.366625,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:ma_slope_regime",
+      "samples_ms": [
+        2.127916
+      ],
+      "median_ms": 2.127916,
+      "columns": 1,
+      "frame_bytes": 61288
+    },
+    {
+      "name": "factory:maker_liquidity_share",
+      "samples_ms": [
+        0.165
+      ],
+      "median_ms": 0.165,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:maker_volume_ratio",
+      "samples_ms": [
+        0.461292
+      ],
+      "median_ms": 0.461292,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:maker_volume_share",
+      "samples_ms": [
+        0.136833
+      ],
+      "median_ms": 0.136833,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:narrow_range",
+      "samples_ms": [
+        1.41975
+      ],
+      "median_ms": 1.41975,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:order_flow_imbalance",
+      "samples_ms": [
+        3.301916
+      ],
+      "median_ms": 3.301916,
+      "columns": 3,
+      "frame_bytes": 506610
+    },
+    {
+      "name": "factory:parkinson_vol_of_vol",
+      "samples_ms": [
+        0.638792
+      ],
+      "median_ms": 0.638792,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:parkinson_volatility",
+      "samples_ms": [
+        1.094708
+      ],
+      "median_ms": 1.094708,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:price_range_position",
+      "samples_ms": [
+        1.059792
+      ],
+      "median_ms": 1.059792,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:price_vs_band_regime",
+      "samples_ms": [
+        1.147458
+      ],
+      "median_ms": 1.147458,
+      "columns": 1,
+      "frame_bytes": 69068
+    },
+    {
+      "name": "factory:range_overlap",
+      "samples_ms": [
+        0.522792
+      ],
+      "median_ms": 0.522792,
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:range_pct",
+      "samples_ms": [
+        0.122708
+      ],
+      "median_ms": 0.122708,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:range_per_dollar_volume",
+      "samples_ms": [
+        0.29475
+      ],
+      "median_ms": 0.29475,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:realized_kurtosis",
+      "samples_ms": [
+        1.38325
+      ],
+      "median_ms": 1.38325,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:realized_semivariance",
+      "samples_ms": [
+        0.703542
+      ],
+      "median_ms": 0.703542,
+      "columns": 2,
+      "frame_bytes": 337740
+    },
+    {
+      "name": "factory:realized_skewness",
+      "samples_ms": [
+        0.936708
+      ],
+      "median_ms": 0.936708,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:rejection_intensity",
+      "samples_ms": [
+        0.504459
+      ],
+      "median_ms": 0.504459,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:relative_range_seasonality",
+      "samples_ms": [
+        2.627375
+      ],
+      "median_ms": 2.627375,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:relative_volatility_seasonality",
+      "samples_ms": [
+        2.055458
+      ],
+      "median_ms": 2.055458,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:relative_volume_seasonality",
+      "samples_ms": [
+        1.929333
+      ],
+      "median_ms": 1.929333,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:return_autocorrelation",
+      "samples_ms": [
+        2.092334
+      ],
+      "median_ms": 2.092334,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:return_per_dollar_volume",
+      "samples_ms": [
+        0.197625
+      ],
+      "median_ms": 0.197625,
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:return_volatility_correlation",
+      "samples_ms": [
+        2.087667
+      ],
+      "median_ms": 2.087667,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:rogers_satchell_volatility",
+      "samples_ms": [
+        1.14925
+      ],
+      "median_ms": 1.14925,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:sma_crossover",
+      "samples_ms": [
+        0.931833
+      ],
+      "median_ms": 0.931833,
+      "columns": 2,
+      "frame_bytes": 106518
+    },
+    {
+      "name": "factory:stochastic_k_abs",
+      "samples_ms": [
+        1.570833
+      ],
+      "median_ms": 1.570833,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:tail_event_intensity",
+      "samples_ms": [
+        1.041833
+      ],
+      "median_ms": 1.041833,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:taker_imbalance_ratio",
+      "samples_ms": [
+        0.447958
+      ],
+      "median_ms": 0.447958,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:time_to_funding",
+      "samples_ms": [
+        1.269834
+      ],
+      "median_ms": 1.269834,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:trade_density",
+      "samples_ms": [
+        0.374542
+      ],
+      "median_ms": 0.374542,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trade_imbalance",
+      "samples_ms": [
+        0.972375
+      ],
+      "median_ms": 0.972375,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trade_size_ratio",
+      "samples_ms": [
+        1.162375
+      ],
+      "median_ms": 1.162375,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trend_coherence",
+      "samples_ms": [
+        0.362708
+      ],
+      "median_ms": 0.362708,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:trend_strength",
+      "samples_ms": [
+        0.609625
+      ],
+      "median_ms": 0.609625,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volatility_of_volatility",
+      "samples_ms": [
+        1.33625
+      ],
+      "median_ms": 1.33625,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volatility_ratio",
+      "samples_ms": [
+        1.988459
+      ],
+      "median_ms": 1.988459,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volatility_spike",
+      "samples_ms": [
+        0.945042
+      ],
+      "median_ms": 0.945042,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:volatility_term_structure",
+      "samples_ms": [
+        1.217417
+      ],
+      "median_ms": 1.217417,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volume_regime",
+      "samples_ms": [
+        0.680291
+      ],
+      "median_ms": 0.680291,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volume_to_range",
+      "samples_ms": [
+        0.536166
+      ],
+      "median_ms": 0.536166,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:volume_volatility_correlation",
+      "samples_ms": [
+        1.885084
+      ],
+      "median_ms": 1.885084,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:vpin",
+      "samples_ms": [
+        3.396125
+      ],
+      "median_ms": 3.396125,
+      "columns": 3,
+      "frame_bytes": 506610
+    },
+    {
+      "name": "factory:vwap",
+      "samples_ms": [
+        2.11725
+      ],
+      "median_ms": 2.11725,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wick_imbalance",
+      "samples_ms": [
+        0.275916
+      ],
+      "median_ms": 0.275916,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wick_proportion",
+      "samples_ms": [
+        0.690833
+      ],
+      "median_ms": 0.690833,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:window_return_regime",
+      "samples_ms": [
+        0.547458
+      ],
+      "median_ms": 0.547458,
+      "columns": 2,
+      "frame_bytes": 227751
+    },
+    {
+      "name": "factory:yang_zhang_volatility",
+      "samples_ms": [
+        1.411125
+      ],
+      "median_ms": 1.411125,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:ad",
+      "samples_ms": [
+        0.433542
+      ],
+      "median_ms": 0.433542,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:adosc",
+      "samples_ms": [
+        1.022458
+      ],
+      "median_ms": 1.022458,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:apo",
+      "samples_ms": [
+        10.468083
+      ],
+      "median_ms": 10.468083,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:atr",
+      "samples_ms": [
+        2.971542
+      ],
+      "median_ms": 2.971542,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:avgprice",
+      "samples_ms": [
+        0.196
+      ],
+      "median_ms": 0.196,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:bbands",
+      "samples_ms": [
+        6.132583
+      ],
+      "median_ms": 6.132583,
+      "columns": 3,
+      "frame_bytes": 504012
+    },
+    {
+      "name": "factory:body_pct",
+      "samples_ms": [
+        0.210042
+      ],
+      "median_ms": 0.210042,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:bollinger_bands",
+      "samples_ms": [
+        0.641333
+      ],
+      "median_ms": 0.641333,
+      "columns": 3,
+      "frame_bytes": 506610
+    },
+    {
+      "name": "factory:bop",
+      "samples_ms": [
+        0.277667
+      ],
+      "median_ms": 0.277667,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:cci",
+      "samples_ms": [
+        66.59275
+      ],
+      "median_ms": 66.59275,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:cdl2crows",
+      "samples_ms": [
+        37.366333
+      ],
+      "median_ms": 37.366333,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3blackcrows",
+      "samples_ms": [
+        54.028
+      ],
+      "median_ms": 54.028,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3inside",
+      "samples_ms": [
+        42.464667
+      ],
+      "median_ms": 42.464667,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3linestrike",
+      "samples_ms": [
+        38.701125
+      ],
+      "median_ms": 38.701125,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3starsinsouth",
+      "samples_ms": [
+        83.932875
+      ],
+      "median_ms": 83.932875,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdl3whitesoldiers",
+      "samples_ms": [
+        114.747834
+      ],
+      "median_ms": 114.747834,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlabandonedbaby",
+      "samples_ms": [
+        52.5945
+      ],
+      "median_ms": 52.5945,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdladvancedblock",
+      "samples_ms": [
+        158.739
+      ],
+      "median_ms": 158.739,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlbelthold",
+      "samples_ms": [
+        32.268667
+      ],
+      "median_ms": 32.268667,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlclosingmarubozu",
+      "samples_ms": [
+        33.357666
+      ],
+      "median_ms": 33.357666,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlconcealbabyswall",
+      "samples_ms": [
+        77.520875
+      ],
+      "median_ms": 77.520875,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlcounterattack",
+      "samples_ms": [
+        45.478459
+      ],
+      "median_ms": 45.478459,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdldarkcloudcover",
+      "samples_ms": [
+        19.291042
+      ],
+      "median_ms": 19.291042,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdldoji",
+      "samples_ms": [
+        12.705708
+      ],
+      "median_ms": 12.705708,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdldragonflydoji",
+      "samples_ms": [
+        29.910166
+      ],
+      "median_ms": 29.910166,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlengulfing",
+      "samples_ms": [
+        11.918542
+      ],
+      "median_ms": 11.918542,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlgravestonedoji",
+      "samples_ms": [
+        32.90625
+      ],
+      "median_ms": 32.90625,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhammer",
+      "samples_ms": [
+        49.044291
+      ],
+      "median_ms": 49.044291,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhangingman",
+      "samples_ms": [
+        52.436708
+      ],
+      "median_ms": 52.436708,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlharami",
+      "samples_ms": [
+        29.258917
+      ],
+      "median_ms": 29.258917,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlharamicross",
+      "samples_ms": [
+        27.569542
+      ],
+      "median_ms": 27.569542,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhighwave",
+      "samples_ms": [
+        31.910625
+      ],
+      "median_ms": 31.910625,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhikkake",
+      "samples_ms": [
+        8.179083
+      ],
+      "median_ms": 8.179083,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhikkakemod",
+      "samples_ms": [
+        25.154625
+      ],
+      "median_ms": 25.154625,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlhomingpigeon",
+      "samples_ms": [
+        32.051708
+      ],
+      "median_ms": 32.051708,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlidentical3crows",
+      "samples_ms": [
+        87.599375
+      ],
+      "median_ms": 87.599375,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlinvertedhammer",
+      "samples_ms": [
+        50.233458
+      ],
+      "median_ms": 50.233458,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlladderbottom",
+      "samples_ms": [
+        40.969
+      ],
+      "median_ms": 40.969,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdllongleggeddoji",
+      "samples_ms": [
+        33.34925
+      ],
+      "median_ms": 33.34925,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdllongline",
+      "samples_ms": [
+        56.302167
+      ],
+      "median_ms": 56.302167,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlmarubozu",
+      "samples_ms": [
+        39.4165
+      ],
+      "median_ms": 39.4165,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlmatchinglow",
+      "samples_ms": [
+        18.399416
+      ],
+      "median_ms": 18.399416,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlmathold",
+      "samples_ms": [
+        99.28275
+      ],
+      "median_ms": 99.28275,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlonneck",
+      "samples_ms": [
+        46.7235
+      ],
+      "median_ms": 46.7235,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlpiercing",
+      "samples_ms": [
+        44.003083
+      ],
+      "median_ms": 44.003083,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlrickshawman",
+      "samples_ms": [
+        52.984292
+      ],
+      "median_ms": 52.984292,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlrisefall3methods",
+      "samples_ms": [
+        93.179166
+      ],
+      "median_ms": 93.179166,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlseparatinglines",
+      "samples_ms": [
+        49.029291
+      ],
+      "median_ms": 49.029291,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlshootingstar",
+      "samples_ms": [
+        45.601042
+      ],
+      "median_ms": 45.601042,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlshortline",
+      "samples_ms": [
+        46.067291
+      ],
+      "median_ms": 46.067291,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlspinningtop",
+      "samples_ms": [
+        21.921959
+      ],
+      "median_ms": 21.921959,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlstalledpattern",
+      "samples_ms": [
+        83.645791
+      ],
+      "median_ms": 83.645791,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlsticksandwich",
+      "samples_ms": [
+        18.860708
+      ],
+      "median_ms": 18.860708,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdltakuri",
+      "samples_ms": [
+        36.397958
+      ],
+      "median_ms": 36.397958,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlthrusting",
+      "samples_ms": [
+        28.31325
+      ],
+      "median_ms": 28.31325,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdltristar",
+      "samples_ms": [
+        19.824625
+      ],
+      "median_ms": 19.824625,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cdlunique3river",
+      "samples_ms": [
+        33.236167
+      ],
+      "median_ms": 33.236167,
+      "columns": 1,
+      "frame_bytes": 83136
+    },
+    {
+      "name": "factory:cmo",
+      "samples_ms": [
+        10.117708
+      ],
+      "median_ms": 10.117708,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:dema",
+      "samples_ms": [
+        7.346625
+      ],
+      "median_ms": 7.346625,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ema",
+      "samples_ms": [
+        3.735
+      ],
+      "median_ms": 3.735,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_dcperiod",
+      "samples_ms": [
+        61.225708
+      ],
+      "median_ms": 61.225708,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_dcphase",
+      "samples_ms": [
+        189.163833
+      ],
+      "median_ms": 189.163833,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_phasor",
+      "samples_ms": [
+        125.11325
+      ],
+      "median_ms": 125.11325,
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:ht_sine",
+      "samples_ms": [
+        388.946333
+      ],
+      "median_ms": 388.946333,
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:ht_trendline",
+      "samples_ms": [
+        113.238292
+      ],
+      "median_ms": 113.238292,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ht_trendmode",
+      "samples_ms": [
+        258.169792
+      ],
+      "median_ms": 258.169792,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:kama",
+      "samples_ms": [
+        15.180542
+      ],
+      "median_ms": 15.180542,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg",
+      "samples_ms": [
+        60.462958
+      ],
+      "median_ms": 60.462958,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg_angle",
+      "samples_ms": [
+        57.117125
+      ],
+      "median_ms": 57.117125,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg_intercept",
+      "samples_ms": [
+        58.166833
+      ],
+      "median_ms": 58.166833,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:linearreg_slope",
+      "samples_ms": [
+        55.833083
+      ],
+      "median_ms": 55.833083,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ma",
+      "samples_ms": [
+        4.98375
+      ],
+      "median_ms": 4.98375,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:macd",
+      "samples_ms": [
+        10.784667
+      ],
+      "median_ms": 10.784667,
+      "columns": 3,
+      "frame_bytes": 498816
+    },
+    {
+      "name": "factory:macdext",
+      "samples_ms": [
+        15.272667
+      ],
+      "median_ms": 15.272667,
+      "columns": 3,
+      "frame_bytes": 498816
+    },
+    {
+      "name": "factory:macdfix",
+      "samples_ms": [
+        10.723583
+      ],
+      "median_ms": 10.723583,
+      "columns": 3,
+      "frame_bytes": 498816
+    },
+    {
+      "name": "factory:mama",
+      "samples_ms": [
+        140.838333
+      ],
+      "median_ms": 140.838333,
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:medprice",
+      "samples_ms": [
+        0.280125
+      ],
+      "median_ms": 0.280125,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:mfi",
+      "samples_ms": [
+        1.083958
+      ],
+      "median_ms": 1.083958,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:midpoint",
+      "samples_ms": [
+        31.197042
+      ],
+      "median_ms": 31.197042,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:midprice",
+      "samples_ms": [
+        50.4295
+      ],
+      "median_ms": 50.4295,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:mom",
+      "samples_ms": [
+        0.414167
+      ],
+      "median_ms": 0.414167,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:natr",
+      "samples_ms": [
+        3.278917
+      ],
+      "median_ms": 3.278917,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:obv",
+      "samples_ms": [
+        0.54125
+      ],
+      "median_ms": 0.54125,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ppo",
+      "samples_ms": [
+        11.040333
+      ],
+      "median_ms": 11.040333,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:price_change_pct",
+      "samples_ms": [
+        0.315708
+      ],
+      "median_ms": 0.315708,
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:returns",
+      "samples_ms": [
+        0.146625
+      ],
+      "median_ms": 0.146625,
+      "columns": 1,
+      "frame_bytes": 166273
+    },
+    {
+      "name": "factory:roc",
+      "samples_ms": [
+        0.41475
+      ],
+      "median_ms": 0.41475,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rocp",
+      "samples_ms": [
+        0.561666
+      ],
+      "median_ms": 0.561666,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rocr",
+      "samples_ms": [
+        1.221792
+      ],
+      "median_ms": 1.221792,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rocr100",
+      "samples_ms": [
+        0.529292
+      ],
+      "median_ms": 0.529292,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:rolling_volatility",
+      "samples_ms": [
+        0.516666
+      ],
+      "median_ms": 0.516666,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:rsi",
+      "samples_ms": [
+        10.53
+      ],
+      "median_ms": 10.53,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:rsi_sma",
+      "samples_ms": [
+        1.090375
+      ],
+      "median_ms": 1.090375,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:sar",
+      "samples_ms": [
+        8.147833
+      ],
+      "median_ms": 8.147833,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:sarext",
+      "samples_ms": [
+        8.241542
+      ],
+      "median_ms": 8.241542,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:sma",
+      "samples_ms": [
+        5.565459
+      ],
+      "median_ms": 5.565459,
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:sma_deviation_std",
+      "samples_ms": [
+        1.287125
+      ],
+      "median_ms": 1.287125,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:stddev",
+      "samples_ms": [
+        12.849333
+      ],
+      "median_ms": 12.849333,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:stoch",
+      "samples_ms": [
+        25.511584
+      ],
+      "median_ms": 25.511584,
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:stochastic_oscillator",
+      "samples_ms": [
+        1.724584
+      ],
+      "median_ms": 1.724584,
+      "columns": 2,
+      "frame_bytes": 337740
+    },
+    {
+      "name": "factory:stochf",
+      "samples_ms": [
+        20.185167
+      ],
+      "median_ms": 20.185167,
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:stochrsi",
+      "samples_ms": [
+        29.4615
+      ],
+      "median_ms": 29.4615,
+      "columns": 2,
+      "frame_bytes": 332544
+    },
+    {
+      "name": "factory:t3",
+      "samples_ms": [
+        19.946583
+      ],
+      "median_ms": 19.946583,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:tema",
+      "samples_ms": [
+        11.007041
+      ],
+      "median_ms": 11.007041,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:trange",
+      "samples_ms": [
+        0.583375
+      ],
+      "median_ms": 0.583375,
+      "columns": 1,
+      "frame_bytes": 168871
+    },
+    {
+      "name": "factory:trima",
+      "samples_ms": [
+        10.269625
+      ],
+      "median_ms": 10.269625,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:trix",
+      "samples_ms": [
+        16.312542
+      ],
+      "median_ms": 16.312542,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:tsf",
+      "samples_ms": [
+        57.168084
+      ],
+      "median_ms": 57.168084,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:typprice",
+      "samples_ms": [
+        0.33175
+      ],
+      "median_ms": 0.33175,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:ultosc",
+      "samples_ms": [
+        59.370292
+      ],
+      "median_ms": 59.370292,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:var",
+      "samples_ms": [
+        9.862875
+      ],
+      "median_ms": 9.862875,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wclprice",
+      "samples_ms": [
+        0.278583
+      ],
+      "median_ms": 0.278583,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:wilder_rsi",
+      "samples_ms": [
+        10.813958
+      ],
+      "median_ms": 10.813958,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "factory:willr",
+      "samples_ms": [
+        2.017416
+      ],
+      "median_ms": 2.017416,
+      "columns": 1,
+      "frame_bytes": 168870
+    },
+    {
+      "name": "factory:window_return",
+      "samples_ms": [
+        0.429834
+      ],
+      "median_ms": 0.429834,
+      "columns": 1,
+      "frame_bytes": 166275
+    },
+    {
+      "name": "factory:wma",
+      "samples_ms": [
+        7.453125
+      ],
+      "median_ms": 7.453125,
+      "columns": 1,
+      "frame_bytes": 166272
+    },
+    {
+      "name": "catalog_pool",
+      "samples_ms": [
+        4479.373167
+      ],
+      "median_ms": 4479.373167
+    }
+  ],
+  "peak_rss_bytes": 497811456,
+  "import_ms": 3803.714375,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "6e864599aeac276cd874600309fafa95afdb2351"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "k": 8,
+    "reps": 1
+  },
+  "registry_count": 226,
+  "skipped": [
+    {
+      "factory": "active_lines",
+      "reason": "TypeError: active_lines() missing 2 required positional arguments: 'long_lines' and 'short_lines'"
+    },
+    {
+      "factory": "active_quantile_count",
+      "reason": "TypeError: active_quantile_count() missing 2 required positional arguments: 'long_lines_q' and 'short_lines_q'"
+    },
+    {
+      "factory": "breakout_features",
+      "reason": "ColumnNotFoundError: unable to find column \"breakout_long\"; valid columns: [\"datetime\", \"open\", \"high\", \"low\", \"close\", \"volume\", \"mean\", \"std\", \"maker_ratio\", \"no_of_trades\", \"open_liquidity\", \"high_liquidity\", \"low_liquidity\", \"close_liquidity\", \"liquidity_sum\", \"maker_volume\", \"maker_liquidity\"]"
+    },
+    {
+      "factory": "conserved_flux_renormalization",
+      "reason": "ColumnNotFoundError: unable to find column \"price\"; valid columns: [\"datetime\", \"open\", \"high\", \"low\", \"close\", \"volume\", \"mean\", \"std\", \"maker_ratio\", \"no_of_trades\", \"open_liquidity\", \"high_liquidity\", \"low_liquidity\", \"close_liquidity\", \"liquidity_sum\", \"maker_volume\", \"maker_liquidity\"]"
+    },
+    {
+      "factory": "find_min_d",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "fractional_diff",
+      "reason": "ValueError: fractional_diff cols must be a non-empty list of column names"
+    },
+    {
+      "factory": "hours_since_big_move",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "hours_since_quantile_line",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_column",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_columns",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_range",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "lag_range_cols",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "price_lines",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "quantile_line_density",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "quantile_price_lines",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "rolling_zscore",
+      "reason": "requires parameters"
+    },
+    {
+      "factory": "bollinger_position",
+      "reason": "ColumnNotFoundError: unable to find column \"bb_upper\"; valid columns: [\"datetime\", \"open\", \"high\", \"low\", \"close\", \"volume\", \"mean\", \"std\", \"maker_ratio\", \"no_of_trades\", \"open_liquidity\", \"high_liquidity\", \"low_liquidity\", \"close_liquidity\", \"liquidity_sum\", \"maker_volume\", \"maker_liquidity\"]"
+    }
+  ],
+  "pool": {
+    "columns": 259,
+    "bytes": 43064448,
+    "skipped": [
+      "active_lines",
+      "active_quantile_count",
+      "breakout_features",
+      "conserved_flux_renormalization",
+      "fractional_diff",
+      "bollinger_position"
+    ]
+  }
+}
