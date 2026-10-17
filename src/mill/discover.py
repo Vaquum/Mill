@@ -206,12 +206,30 @@ def runs(flags: np.ndarray) -> list[tuple[int, int]]:
     return list(zip(np.flatnonzero(edges == 1).tolist(), np.flatnonzero(edges == -1).tolist()))
 
 
-def column_ranks(values: np.ndarray) -> np.ndarray:
+def _rank_dtype(n: int, compact: bool):
+    # Average ranks are integers or halves. Float32 represents every such
+    # value through 2**23 exactly; larger contexts retain Float64 storage.
+    return pl.Float32 if compact and n <= 2**23 else pl.Float64
+
+
+def column_ranks(values: np.ndarray, *, compact: bool = False) -> np.ndarray:
     """Average ranks of each column among its finite rows; NaN where undefined."""
     if values.shape[1] == 0:
         return values.copy()
     frame = pl.from_numpy(values).fill_nan(None)
-    return frame.select(pl.all().rank("average")).to_numpy().astype(np.float64, copy=False)
+    return frame.select(pl.all().rank("average").cast(_rank_dtype(values.shape[0], compact))).to_numpy()
+
+
+def _screen_auc(y, ranks):
+    if ranks.dtype != np.float32:
+        return auc(y, ranks)
+    # Promote one tile, rather than allocating a second full Float64 matrix.
+    # Binary labels and bounded half-integer ranks make every sum exact.
+    result = np.empty(ranks.shape[1], dtype=np.float64)
+    for start in range(0, ranks.shape[1], _FFT_CHUNK):
+        block = ranks[:, start:start+_FFT_CHUNK].astype(np.float64)
+        result[start:start+block.shape[1]] = auc(y, block)
+    return result
 
 
 def auc(y: np.ndarray, ranks: np.ndarray) -> np.ndarray:
@@ -252,7 +270,7 @@ def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
         n1 = np.rint(np.fft.irfft(fy * np.fft.rfft(valid), n=n)[shifts])[:, None]
         n0 = valid.sum() - n1
         for c0 in range(0, len(columns), _FFT_CHUNK):
-            block = ranks[:, columns[c0:c0 + _FFT_CHUNK]]
+            block = ranks[:, columns[c0:c0 + _FFT_CHUNK]].astype(np.float64, copy=False)
             s1 = np.fft.irfft(fy[:, None] * np.fft.rfft(np.nan_to_num(block), axis=0), n=n, axis=0)[shifts]
             with np.errstate(invalid="ignore", divide="ignore"):
                 sep = np.abs((s1 - n1 * (n1 + 1) / 2) / (n1 * n0) - 0.5)
@@ -506,12 +524,12 @@ def _analyze(pool, index, y, intervals, rank_key):
     def build_ranks():
         values = (pool.values[index[0]:index[-1] + 1]
                   if index.size and index[-1] - index[0] + 1 == index.size else pool.values[index])
-        return column_ranks(values)
+        return column_ranks(values, compact=True)
     ranks = discovery_reuse.ranks(rank_key, build_ranks)
     timing = {"rank": time.perf_counter() - clock0}
 
     clock1 = time.perf_counter()
-    point = auc(y, ranks)
+    point = _screen_auc(y, ranks)
     separation = np.abs(point - 0.5)
     ranked = np.flatnonzero(np.isfinite(separation))
     ranked = ranked[np.argsort(-separation[ranked], kind="stable")]

@@ -114,10 +114,11 @@ def test_mutable_library_pools_are_never_reused(tmp_path):
     assert _answer(mutable, options) != before
 
 
-def test_source_advances_outside_context_reuse_stats_but_refresh_full_series_rules(tmp_path, monkeypatch):
+@pytest.mark.parametrize("mode", ["inside", "lead"])
+def test_source_advances_outside_context_reuse_stats_but_refresh_full_series_rules(tmp_path, monkeypatch, mode):
     discovery_reuse.clear()
     old, fields = _pool(tmp_path / "old")
-    options = _options(old)
+    options = _options(old) | {"mode": mode}
     newer = tmp_path / "new"
     newer.mkdir()
     np.save(newer / "values.npy", np.vstack([old.values, old.values[-10:]]))
