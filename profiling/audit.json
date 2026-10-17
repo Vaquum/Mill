@@ -1,0 +1,394 @@
+{
+  "title": "Mill engine performance audit",
+  "date": "2026-10-17",
+  "scope": "Architecture and performance evidence only; production optimizations are proposed, not implemented.",
+  "engine_source_tree": "5ff07830e09d43f12728d7aec2bcb1b24012d3f1",
+  "hardware": {
+    "cpu": "Apple M1 Max",
+    "logical_cpus": 10,
+    "ram_bytes": 68719476736
+  },
+  "method": {
+    "sources": [
+      "1h_time_bars_9a5b8be319f4d65e.parquet: 20784 rows",
+      "15m_time_bars_84b0a8617eeeb5d8.parquet: 83136 rows"
+    ],
+    "data_period": "2024-01-01 through 2026-05-15; cached snapshots, not the live production store",
+    "data_access": "GetData.from_parquet for snapshots; actual GetData.get_time_bars for isolated Arrow fixtures. No external HistoricalData calls.",
+    "timings": "Sequential fresh processes; raw samples retained. Repeated timings use medians; first/cold operations use one sample. Cold means application cache, not flushed OS page cache. Host is shared; variability is not hidden.",
+    "memory": "Fresh-process high-water RSS includes imports, whole source input, fixture writes and transient work; not a steady-state or incremental allocation claim. Python tracemalloc is a separate serializer-only run and excludes native allocations. All recorded scaling sources use their complete rows, not --rows.",
+    "coverage": "Eight built-in views, all seven target calculators, 226-factory registry at two row counts, 1/8/30-feature QC, catalog discovery with 40 events and 3 returned candidates, raw-cache refresh/races, and short loopback HTTP batches at concurrency 1/4/8. QC statistical measurements use next_return and bar mode.",
+    "boundaries": [
+      "No production Linux/3.12 benchmark or sustained saturation/p99 study",
+      "No concurrent discovery memory measurement",
+      "No real-store write cadence, TLS/WAN latency, browser rendering, dollar-bar timing or every factory-parameter/target/QC-mode combination benchmark",
+      "Required-parameter factories are listed, not invented; six default producers are incompatible with this bar schema",
+      "No demonstrated optimization speedup or contractual SLA"
+    ],
+    "provenance": "Each raw file records input digest, versions, thread settings and checkout SHA. Production src/mill was unchanged across harness revisions. Later harness fixes improve supervision and small-input handling; original measurements remain attributed to their recorded revisions."
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "title": "Eager JSON dominates built-in views and is paid by QC",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/serve.py:_ensure",
+        "src/mill/serve.py:_serialize",
+        "src/mill/serve.py:_Handler.do_GET"
+      ],
+      "evidence": [
+        "views-20k.json: view compute 0.097–13.711 ms; view JSON 22.277–67.671 ms",
+        "features-83k-8.json: JSON 253.630 ms, payload 8,526,656 bytes",
+        "memory-83k-8.json: serializer Python allocation peak 42,381,281 bytes"
+      ],
+      "consequence": "The frame path always constructs rows(), Python tuples/scalars, a JSON string and bytes, even when /qc needs only the frame. Exact hits avoid this CPU work but still transfer the entire payload.",
+      "proposed_action": "Separate frame calculation from lazy serialization. Evaluate an optional Arrow IPC response for engine consumers; retain the existing JSON contract. Avoid serializing a full result solely to run QC.",
+      "acceptance": "Compare frame and JSON outputs across every built-in view, target, NaN/inf/null case and column ordering. Existing JSON rounding and datetime formatting must remain identical. Measure QC without an unneeded JSON payload."
+    },
+    {
+      "id": "F02",
+      "priority": 1,
+      "title": "Overlapping feature requests rebuild unchanged producers",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/table.py:build_from_spec",
+        "src/mill/serve.py:_spec_hash",
+        "src/mill/serve.py:_ensure"
+      ],
+      "evidence": [
+        "features-20k-8.json: initial ensure 158.564 ms; adding close 157.254 ms; exact hit 0.019 ms",
+        "features-83k-8.json: adding close 1080.328 ms; exact hit 0.018 ms"
+      ],
+      "consequence": "Only whole-spec/target results are cached. A changed spec or target rebuilds shared factories over full history. The spec hash also distinguishes duplicates that build_from_spec subsequently removes.",
+      "proposed_action": "Cache producer outputs by source version, factory and parameters with a byte budget. Assemble requested columns from reusable results; keep explicit/default parameter naming and requested column order. Consider incremental calculations only for producers with a proven state/overlap contract.",
+      "acceptance": "Demonstrate one producer invocation per identical input/version under overlapping requests; compare output frames exactly. Cover parameter suffixes, repeated factories, multi-output factories, history revisions and target changes."
+    },
+    {
+      "id": "F03",
+      "priority": 1,
+      "title": "Discovery transient allocations dwarf the feature pool",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/discover.py:_build",
+        "src/mill/discover.py:column_ranks",
+        "src/mill/discover.py:shift_null",
+        "src/mill/discover.py:bootstrap_interval"
+      ],
+      "evidence": [
+        "discover-20k-catalog.json: 43,064,448-byte pool; peak process RSS 1,204,355,072 bytes",
+        "discover-83k-catalog.json: 172,257,792-byte pool; peak process RSS 3,537,059,840 bytes; 12,414.809 ms search",
+        "83k search: rank 386.53 ms, null 4439.63 ms, stage two 7497.31 ms"
+      ],
+      "consequence": "Context indexing copies the dense pool, ranking creates additional matrices, FFT chunks allocate complex arrays, and each leader bootstrap materializes several 200-by-N arrays. Concurrent searches can multiply this pressure; concurrent peak was not measured.",
+      "proposed_action": "Batch bootstrap draws with the same sampled indices and deterministic arithmetic; reduce temporary rank/FFT copies; establish a memory budget and bounded search admission. Preserve the exact circular-shift null and full context.",
+      "acceptance": "Verify exact seeds/draws, AUCs, intervals, adjusted p-values, beyond-chance flags, leader ordering and fitted rules against existing cases, including threshold ties. Measure native peak RSS in a fresh process at 20k/83k and under concurrent searches."
+    },
+    {
+      "id": "F04",
+      "priority": 1,
+      "title": "Research workloads share an unbounded request-thread process with consumers",
+      "basis": "source-confirmed risk; partial concurrency measurement",
+      "sources": [
+        "src/mill/serve.py:main",
+        "src/mill/serve.py:_between_factories",
+        "src/mill/serve.py:_search",
+        "src/mill/serve.py:_Handler.do_POST"
+      ],
+      "evidence": [
+        "http-20k-8.json: warm 16-request batches take 20.733 / 14.652 / 32.348 ms at concurrency 1 / 4 / 8",
+        "http-20k-8.json: identical cold requests build once",
+        "discover-83k-catalog.json: one search reaches 3.29 GiB process peak"
+      ],
+      "consequence": "ThreadingHTTPServer has no application-wide worker/memory budget or compute cancellation. Search tickets pause background pool refreshes between factories, but they do not isolate data delivery or QC. Browser aborts do not stop engine calculations. The short loopback run does not establish capacity or p99.",
+      "proposed_action": "Place QC/discovery work behind bounded admission or dedicated worker processes. Keep the data/feature consumer path available during research work. Add deadlines/cancellation and explicit overload behavior without silently reducing history or statistical work.",
+      "acceptance": "Run a sustained mixed workload with consumer latency, queue depth, timeouts, process RSS and throughput recorded. Verify canceled work stops and overload cannot exhaust the consumer process."
+    },
+    {
+      "id": "F05",
+      "priority": 1,
+      "title": "Cold QC grows with per-feature bootstrap and quadratic pair work",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/qc.py:precompute",
+        "src/mill/qc.py:_edge_metrics",
+        "src/mill/qc.py:_pair_map",
+        "src/mill/qc.py:_bootstrap_spearman_ci"
+      ],
+      "evidence": [
+        "qc-20k-1.json: cold 1315.281 ms",
+        "qc-20k-8.json: cold 3147.676 ms; edge 2583.577 ms; 28 pairs 491.523 ms",
+        "qc-20k-30.json: cold 19136.942 ms; edge 10208.000 ms; 435 pairs 8668.187 ms",
+        "qc-20k-8.json: warm kernel report 3.143 ms; precomputed report 0.063 ms"
+      ],
+      "consequence": "Memoization makes repeated inputs fast, but a changed row or context changes content hashes. Bootstrap uses 200 draws over up to 20k observations per feature, and every feature pair computes Spearman and KNN mutual information. Kernel launch serialization protects the Numba workqueue.",
+      "proposed_action": "Keep statistical QC outside latency-critical feature delivery. Reuse QCPrimitives for subsets of an identical pool/context and evaluate targeted primitive invalidation. Optimize exact kernels before considering any separately specified statistical approximation.",
+      "acceptance": "Use qc_validate.py dump/check and existing memo/thread/sweep tests; require unchanged reports and deterministic seeds. Benchmark genuinely cold inputs as well as repeated kernels, and preserve the parallel-kernel safety lock unless its threading contract is replaced."
+    },
+    {
+      "id": "F06",
+      "priority": 2,
+      "title": "Local Arrow is round-tripped through Parquet on refresh",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/get_data.py:_cached",
+        "src/mill/cache_store.py:read_fresh",
+        "src/mill/cache_store.py:write_cache",
+        "src/mill/frames.py:normalize_datetime"
+      ],
+      "evidence": [
+        "data-83k.json: Arrow read/normalize/select 1.774 ms; disk-cache hit 17.443 ms; cold cache creation 24.981 ms",
+        "data-20k-v2.json: Arrow 1.693 ms; disk-cache hit 6.149 ms; cold cache creation 15.763 ms",
+        "data-20k.json is an earlier slower run, retained to expose host/runtime variability"
+      ],
+      "consequence": "The underlying mmap read is fast, but every invalidated GetData request normalizes and writes compressed Parquet plus metadata; a disk cache hit decodes Parquet. These are application-cache states with warm OS pages, not cold physical-disk timings. The complete path is not allocation-free merely because its source read is mmap-backed.",
+      "proposed_action": "Evaluate direct versioned Arrow reads or a bounded in-memory GetData cache for an available local source. Preserve the existing last-known-cache fallback when the source is absent. Keep data access behind GetData.",
+      "acceptance": "Measure complete source-present and source-missing paths. Verify canonical dtypes, closed bars, date/row limits, atomic refresh and source-write-during-read behavior; retain freshness race tests."
+    },
+    {
+      "id": "F07",
+      "priority": 2,
+      "title": "Open-bar rewrites still trigger full closed-frame reload and comparison",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/serve.py:_raw_for",
+        "src/mill/serve.py:_retire",
+        "src/mill/get_data.py:get_time_bars"
+      ],
+      "evidence": [
+        "data-20k-v2.json: raw memory hit 0.010 ms; unchanged rewrite 9.820 ms",
+        "data-83k.json: raw memory hit 0.010 ms; unchanged rewrite 26.258 ms"
+      ],
+      "consequence": "Closed-frame equality correctly preserves result versions when only an open bar changes. Reaching that decision still rereads, filters, persists and compares the full history. A genuinely changed closed bar invalidates all whole-spec results.",
+      "proposed_action": "Use a trustworthy closed-data revision from the store or validated append/revision metadata to distinguish open-bar rewrites cheaply. Avoid assuming that an unchanged row count means unchanged history.",
+      "acceptance": "Preserve late corrections, rewritten closed bars, writes during reads and open-to-closed transitions. Assert the latest closed bar is served, without a date cutoff."
+    },
+    {
+      "id": "F08",
+      "priority": 2,
+      "title": "Lock granularity creates redundant raw loads and same-series queues",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/get_data.py:_LIMEN_LOCK",
+        "src/mill/serve.py:_raw_for",
+        "src/mill/serve.py:_ensure",
+        "src/mill/serve.py:_BAR_LOCKS"
+      ],
+      "evidence": [
+        "data-20k-v2.json and data-83k.json: four concurrent first raw-cache requests call klines four times",
+        "http-20k-8.json: four identical cold /data requests call build_from_spec once"
+      ],
+      "consequence": "Raw-cache loading happens before the server bar lock. The GetData miss lock is global across all series; the server bar lock then covers every distinct spec/target for that bar through JSON construction. Existing identical-key single-flight behavior is useful and should remain.",
+      "proposed_action": "Single-flight raw publication per source version. Separate publication locks from expensive producer work and serialization; evaluate per-key admission together with a global resource budget. Measure different-key requests before claiming a concurrency speedup.",
+      "acceptance": "Count source reads and producer calls under identical, overlapping and independent requests. Retain atomic frame/payload publication and source-version race tests; measure mixed-series head-of-line latency."
+    },
+    {
+      "id": "F09",
+      "priority": 1,
+      "title": "Caches retain payloads without a byte budget",
+      "basis": "measured retention and source-confirmed risk",
+      "sources": [
+        "src/mill/serve.py:_RESULTS",
+        "src/mill/serve.py:_QC_CACHE",
+        "src/mill/serve.py:_POOL_LOCKS",
+        "src/mill/serve.py:_build_pool",
+        "src/mill/qc.py:_KERNEL_CACHE_MAX"
+      ],
+      "evidence": [
+        "memory-83k-8.json: ten result entries retain 58,797,097 JSON bytes",
+        "memory-83k-8.json: estimated frame-byte sum 43,573,656; shared buffers mean this is not unique retained memory",
+        "src/mill/qc.py: 200,000-entry limit clears the entire kernel cache"
+      ],
+      "consequence": "Result and QC variants accumulate until a bar version changes; view-pool eviction does not evict the corresponding lock entries. Kernel memo eviction is an all-at-once latency cliff. Catalog retention is per series and dense.",
+      "proposed_action": "Introduce byte-accounted cache policies, including JSON bytes and native arrays, with per-workload limits and observable hit/eviction counters. Retire lock entries safely with their work lifecycle. Prefer gradual kernel eviction to clearing all results.",
+      "acceptance": "Exercise many spec/parameter/context variants and repeated version changes; verify a stable retained-memory ceiling, correct single-flight behavior during eviction, and bounded miss latency after eviction."
+    },
+    {
+      "id": "F10",
+      "priority": 2,
+      "title": "Import-time eager dependencies and Numba compilation delay startup",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/serve.py:module imports",
+        "src/mill/qc.py:_warmup_bootstrap",
+        "src/mill/qc.py:_bootstrap_spearman_estimates",
+        "Vaquum/Limen@86968e4:limen/__init__.py"
+      ],
+      "evidence": [
+        "import_costs.json: mill.serve cumulative 4.150 s; limen 1.979 s; mill.qc 1.950 s (overlapping import tree)",
+        "raw cases: import wall times 3.4–8.8 s; host/runtime variability is visible"
+      ],
+      "consequence": "Importing the HTTP layer eagerly imports research/ML dependencies and compiles the bootstrap kernel. njit has no disk-cache option here. The tiny warmup can differ from real index-array layouts; an additional first-QC compile is a hypothesis until signature measurements confirm it.",
+      "proposed_action": "Lazy-load research dependencies and warm required compiled signatures in a controlled worker. Evaluate Numba disk caching with deployment-safe cache paths and version keys. Keep readiness separate from liveness and optional catalog warming.",
+      "acceptance": "Measure fresh-process import and first-real-request latency separately on production Python/Linux. Verify the first real bootstrap does not unexpectedly compile another signature and that cold-cache/readiness behavior is explicit."
+    },
+    {
+      "id": "F11",
+      "priority": 2,
+      "title": "Several registered Limen factories execute Python loops per row",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/feature_registry.py:_limen_producer",
+        "src/mill/discover.py:catalog_pool",
+        "Vaquum/Limen@86968e4:limen/indicators/ht_sine.py",
+        "Vaquum/Limen@86968e4:limen/indicators/cci.py"
+      ],
+      "evidence": [
+        "factories-20k.json and factories-83k.json: 226 registered factories; 209 default invocations succeed, 11 require parameters and 6 fail for this raw-bar schema",
+        "factories-20k.json: ht_sine 388.9 ms; ht_trendmode 258.2 ms; ht_dcphase 189.2 ms",
+        "factories-83k.json: full catalog 18.603 s for 259 columns"
+      ],
+      "consequence": "A Polars-facing producer can wrap Python loops in map_batches, so the public frame API does not guarantee native execution. The catalog calls every eligible producer sequentially, and repeats all of them after a closed-data revision.",
+      "proposed_action": "Optimize the measured slow factories upstream in Limen using verified native kernels, or reusable state where mathematically valid. Any new Mill feature implementation must remain a Polars expression. Reuse the same producer cache across views and catalogs.",
+      "acceptance": "Preserve factory outputs, warmup nulls, tie rules, parameter behavior and numeric precision against pinned Limen outputs; record cold and steady timings by factory. Do not drop slow columns to manufacture a speedup."
+    },
+    {
+      "id": "F12",
+      "priority": 2,
+      "title": "QC selection and date filters happen after full-frame construction",
+      "basis": "source-confirmed",
+      "sources": [
+        "src/mill/serve.py:_Handler.do_GET",
+        "src/mill/serve.py:_date_filter",
+        "src/mill/serve.py:_group_for_qc",
+        "src/mill/qc.py:precompute"
+      ],
+      "evidence": [
+        "/qc calls _ensure before selecting columns, date filtering or grouping",
+        "precompute sorts datetime and converts every selected column to NumPy; _arg_key hashes value.tobytes()"
+      ],
+      "consequence": "A narrow QC request can still build and serialize every requested factory across full raw history. Warm kernel hits still pay sorting, conversion and content hashing on reconstructed inputs.",
+      "proposed_action": "Construct only the requested QC frame without serializing it; reuse stable sorted frames and primitives for identical contexts. Do not truncate raw history before stateful/lookback calculations without a proven equivalent state boundary.",
+      "acceptance": "Compare every row_mode and selected date/column combination against the current report; include rolling-feature boundaries and future-dependent targets. Check that default requests still cover the entire available closed history."
+    },
+    {
+      "id": "F13",
+      "priority": 3,
+      "title": "Targets and grading are secondary costs in the measured workloads",
+      "basis": "measured",
+      "sources": [
+        "src/mill/targets.py:apply",
+        "src/mill/grading.py:grade_map",
+        "src/mill/serve.py:_ensure"
+      ],
+      "evidence": [
+        "views-20k.json: all seven target calculations 0.160–8.629 ms, single samples",
+        "qc-20k-30.json: grading 0.528 ms and report JSON 0.201 ms"
+      ],
+      "consequence": "Optimizing targets or grade assembly first would miss the dominant view JSON, factory, bootstrap and discovery costs. Joining by datetime is still repeated when targets/specs change.",
+      "proposed_action": "Retain these as regression baselines; prioritize the larger measured costs. Consider target reuse after shared factory/result caching is defined.",
+      "acceptance": "Preserve target alignment and labels, especially trailing unknown forward values; keep grading results identical."
+    },
+    {
+      "id": "F14",
+      "priority": 2,
+      "title": "Subset assembly is cheap per subset but enumeration remains combinatorial",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/qc.py:sweep",
+        "src/mill/qc.py:report_for",
+        "src/mill/qc.py:_pairwise_rows"
+      ],
+      "evidence": [
+        "qc-20k-30.json: 4525 subsets of sizes 1,2,3 take 180.651 ms after precompute",
+        "qc-20k-30.json: full 30-feature report_for takes 0.318 ms"
+      ],
+      "consequence": "Precompute removes repeated statistical kernels, not the number of emitted reports. Enumerating every subset size still produces exponentially many outputs; pair aggregation within a subset is quadratic in subset width.",
+      "proposed_action": "Keep sweeps lazy and require an explicit combination/output budget for consumers. Reuse one primitive pool per immutable context rather than calling report for each subset.",
+      "acceptance": "Check subset reports against direct reports in pool order; test limits and cancellation without changing directional pair-MI reuse or feature ordering."
+    },
+    {
+      "id": "F15",
+      "priority": 2,
+      "title": "Discovery caches feature values but recomputes ranks and null preparation",
+      "basis": "measured and source-confirmed",
+      "sources": [
+        "src/mill/serve.py:_pool_for",
+        "src/mill/discover.py:discover",
+        "src/mill/discover.py:column_ranks",
+        "src/mill/discover.py:shift_null"
+      ],
+      "evidence": [
+        "discover-83k-catalog.json: rank 386.53 ms and circular-shift null 4439.63 ms on a prebuilt pool",
+        "_pool_for intentionally serves the previous pool while refreshing and exposes through_ms"
+      ],
+      "consequence": "Repeated searches reuse dense feature values but rebuild context ranks and feature-side FFTs. Results can intentionally lag the latest bars while a replacement pool is built; the exposed through_ms is essential for consumers.",
+      "proposed_action": "Evaluate bounded context-rank and feature-FFT reuse keyed by exact source version, row mask and context. Preserve stale-pool metadata and allow consumers to distinguish cached freshness from current raw freshness.",
+      "acceptance": "Verify rank ties, NaNs, lead-mode exclusions, exact allowed shifts and pool-version changes. Quantify extra cache bytes before retaining context matrices or FFTs."
+    },
+    {
+      "id": "F16",
+      "priority": 2,
+      "title": "Production latency budgets and regression evidence are absent",
+      "basis": "source-confirmed gap and scope boundary",
+      "sources": [
+        "pyproject.toml",
+        "Dockerfile",
+        ".github/workflows/tests.yml",
+        "src/mill/serve.py:_send"
+      ],
+      "evidence": [
+        "Docker/CI target Python 3.12 on Linux; local measurements use Python 3.13.2 on macOS arm64",
+        "Core numerical dependencies other than Polars/Limen are not fully pinned",
+        "CI runs correctness tests; endpoint histograms, cache-byte counters and performance thresholds are absent"
+      ],
+      "consequence": "These snapshots identify costs but cannot establish production p99, saturation capacity, network latency or consumer SLAs. Cold one-shot measurements and short loopback batches are not latency distributions.",
+      "proposed_action": "Agree consumer payload sizes, concurrency and p50/p95/p99 budgets. Add stage timings and cache/resource counters, then repeat this matrix on a controlled production-equivalent runner. Pin numerical/runtime inputs used for performance comparisons.",
+      "acceptance": "Track both warm hits and genuinely changed-input misses, total CPU, peak/retained RSS, payload bytes, queue depth and freshness. Do not approve a speedup from warm-cache averages alone."
+    }
+  ],
+  "sequence": [
+    {
+      "step": 1,
+      "findings": [
+        "F01",
+        "F02",
+        "F12"
+      ],
+      "deliverable": "Separate computation from presentation; reuse versioned producer results.",
+      "proof": "Exact output parity across views, parameters, targets and source revisions, plus measured cold/miss improvement."
+    },
+    {
+      "step": 2,
+      "findings": [
+        "F03",
+        "F04",
+        "F09"
+      ],
+      "deliverable": "Bound discovery scratch memory, retained cache bytes and research concurrency.",
+      "proof": "Bounded high-water/retained RSS and consumer latency under mixed load; exact statistical decisions."
+    },
+    {
+      "step": 3,
+      "findings": [
+        "F06",
+        "F07",
+        "F08"
+      ],
+      "deliverable": "Remove avoidable live Arrow/Parquet refresh work and correct lock granularity.",
+      "proof": "Freshness/race tests and source-missing fallback pass; no duplicate raw publication or serialized unrelated I/O."
+    },
+    {
+      "step": 4,
+      "findings": [
+        "F05",
+        "F10",
+        "F11",
+        "F15"
+      ],
+      "deliverable": "Optimize measured upstream kernels, first-use compilation and discovery reuse.",
+      "proof": "Pinned numerical equivalence, deterministic QC/discovery, and cold/steady timing comparisons."
+    },
+    {
+      "step": 5,
+      "findings": [
+        "F13",
+        "F14",
+        "F16"
+      ],
+      "deliverable": "Set production-equivalent latency/resource budgets and regression monitoring.",
+      "proof": "Sustained mixed-consumer measurements with explicit payload, concurrency, freshness and p99 targets."
+    }
+  ]
+}

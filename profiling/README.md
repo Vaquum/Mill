@@ -1,26 +1,21 @@
-# profiling
+# Mill engine performance
 
-Developer tooling for profiling and validating the QC pipeline. Not part of the
-package and not run by the test suite — these are standalone scripts run by hand
-in venv `mill`.
+**Cache misses dominate.** Built-in views compute quickly; JSON, repeated history work, discovery allocations and statistical QC prevent consistently low latency.
 
-They read real BTCUSDT bars from the local GetData cache (`~/.cache/mill/*.parquet`,
-populated by normal Mill use), so they need that cache present on the machine.
+| Path | 20,784 bars | 83,136 bars |
+| --- | ---: | ---: |
+| Built-in view compute / JSON | 0.10–13.71 / 22.28–67.67 ms | Not measured |
+| Eight indicators compute / JSON | 100.05 / 57.94 ms | 663.13 / 253.63 ms |
+| Exact result cache hit, in process | 19 µs | 18 µs |
+| Catalog build, 259 columns | 4.48 s | 18.60 s |
+| Discovery, prebuilt catalog | 2.09 s | 12.41 s |
+| Discovery peak process RSS | 1.12 GiB | 3.29 GiB |
+| Cold QC, 1 / 8 / 30 indicators | 1.32 / 3.15 / 19.14 s | Not measured |
 
-- **`qc_profile.py`** — profiles every step of the `/qc` pipeline (load → build →
-  serialize → group → `qc.report` → grade → json) and breaks `qc.report` into its
-  sections, sweeping the feature count. Optional `--cprofile` attributes time to
-  the underlying library calls.
-- **`qc_validate.py`** — captures (`--dump`) and compares (`--check`) exact QC
-  outputs across a grid of (feature count, target, row_mode). A byte-for-byte
-  JSON match proves an optimization is lossless. Use it to gate any change to
-  `qc.py`: dump on the old code, check on the new.
-- **`qc_memo_demo.py`** — shows the kernel-memo win on the real flows: cold vs
-  identical re-run vs incremental (+1 feature).
+[Engine map](engine.mmd), [16 findings and optimization sequence](audit.json), [raw samples](results/2026-10-17), [import attribution](import_costs.json). Measurements are local snapshots on M1 Max, Python 3.13, pinned Polars/Limen; production uses Linux/Python 3.12. Medians describe repeated timings; cold measurements are single samples. RSS includes imports, full input decoding, fixtures and transient work; it is neither incremental allocation nor steady-state memory. No production code changed.
 
-Example:
+Prioritize lazy JSON, factory-level reuse, bounded discovery memory/workers, and a live Arrow path that avoids Parquet round-trips. Preserve complete history, closed-bar freshness, feature values, statistical decisions and existing API responses. Proposed acceptance gates are in the audit; speedups are not yet demonstrated.
 
-    python profiling/qc_validate.py --dump  /tmp/qc_baseline.json   # before change
-    python profiling/qc_validate.py --check /tmp/qc_baseline.json   # after change
-    python profiling/qc_profile.py  --ks 1,2,4,8,16 --reps 3
-    python profiling/qc_memo_demo.py
+Activate venv `mill`; run `python profiling/engine_sweep.py --case features --parquet /absolute/source.parquet --output /tmp/features.json --k 8 --reps 5`. Cases: startup, data, features, factories, views, qc, discover, http, memory. Add `--bar 15m_time_bars` for 15m input; `--catalog` for full discovery. Each invocation has a 49-second worker alarm and 50-second supervisor limit; fixtures are temporary. `--rows` limits compute after complete source decoding and is rejected for memory measurements. Run cases sequentially. Ordinary requests do not have these profiler deadlines.
+
+Existing QC tools remain available: `qc_profile.py` attributes stages; `qc_validate.py --dump /tmp/before.json` then `--check /tmp/before.json` checks exact QC outputs across revisions; `qc_memo_demo.py` measures reuse; `qc_sweep_profile.py` measures subset aggregation. The CLI safety boundary and recorded-sample consistency run in pytest; performance timings stay manual.

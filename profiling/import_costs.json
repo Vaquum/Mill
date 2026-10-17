@@ -1,5 +1,5 @@
 {
-  "command": "python -X importtime -c import_mill.serve",
+  "command": "python -X importtime -c 'import mill.serve'",
   "note": "Separate process; cumulative import times overlap and must not be added. Warm OS cache; import tracing has overhead.",
   "top_cumulative": [
     {
