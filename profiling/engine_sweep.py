@@ -39,6 +39,7 @@ def arguments():
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
     parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
+    parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -404,9 +405,12 @@ def worker(args):
                     raise ValueError("pool artifact does not match this source, parameters and engine")
                 record.doc["pool_builder_source_tree_sha256"] = built["tree"]
                 fields = metadata["fields"]
-                pool = discover.Pool(**{k: tuple(v) for k, v in fields.items()},
-                    ms=np.load(args.pool_artifact / "ms.npy", allow_pickle=False, mmap_mode="r"),
-                    values=np.load(args.pool_artifact / "values.npy", allow_pickle=False, mmap_mode="r"))
+                if hasattr(discover, "mapped_pool"):
+                    pool = discover.mapped_pool(args.pool_artifact, {k: tuple(v) for k, v in fields.items()})
+                else:
+                    pool = discover.Pool(**{k: tuple(v) for k, v in fields.items()},
+                        ms=np.load(args.pool_artifact / "ms.npy", allow_pickle=False, mmap_mode="r"),
+                        values=np.load(args.pool_artifact / "values.npy", allow_pickle=False, mmap_mode="r"))
             else:
                 pool = measure("pool_build", lambda: discover.catalog_pool(raw) if args.catalog else discover.spec_pool(raw, spec), reps=1)
             record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
@@ -427,11 +431,28 @@ def worker(args):
             first = min(100, max(1, len(ms) // 10))
             windows = [(int(ms[i]), int(ms[min(i + 2, len(ms)-1)]))
                        for i in range(first, len(ms) - 2, max(3, len(ms) // 40))]
-            answer = measure("discover_full", lambda: discover.discover(pool, step_ms=step,
-                windows=windows, mode="inside", lead_bars=1,
-                context=(int(ms[0]), int(ms[-1]) + step), display=(int(ms[0]), int(ms[-1]) + step),
-                top=3, max_points=256, bar_source={"method": "limen.data.HistoricalData.get_arrow_file",
-                    "params": {"file_path": f"/opt/arrow/{series}/latest.arrow"}}, label="profile"))
+            def search(**overrides):
+                options = dict(step_ms=step, windows=windows, mode="inside", lead_bars=1,
+                    context=(int(ms[0]), int(ms[-1]) + step), display=(int(ms[0]), int(ms[-1]) + step),
+                    top=3, max_points=256, bar_source={"method": "limen.data.HistoricalData.get_arrow_file",
+                        "params": {"file_path": f"/opt/arrow/{series}/latest.arrow"}}, label="profile")
+                return discover.discover(pool, **(options | overrides))
+            def cold_search():
+                if hasattr(discover, "discovery_reuse"):
+                    discover.discovery_reuse.clear()
+                return search()
+            answer = measure("discover_full", cold_search)
+            if args.related_searches:
+                related = {"repeat": measure("discover_repeat", search),
+                    "display": measure("discover_display_change", lambda: search(top=1, max_points=128,
+                        display=(int(ms[len(ms)//2]), int(ms[-1])+step)))}
+                sequence = [0]
+                def new_windows():
+                    sequence[0] += 1
+                    return search(windows=[(a+step*sequence[0], b+step*sequence[0]) for a, b in windows])
+                related["windows"] = measure("discover_changed_windows", new_windows)
+                record.doc["parity_related"] = {name: content_digest({k: v for k, v in result.items()
+                    if k != "timing_ms"}) for name, result in related.items()}
             record.doc["discovery"] = {"columns": len(pool.names), "pool_bytes": pool.values.nbytes,
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}

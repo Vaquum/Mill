@@ -154,7 +154,11 @@ def test_shared_target_mi_matches_reference_for_all_target_kinds(kind):
     expected = {name: qc._edge_metrics.__wrapped__(arrays[name], y, 24, qc._seed_for(name))
                 for name in ("0", "1", "2")}
     qc.clear_kernel_cache()
-    assert qc._edge_map(arrays, ("0", "1", "2"), y, blocks, "target") == expected
+    actual = qc._edge_map(arrays, ("0", "1", "2"), y, blocks, "target")
+    for name in expected:
+        # The reference's decile spread is NaN for infinite targets. Preserve
+        # that value too; ordinary tuple equality treats NaN as unequal.
+        np.testing.assert_equal(actual[name], expected[name])
 
 
 def test_sorted_radius_counts_match_kdtree_at_floating_point_boundaries():

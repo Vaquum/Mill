@@ -13,7 +13,7 @@ import numpy as np
 import polars as pl
 
 from . import discover, feature_registry, expressions
-from .cache_store import _atomic_path, write_json_atomic
+from .cache_store import _atomic_path, file_identity, write_json_atomic
 from .settings import cache_root, memory_budget
 
 
@@ -35,14 +35,16 @@ def _revision():
 
 
 def _load(directory):
+    stamp = file_identity(directory / "ready.json")
     metadata = json.loads((directory / "ready.json").read_text())
     fields = {k: tuple(v) for k, v in metadata.items()}
-    values = np.load(directory / "values.npy", allow_pickle=False, mmap_mode="r")
-    ms = np.load(directory / "ms.npy", allow_pickle=False, mmap_mode="r")
-    if values.shape != (ms.size, len(fields["names"])):
+    pool = discover.mapped_pool(directory, fields)
+    if stamp != file_identity(directory / "ready.json"):
+        raise RuntimeError("persisted pool metadata changed while opening; retry")
+    if pool.values.shape != (pool.ms.size, len(fields["names"])):
         raise ValueError("invalid persisted pool shape")
     os.utime(directory, None)
-    return discover.Pool(**fields, ms=ms, values=values)
+    return pool
 
 
 def _entries(spec):

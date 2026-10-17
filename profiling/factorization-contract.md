@@ -38,6 +38,16 @@ sums are exactly representable half/quarter integers. Reducing those directly
 removes sampled/centered arrays without changing floating-point results.
 Scratch has at most eight lanes; no allocation occurs inside the draw loop.
 
+Related discovery runs share context ranks and the numerical analysis separately
+from rendering. Admission requires read-only pool maps with identities captured
+before and after opening, plus complete metadata, shape and dtype. Atomic file
+replacement cannot relabel an existing mapping. Rank keys include exact context
+row bits; analysis keys also include marked-row bits and every statistical
+constant. Display, top count, point count, labels and manifests are rendered
+from current arguments. Mutable library pools are uncached. Retained ranks and
+analysis containers have independent 256/16 MiB budgets; returned containers
+cannot mutate retained state. Changed worker data environments clear both.
+
 Measurement gates: repeated matched full-history runs against the reference,
 including cold setup, feature building, target joins, output serialization,
 research execution and steady state; separate ablations for native expression

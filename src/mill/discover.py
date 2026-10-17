@@ -21,14 +21,16 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from importlib.metadata import version
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import polars as pl
 from limen.sfd.rule_based.predicates import build_predicate
 
-from . import feature_registry
+from . import feature_registry, discovery_reuse
 from .expressions import evaluate
+from .cache_store import file_identity
 from .table import produce
 
 MODES = ("inside", "lead")
@@ -58,6 +60,18 @@ class Pool:
     ms: np.ndarray
     values: np.ndarray
     skipped: tuple[str, ...]
+    _identity: tuple | None = None
+
+
+def mapped_pool(directory, fields):
+    """Capture the identity of the files actually mapped, across atomic replacement."""
+    paths = [Path(directory) / name for name in ("values.npy", "ms.npy")]
+    before = tuple(file_identity(path) for path in paths)
+    values, ms = (np.load(path, allow_pickle=False, mmap_mode="r") for path in paths)
+    if None in before or before != tuple(file_identity(path) for path in paths):
+        raise RuntimeError("persisted pool changed while opening; retry")
+    identity = tuple((str(path.absolute()), token) for path, token in zip(paths, before))
+    return Pool(**fields, ms=ms, values=values, _identity=identity)
 
 
 def catalog_pool(raw: pl.DataFrame, pause: Callable[[], None] | None = None, *, cache_key=None) -> Pool:
@@ -486,26 +500,14 @@ def spans(hits: np.ndarray, ms: np.ndarray, step_ms: int, start_ms: int, end_ms:
     return [[int(ms[a]), int(ms[b - 1] + step_ms)] for a, b in runs(hits & inside)[:limit]]
 
 
-def discover(
-    pool: Pool, *, step_ms: int, windows: Sequence[tuple[int, int]], mode: str, lead_bars: int,
-    context: tuple[int, int], display: tuple[int, int], top: int, max_points: int,
-    bar_source: dict[str, Any], label: str,
-) -> dict[str, Any]:
-    """Rank the pool against the marked bars, measure chance, and describe the leaders."""
+def _analyze(pool, index, y, intervals, rank_key):
+    """Statistics independent of display, requested leader count and rendering."""
     clock0 = time.perf_counter()
-    marked, left_out = target(pool.ms, step_ms, windows, mode, lead_bars)
-    rows = (pool.ms >= context[0]) & (pool.ms + step_ms <= context[1]) & ~left_out
-    marked &= rows
-    events = runs(marked)
-    if not events:
-        raise ValueError("no marked bar falls inside the context")
-    if not (rows & ~marked).any():
-        raise ValueError("the context has no unmarked bar to compare against")
-    index = np.flatnonzero(rows)
-    y = marked[index].astype(np.float64)
-    values = (pool.values[index[0]:index[-1] + 1]
-              if index.size and index[-1] - index[0] + 1 == index.size else pool.values[index])
-    ranks = column_ranks(values)
+    def build_ranks():
+        values = (pool.values[index[0]:index[-1] + 1]
+                  if index.size and index[-1] - index[0] + 1 == index.size else pool.values[index])
+        return column_ranks(values)
+    ranks = discovery_reuse.ranks(rank_key, build_ranks)
     timing = {"rank": time.perf_counter() - clock0}
 
     clock1 = time.perf_counter()
@@ -523,7 +525,6 @@ def discover(
     critical = critical_separation(null)
 
     clock3 = time.perf_counter()
-    intervals = len(events) >= MIN_EVENTS_FOR_INTERVALS
     leaders: list[dict[str, Any]] = []
     kept: list[int] = []
     for j in ranked[:_SCREEN_LEADERS]:
@@ -539,23 +540,54 @@ def discover(
     # top takes a prefix of that order over the same clusters, so asking for fewer never changes who leads.
     order = sorted(range(len(leaders)), key=lambda i: (
         leaders[i]["conservative"] is None, -(leaders[i]["conservative"] or 0.0), -leaders[i]["separation"]))
-    leaders = [_describe(leaders[i], pool, kept[i], marked, rows, events, step_ms, context, display, max_points,
-                         bar_source, label) for i in order[:top]]
     timing["stage_two"] = time.perf_counter() - clock3
+    return {"leaders": leaders, "kept": kept, "order": order, "longest": longest,
+            "screened": int(ranked.size),
+            "chance": {"method": "circular-shift", "shifts": int(null.size), "min_shift": int(min_shift),
+                       "alpha": 1 / _BEYOND_ONE_IN, "critical": None if critical is None else round(critical, 4),
+                       "best": round(float(separation[ranked[0]]), 4) if ranked.size else None}}, timing
+
+
+def discover(
+    pool: Pool, *, step_ms: int, windows: Sequence[tuple[int, int]], mode: str, lead_bars: int,
+    context: tuple[int, int], display: tuple[int, int], top: int, max_points: int,
+    bar_source: dict[str, Any], label: str,
+) -> dict[str, Any]:
+    """Rank the pool, reuse only immutable numerical state, then render leaders."""
+    clock0 = time.perf_counter()
+    marked, left_out = target(pool.ms, step_ms, windows, mode, lead_bars)
+    rows = (pool.ms >= context[0]) & (pool.ms + step_ms <= context[1]) & ~left_out
+    marked &= rows
+    events = runs(marked)
+    if not events:
+        raise ValueError("no marked bar falls inside the context")
+    if not (rows & ~marked).any():
+        raise ValueError("the context has no unmarked bar to compare against")
+    index = np.flatnonzero(rows)
+    y = marked[index].astype(np.float64)
+    intervals = len(events) >= MIN_EVENTS_FOR_INTERVALS
+    source_key = discovery_reuse.pool_key(pool)
+    rank_key = (source_key, np.packbits(rows).tobytes()) if source_key is not None else None
+    constants = (_SCREEN_LEADERS, _CLUSTER_RHO, _BOOTSTRAP_DRAWS, _MIN_BLOCK, _BEYOND_ONE_IN,
+                 _FFT_CHUNK, _BOOTSTRAP_BATCH, MAX_LEADERS, MIN_EVENTS_FOR_INTERVALS, _TIE)
+    key = (rank_key, np.packbits(marked).tobytes(), constants) if rank_key is not None else None
+    state, timing = discovery_reuse.analysis(key, lambda: _analyze(pool, index, y, intervals, rank_key))
+    clock3 = time.perf_counter()
+    leaders = [_describe(state["leaders"][i], pool, state["kept"][i], marked, rows, events, step_ms,
+                         context, display, max_points, bar_source, label) for i in state["order"][:top]]
+    timing["stage_two"] += time.perf_counter() - clock3
     timing["total"] = time.perf_counter() - clock0
 
     return {
         "target": {"mode": mode, "lead_bars": lead_bars if mode == "lead" else None,
                    "windows": [list(w) for w in windows], "marked_bars": int(marked.sum()),
-                   "events": len(events), "longest_run": int(longest)},
+                   "events": len(events), "longest_run": int(state["longest"])},
         "context": {"start_ms": int(context[0]), "end_ms": int(context[1]), "bars": int(index.size),
                     "unmarked_bars": int(index.size - marked.sum())},
         "evidence": "events" if len(events) > 1 else "description",
         "intervals": intervals,
-        "chance": {"method": "circular-shift", "shifts": int(null.size), "min_shift": int(min_shift),
-                   "alpha": 1 / _BEYOND_ONE_IN, "critical": None if critical is None else round(critical, 4),
-                   "best": round(float(separation[ranked[0]]), 4) if ranked.size else None},
-        "screened": int(ranked.size),
+        "chance": state["chance"],
+        "screened": state["screened"],
         "timing_ms": {k: round(v * 1000, 2) for k, v in timing.items()},
         "candidates": leaders,
     }
