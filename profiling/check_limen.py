@@ -56,8 +56,10 @@ def main():
                 child.wait(timeout=1)
         before, after = [json.loads(path.read_text()) for path in paths]
         assert before["origin"].get("url") == ARCHIVE
-        assert after["origin"]["vcs_info"]["commit_id"] == CURRENT
+        expected = REFERENCE if sys.version_info >= (3, 14) else CURRENT
+        assert after["origin"]["vcs_info"]["commit_id"] == expected
         assert before["catalog"] == after["catalog"]
+        assert before["targets"] == after["targets"]
         for name,value in before["versions"].items():
             if name != "vaquum_limen":
                 assert after["versions"][name] == value
@@ -67,18 +69,21 @@ def main():
             assert left["rows"] == right["rows"] and left["input_digest"] == right["input_digest"]
             differences += [{"case": case, "factory": name, "before": value, "after": right["results"][name]}
                 for name,value in left["results"].items() if value != right["results"][name]]
+            differences += [{"case": case, "target": name, "before": value, "after": right["target_results"][name]}
+                for name,value in left["target_results"].items() if value != right["target_results"][name]]
         from verify_factorization import tree
         root = Path(__file__).resolve().parents[1]
         result = {"reference": before, "current": after, "differences": differences,
                   "source_tree_sha256": tree(root),
                   "factory_contract_sha256": hashlib.sha256((root/"src/mill/factory_contract.json").read_bytes()).hexdigest(),
                   "reference_integrity": verify(reference),
-                  "checks": len(before["catalog"])*len(before["cases"])}
+                  "checks": len(before["catalog"])*len(before["cases"]),
+                  "target_checks": len(before["targets"])*len(before["cases"])}
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2)+"\n")
         verify(reference)
         assert not differences, f"{len(differences)} factory/case mismatches; see {args.output}"
-        print(f"Exact equivalence: {result['checks']} factory/case comparisons")
+        print(f"Exact equivalence: {result['checks']} factory/case and {result['target_checks']} target/case comparisons")
     return 0
 
 

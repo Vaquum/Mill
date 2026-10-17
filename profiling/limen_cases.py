@@ -101,11 +101,12 @@ def parameters(spec):
 def snapshot():
     import numpy as np
     from importlib.metadata import distribution, version
-    from mill import feature_registry
+    from mill import feature_registry, targets
     catalog = feature_registry.catalog()
     output = {"catalog": catalog, "versions": {name: version(name) for name in
         ("polars", "numpy", "numba", "scipy", "scikit-learn", "statsmodels", "vaquum_limen")},
-        "origin": json.loads(distribution("vaquum_limen").read_text("direct_url.json")), "cases": {}}
+        "origin": json.loads(distribution("vaquum_limen").read_text("direct_url.json")),
+        "targets": {name: targets.binding(name) for name in targets.NAMES}, "cases": {}}
     warnings.filterwarnings("ignore")
     for case in CASES:
         np.random.seed(0)
@@ -122,5 +123,13 @@ def snapshot():
                 results[item["name"]] = {"schema": str(frame.schema), "digest": frame_digest(frame)}
             except Exception as exc:
                 results[item["name"]] = {"error": type(exc).__name__, "detail": str(exc)}
-        output["cases"][case] = {"rows": raw.height, "input_digest": frame_digest(raw), "results": results}
+        target_results = {}
+        for name in targets.NAMES:
+            try:
+                frame = targets.apply(raw, name)
+                target_results[name] = {"schema": str(frame.schema), "digest": frame_digest(frame)}
+            except Exception as exc:
+                target_results[name] = {"error": type(exc).__name__, "detail": str(exc)}
+        output["cases"][case] = {"rows": raw.height, "input_digest": frame_digest(raw),
+                                "results": results, "target_results": target_results}
     return output

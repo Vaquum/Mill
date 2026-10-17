@@ -1,9 +1,23 @@
 """The dependency can improve kernels without expanding Mill's public API."""
 import hashlib
 import json
+from pathlib import Path
+import tomllib
+from packaging.requirements import Requirement
 import pytest
 
 from mill import feature_registry, pool_store
+
+
+@pytest.mark.parametrize("version,commit", [("3.12", "728a6eefc19cde2cb0fa3f5312b185e2877bc330"),
+    ("3.13", "728a6eefc19cde2cb0fa3f5312b185e2877bc330"),
+    ("3.14", "86968e44022cabcae83fc38fe2ed0c7105816fa2")])
+def test_dependency_upgrade_preserves_existing_interpreter_admission(version, commit):
+    project = tomllib.loads((Path(__file__).resolve().parents[1]/"pyproject.toml").read_text())["project"]
+    requirements = [Requirement(value) for value in project["dependencies"]]
+    selected = [r for r in requirements if r.name == "vaquum_limen"
+                and (r.marker is None or r.marker.evaluate({"python_version": version}))]
+    assert len(selected) == 1 and selected[0].url.endswith("@"+commit)
 
 
 def test_existing_public_factory_catalog_is_unchanged():
