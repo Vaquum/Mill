@@ -312,6 +312,9 @@ def test_compact_ranks_are_lossless_and_keep_double_precision_statistics():
     y = rng.integers(0, 2, size=len(values)).astype(float)
     np.testing.assert_array_equal(discover._screen_auc(y, compact), discover.auc(y, full))
     np.testing.assert_array_equal(discover.shift_null(y, compact, 13, promote_ranks=True), discover.shift_null(y, full, 13))
+    assert discover.rank_correlation(compact[:, 0], compact[:, 1]) == discover.rank_correlation(full[:, 0], full[:, 1])
+    valid = np.isfinite(full[:, 0])
+    assert discover.bootstrap_interval(compact[valid, 0], y[valid], 24, 77) == discover.bootstrap_interval(full[valid, 0], y[valid], 24, 77)
     assert discover._rank_dtype(2**23, True) == pl.Float32
     assert discover._rank_dtype(2**23+1, True) == pl.Float64
     assert discover._rank_dtype(10, False) == pl.Float64
