@@ -67,3 +67,29 @@ research.main()
         assert worker._process.pid == pid and worker._process.poll() is None
     finally:
         worker.close()
+
+
+@pytest.mark.parametrize("value", ["invalid", "0", "9"])
+def test_invalid_worker_configuration_is_a_server_error(monkeypatch, value):
+    monkeypatch.setenv("MILL_RESEARCH_THREADS", value)
+    worker = Worker()
+    with pytest.raises(RuntimeError, match="MILL_RESEARCH_THREADS"):
+        worker.run("discover", body={})
+    assert worker._process is None
+
+
+def test_slow_reaping_closes_pipes_without_masking_the_original_error(monkeypatch):
+    from io import BytesIO
+    class Process:
+        stdin, stdout = BytesIO(), BytesIO()
+        def poll(self): return None
+        def terminate(self): pass
+        def kill(self): pass
+        def wait(self, timeout): raise subprocess.TimeoutExpired("test", timeout)
+    worker = Worker()
+    process = Process()
+    worker._process = process
+    monkeypatch.setattr("mill.research.select.select", lambda *args: ([], [], []))
+    with pytest.raises(ResearchTimeout, match="execution deadline"):
+        worker.run("report", target=None)
+    assert process.stdin.closed and process.stdout.closed and worker._process is None

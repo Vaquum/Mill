@@ -103,7 +103,8 @@ def build_reference(
         },
         {
             "method": "GET", "path": "/qc", "auth": True,
-            "summary": "Quality-control report and grades for a feature set.",
+            "summary": "Quality-control report and grades for a feature set. "
+                       "Research admission or deadline returns 503 with Retry-After.",
             "query": [
                 bars_param, target_param, features_param,
                 _param("cols", "string", default="",
@@ -126,7 +127,9 @@ def build_reference(
             "method": "POST", "path": "/discover", "auth": True,
             "summary": "Find features: rank the catalog or a view's columns against marked "
                        "windows, with an exact circular-shift chance check, intervals at 30 or "
-                       "more events, and a fitted Limen threshold rule per leader.",
+                       "more events, and a fitted Limen threshold rule per leader. "
+                       "Catalog preparation checkpoints across requests; preparation, admission "
+                       "or deadline returns 503 with Retry-After. Retry preserves completed work.",
             "body": {
                 "content_type": "application/json",
                 "fields": [

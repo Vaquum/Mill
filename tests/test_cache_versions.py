@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 
 from mill import get_data, serve
 from mill.get_data import GetData
@@ -25,9 +26,10 @@ def test_offline_server_observes_newer_disk_cache_from_another_process(arrow_sto
     assert current.height == 2 and changed != version
 
 
-def test_disabled_raw_ram_cache_preserves_versions_and_result_hits(arrow_store, monkeypatch):
+@pytest.mark.parametrize("budget", [0, 1])
+def test_disabled_raw_ram_cache_preserves_versions_and_result_hits(arrow_store, monkeypatch, budget):
     arrow_store.write("time_1h", [ns(2024, 1, 1)])
-    monkeypatch.setattr(serve, "_RAW_CACHE", ByteLRU(0, lambda x: x[0].estimated_size()))
+    monkeypatch.setattr(serve, "_RAW_CACHE", ByteLRU(budget, lambda x: x[0].estimated_size()))
     monkeypatch.setattr(serve, "_RESULTS", {})
     payload, frame = serve._ensure("1h_time_bars", "none", [])
     version = serve._raw_for("1h_time_bars")[1]
@@ -35,3 +37,16 @@ def test_disabled_raw_ram_cache_preserves_versions_and_result_hits(arrow_store, 
         again, result = serve._ensure("1h_time_bars", "none", [])
         assert again is payload and result is frame
         assert serve._raw_for("1h_time_bars")[1] == version
+
+
+def test_evicted_raw_frame_preserves_result_version(arrow_store, monkeypatch):
+    arrow_store.write("time_1h", [ns(2024, 1, 1)])
+    arrow_store.write("time_15m", [ns(2024, 1, 1)])
+    size = GetData().get_time_bars("1h_time_bars").estimated_size()
+    monkeypatch.setattr(serve, "_RAW_CACHE", ByteLRU(size, lambda x: x[0].estimated_size()))
+    monkeypatch.setattr(serve, "_RESULTS", {})
+    payload, frame = serve._ensure("1h_time_bars", "none", [])
+    serve._raw_for("15m_time_bars")
+    assert "1h_time_bars" not in serve._RAW_CACHE
+    again, result = serve._ensure("1h_time_bars", "none", [])
+    assert again is payload and result is frame

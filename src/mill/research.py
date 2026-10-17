@@ -34,15 +34,23 @@ class Worker:
     def close(self) -> None:
         process, self._process = self._process, None
         if process is not None:
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=1)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=1)
-            process.stdin.close()
-            process.stdout.close()
+            try:
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        try:
+                            process.wait(timeout=1)
+                        except subprocess.TimeoutExpired:
+                            threading.Thread(target=_reap, args=(process,), daemon=True).start()
+            except OSError:
+                pass
+            finally:
+                for stream in (process.stdin, process.stdout):
+                    with contextlib.suppress(OSError):
+                        stream.close()
 
     def run(self, kind: str, *, frame=None, **arguments):
         if not self._slots.acquire(blocking=False):
@@ -64,7 +72,12 @@ class Worker:
                 if self._process is None or self._process.poll() is not None:
                     self.close()
                     env = dict(os.environ)
-                    threads = max(1, min(8, int(env.get("MILL_RESEARCH_THREADS", "4"))))
+                    try:
+                        threads = int(env.get("MILL_RESEARCH_THREADS", "4"))
+                    except ValueError as exc:
+                        raise RuntimeError("MILL_RESEARCH_THREADS must be an integer from 1 to 8") from exc
+                    if not 1 <= threads <= 8:
+                        raise RuntimeError("MILL_RESEARCH_THREADS must be an integer from 1 to 8")
                     env.update({name: str(threads) for name in (
                         "NUMBA_NUM_THREADS", "POLARS_MAX_THREADS", "OPENBLAS_NUM_THREADS",
                         "OMP_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "MKL_NUM_THREADS")})
@@ -99,6 +112,11 @@ class Worker:
 
 
 _WORKER_ENV = None
+
+
+def _reap(process):
+    with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+        process.wait(timeout=50)
 
 
 def _execute(request):

@@ -44,7 +44,7 @@ def bar_identity(bar):
     source = arrow_latest_path(series)
     identity = source_identity(source)
     disk = disk_identity(cache_path(bar, _criteria(bar, series))) if identity is None else None
-    return (str(source.resolve()), identity, disk)
+    return (str(source.absolute()), identity, disk)
 
 
 def _date_part(value: str | None) -> date | None:
@@ -182,7 +182,7 @@ class GetData:
         source: Path,
     ) -> pl.DataFrame:
         path = cache_path(label, criteria)
-        key = str(path.resolve())
+        key = str(path.absolute())
         identity = source_identity(source)
         hit = _DATA.get(key)
         if hit is not None and (hit[0] == identity if identity is not None else hit[2] == disk_identity(path)):

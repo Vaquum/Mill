@@ -293,7 +293,7 @@ def _raw_for(bar: str) -> tuple[pl.DataFrame, int]:
     """
     with _RAW_FLIGHTS.hold(bar):
         identity = bar_identity(bar)
-        written = _source_version(bar)
+        written = identity[1][0] if identity[1] is not None else 0
         hit = _RAW_CACHE.get(bar)
         if hit is not None and _RAW_IDENTITIES.get(bar) == identity:
             return hit[0], hit[1]
@@ -1124,6 +1124,8 @@ class _Handler(BaseHTTPRequestHandler):
     ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", ctype)
+        if status == 503:
+            self.send_header("Retry-After", "1")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
