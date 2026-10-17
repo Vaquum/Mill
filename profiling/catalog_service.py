@@ -17,7 +17,7 @@ def worker(source, output, bar, scratch):
                       ("MILL_CONFIG_DIR", "config")):
         os.environ[key] = str(scratch/name)
     os.environ["MILL_RESEARCH_TMPDIR"] = str(scratch)
-    record = Recorder(SimpleNamespace(output=output, reps=1))
+    record = Recorder(SimpleNamespace(output=output, reps=1, case="catalog-service"))
     record.doc.update(profiler_path="profiling/catalog_service.py",
         profiler_sha256=source_digest(Path(__file__)),
         common_profiler_sha256=source_digest(Path(__file__).with_name("engine_sweep.py")),
