@@ -37,9 +37,10 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json", "context"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
+    parser.add_argument("--transition-searches", action="store_true", help="measure an explicitly synthetic appended pool row outside the original context")
     parser.add_argument("--warm-kernels", action="store_true", help="measure compiled-kernel setup separately before cold QC")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
@@ -61,11 +62,13 @@ def arguments():
     allowed = {"native": ("workload", "features", "views", "discover", "pool"),
                "pairs": ("qc",), "edges": ("qc",), "bootstrap": ("qc",),
                "null": ("discover",), "reuse": ("discover",), "rules": ("discover",),
-               "json": ("workload", "features", "http")}
+               "json": ("workload", "features", "http"), "context": ("discover",)}
     if args.ablate != "none" and args.case not in allowed[args.ablate]:
         parser.error("ablation does not apply to this workload")
     if args.ablate == "native" and args.case == "discover" and args.discover_phase == "search":
         parser.error("native ablation requires building a pool")
+    if args.related_searches and args.transition_searches:
+        parser.error("related and transition searches use separate bounded invocations")
     return args
 
 
@@ -217,6 +220,8 @@ def worker(args):
             discover.discovery_reuse.rule = lambda key, build: build()
         elif args.ablate == "json":
             serve.encode_rows = lambda frame: serve.orjson.dumps({"columns": frame.columns, "rows": frame.rows()})
+        elif args.ablate == "context":
+            discover.discovery_reuse.context_key = lambda source_key, row_bits, pool, index: (source_key, row_bits)
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
@@ -475,6 +480,31 @@ def worker(args):
                     discover.discovery_reuse.clear()
                 return search()
             answer = measure("discover_full", cold_search)
+            if args.transition_searches:
+                began = time.perf_counter_ns()
+                advanced = Path(directory) / "advanced-pool"
+                advanced.mkdir()
+                n, width = pool.values.shape
+                extended = np.lib.format.open_memmap(advanced / "values.npy", mode="w+", dtype=pool.values.dtype,
+                                                    shape=(n+1, width), fortran_order=True)
+                for j in range(width):
+                    extended[:n, j], extended[n, j] = pool.values[:, j], pool.values[-1, j]
+                extended.flush()
+                del extended
+                np.save(advanced / "ms.npy", np.r_[pool.ms, pool.ms[-1]+step], allow_pickle=False)
+                fields = {name: getattr(pool, name) for name in
+                          ("names", "natives", "factories", "sources", "params", "skipped")}
+                if hasattr(discover, "mapped_pool"):
+                    pool = discover.mapped_pool(advanced, fields)
+                else:
+                    pool = discover.Pool(**fields, values=np.load(advanced / "values.npy", mmap_mode="r", allow_pickle=False),
+                                         ms=np.load(advanced / "ms.npy", mmap_mode="r", allow_pickle=False))
+                record.doc["transition_fixture"] = {"synthetic": True, "appended_rows": 1,
+                    "appended_values": "repeat final pool row; outside the original statistical context",
+                    "setup_ms": (time.perf_counter_ns()-began)/1e6}
+                transitioned = measure("discover_source_advance", lambda: search(
+                    display=(int(pool.ms[0]), int(pool.ms[-1])+step)))
+                record.doc["parity_transition"] = content_digest({k: v for k, v in transitioned.items() if k != "timing_ms"})
             if args.related_searches:
                 related = {"repeat": measure("discover_repeat", search),
                     "display": measure("discover_display_change", lambda: search(top=1, max_points=128,
