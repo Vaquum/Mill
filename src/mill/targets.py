@@ -48,6 +48,8 @@ def apply(raw: pl.DataFrame, name: str) -> pl.DataFrame:
 
 def for_source(raw, name, source_key):
     """A target depends on the source snapshot, not on a view's feature spec."""
+    if source_key is None:
+        return apply(raw, name).select("datetime", name)
     key = (source_key, name)
     with _FLIGHTS.hold(key):
         result = _RESULTS.get(key)
