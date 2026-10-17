@@ -5,6 +5,7 @@ import copy
 import hashlib
 import json
 import sys
+import numpy as np
 
 from .memo import ByteLRU, Flights
 from .settings import memory_budget
@@ -22,6 +23,7 @@ def _size(value):
 _RANKS = ByteLRU(memory_budget("ranks", 256), lambda entry: entry[1])
 _ANALYSES = ByteLRU(memory_budget("analyses", 16), lambda entry: entry[1])
 _RULES = ByteLRU(memory_budget("rules", 16), lambda entry: entry[1])
+_CONTEXTS = ByteLRU(memory_budget("contexts", 4), lambda entry: entry[1])
 _FLIGHTS = Flights()
 
 
@@ -29,6 +31,7 @@ def clear():
     _RANKS.clear()
     _ANALYSES.clear()
     _RULES.clear()
+    _CONTEXTS.clear()
 
 
 def pool_key(pool):
@@ -56,6 +59,30 @@ def ranks(key, build):
             value.setflags(write=False)
             hit = (value, value.nbytes + _size(key))
             _RANKS[key] = hit
+        return hit[0]
+
+
+def context_key(source_key, row_bits, pool, index):
+    """A new source version need not change an already closed historical context.
+
+    File identity admits a cheap first-level hit. Across source versions, hash
+    the actual selected values before sharing numerical work. Never infer an
+    unchanged context from append-only timestamps or the last row.
+    """
+    if source_key is None:
+        return None
+    key = source_key, row_bits
+    with _FLIGHTS.hold(("context", key)):
+        hit = _CONTEXTS.get(key)
+        if hit is None:
+            digest = hashlib.sha256()
+            contiguous = index.size and index[-1]-index[0]+1 == index.size
+            for j in range(pool.values.shape[1]):
+                values = (pool.values[index[0]:index[-1]+1, j] if contiguous else pool.values[index, j])
+                digest.update(memoryview(np.ascontiguousarray(values)))
+            value = ((index.size, pool.values.shape[1]), pool.values.dtype.str, digest.digest(), source_key[-1])
+            hit = value, _size(value) + _size(key)
+            _CONTEXTS[key] = hit
         return hit[0]
 
 

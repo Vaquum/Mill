@@ -567,15 +567,17 @@ def discover(
     y = marked[index].astype(np.float64)
     intervals = len(events) >= MIN_EVENTS_FOR_INTERVALS
     source_key = discovery_reuse.pool_key(pool)
-    rank_key = (source_key, np.packbits(rows).tobytes()) if source_key is not None else None
+    row_bits = np.packbits(rows).tobytes() if source_key is not None else None
+    rank_key = discovery_reuse.context_key(source_key, row_bits, pool, index)
     constants = (_SCREEN_LEADERS, _CLUSTER_RHO, _BOOTSTRAP_DRAWS, _MIN_BLOCK, _BEYOND_ONE_IN,
                  _FFT_CHUNK, _BOOTSTRAP_BATCH, MAX_LEADERS, MIN_EVENTS_FOR_INTERVALS, _TIE)
-    key = (rank_key, np.packbits(marked).tobytes(), constants) if rank_key is not None else None
+    key = (rank_key, np.packbits(y.astype(bool)).tobytes(), intervals, constants) if rank_key is not None else None
+    rule_scope = (source_key, row_bits, np.packbits(marked).tobytes()) if source_key is not None else None
     state, timing = discovery_reuse.analysis(key, lambda: _analyze(pool, index, y, intervals, rank_key))
     clock3 = time.perf_counter()
     leaders = [_describe(state["leaders"][i], pool, state["kept"][i], marked, rows, events, step_ms,
                          context, display, max_points, bar_source, label,
-                         (key, state["kept"][i], _PERSISTENCE) if key is not None else None)
+                         (rule_scope, state["kept"][i], _PERSISTENCE) if rule_scope is not None else None)
                for i in state["order"][:top]]
     timing["stage_two"] += time.perf_counter() - clock3
     timing["total"] = time.perf_counter() - clock0
