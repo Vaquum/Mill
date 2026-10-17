@@ -13,7 +13,7 @@
     "research-discover-83k": "profiling/results/adoption/research-discover-83k-version-witness.json",
     "catalog-service-20k": "profiling/results/adoption/catalog-service-20k-version-witness.json"
   },
-  "version_witness_driver_sha256": "719ecb1ce72c77c7e46cdf2d0d9e5bf7177df049f62d0fdb66c3434bec159bf1",
+  "version_witness_driver_sha256": "59da940bd5d8ce1c3bf1f987bbc047b60491707a4ade5da5e0b78cc8176c5254",
   "factory_diagnostic": "profiling/results/adoption/factories-diagnostic-after-20k-1.json",
   "method": "Three fresh adjacent before/after process pairs per workload; reverse order in round two; no simultaneous local tests or profiling jobs. Complete local source history through GetData. Same interpreter, numerical libraries and four Polars/Numba threads; parent BLAS/OMP one. Production research children cap Polars/Numba/BLAS/OMP at four threads on both sides. Every invocation has 49s worker / 50s supervisor deadlines.",
   "limitations": [
