@@ -82,6 +82,17 @@ def test_raw_column_renames_and_swaps_preserve_original_lineage(swap):
     assert actual.equals(producer(raw))
 
 
+def test_native_literal_round_trip_preserves_signed_zero():
+    from mill.feature_registry import _limen_producer
+    def signed(frame):
+        return frame.with_columns(pl.lit(-0.).alias("negative"), pl.lit(0.).alias("positive"))
+    raw, producer = _raw(), _limen_producer(signed)
+    actual = evaluate(raw, [(producer, {})])[0]
+    for column in actual.columns:
+        np.testing.assert_array_equal(np.signbit(actual[column].to_numpy()),
+                                      np.signbit(producer(raw)[column].to_numpy()))
+
+
 def test_every_eligible_factory_matches_its_original_producer():
     raw = _raw()
     for name, entry in feature_registry.REGISTRY.items():

@@ -574,7 +574,9 @@ def discover(
     state, timing = discovery_reuse.analysis(key, lambda: _analyze(pool, index, y, intervals, rank_key))
     clock3 = time.perf_counter()
     leaders = [_describe(state["leaders"][i], pool, state["kept"][i], marked, rows, events, step_ms,
-                         context, display, max_points, bar_source, label) for i in state["order"][:top]]
+                         context, display, max_points, bar_source, label,
+                         (key, state["kept"][i], _PERSISTENCE) if key is not None else None)
+               for i in state["order"][:top]]
     timing["stage_two"] += time.perf_counter() - clock3
     timing["total"] = time.perf_counter() - clock0
 
@@ -624,11 +626,12 @@ def _leader(
 def _describe(
     out: dict[str, Any], pool: Pool, j: int, marked: np.ndarray, rows: np.ndarray,
     events: list[tuple[int, int]], step_ms: int, context: tuple[int, int], display: tuple[int, int],
-    max_points: int, bar_source: dict[str, Any], label: str,
+    max_points: int, bar_source: dict[str, Any], label: str, rule_key=None,
 ) -> dict[str, Any]:
     """A returned leader's fitted rule, its hits and manifest, and its series."""
     column, values = pool.names[j], pool.values[:, j]
-    rule = fit_rule(values, pool.natives[j], out["direction"], marked, rows, events)
+    rule = discovery_reuse.rule(rule_key, lambda: fit_rule(
+        values, pool.natives[j], out["direction"], marked, rows, events))
     if rule is not None:
         hits = rule.pop("_hits")
         value = np.format_float_positional(rule["value"], trim="-")

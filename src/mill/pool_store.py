@@ -133,19 +133,25 @@ def pool_for(raw, bar, spec, digest, *, quantum=5):
     pending = [(i, entry) for i, entry in enumerate(entries)
                if not (directory / f"{i}.arrow").exists() and not (directory / f"{i}.skip").exists()]
     batch_size = 1 if quantum <= 0 else 8
+    completed = 0
     for start in range(0, len(pending), batch_size):
         batch = pending[start:start+batch_size]
-        parts = expressions.evaluate(raw, [(entry[3]["producer"], entry[1]) for _, entry in batch], errors=True)
-        for (i, (factory, given, _, entry)), part in zip(batch, parts):
-            path, skipped = directory / f"{i}.arrow", directory / f"{i}.skip"
-            if isinstance(part, Exception):
-                write_json_atomic(skipped, {"factory": factory})
-            else:
-                with _atomic_path(path) as temporary:
-                    part.write_ipc(temporary, compression="uncompressed")
+        def publish(parts):
+            nonlocal completed
+            for local, part in parts.items():
+                i, (factory, given, _, entry) = batch[local]
+                path, skipped = directory / f"{i}.arrow", directory / f"{i}.skip"
+                if isinstance(part, Exception):
+                    write_json_atomic(skipped, {"factory": factory})
+                else:
+                    with _atomic_path(path) as temporary:
+                        part.write_ipc(temporary, compression="uncompressed")
+                completed += 1
             _trim(root, directory)
-        if time.perf_counter() - began >= quantum and start + batch_size < len(pending):
-            raise PoolPending("catalog construction is progressing; retry shortly")
+            if time.perf_counter() - began >= quantum and completed < len(pending):
+                raise PoolPending("catalog construction is progressing; retry shortly")
+        expressions.evaluate(raw, [(entry[3]["producer"], entry[1]) for _, entry in batch],
+                             errors=True, publish=publish)
     _assemble(directory, raw, entries)
     _trim(root, directory)
     return _load(directory), False, (time.perf_counter() - began) * 1000

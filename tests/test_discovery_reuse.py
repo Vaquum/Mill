@@ -42,21 +42,22 @@ def test_related_runs_share_only_their_invariant_stages(tmp_path, monkeypatch):
     variants = [base, base | {"top": 1, "max_points": 80, "display": (int(pool.ms[100]), base["display"][1]), "label": "other"},
                 base | {"windows": [(a+3_600_000, b+3_600_000) for a, b in base["windows"]]},
                 base | {"context": (int(pool.ms[17]), base["context"][1])}]
-    counts = {"rank": 0, "null": 0}
+    counts = {"rank": 0, "null": 0, "rule": 0}
     with monkeypatch.context() as patch:
-        for name, label in (("column_ranks", "rank"), ("shift_null", "null")):
+        for name, label in (("column_ranks", "rank"), ("shift_null", "null"), ("fit_rule", "rule")):
             original = getattr(discover, name)
-            def wrapped(*args, _fn=original, _label=label):
+            def wrapped(*args, _fn=original, _label=label, **kwargs):
                 counts[_label] += 1
-                return _fn(*args)
+                return _fn(*args, **kwargs)
             patch.setattr(discover, name, wrapped)
         actual = [_answer(pool, options) for options in variants]
-        assert counts == {"rank": 2, "null": 3}
+        assert counts["rank"] == 2 and counts["null"] == 3
+        fits = counts["rule"]
         # Returned containers cannot mutate retained analysis or another request.
         actual[0]["candidates"][0]["similar"].append("changed")
         again = _answer(pool, base)
         assert "changed" not in again["candidates"][0]["similar"]
-        assert counts == {"rank": 2, "null": 3}
+        assert counts == {"rank": 2, "null": 3, "rule": fits}
     actual[0] = again
     uncached = replace(pool, _identity=None)
     assert actual == [_answer(uncached, options) for options in variants]

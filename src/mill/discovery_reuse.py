@@ -21,12 +21,14 @@ def _size(value):
 
 _RANKS = ByteLRU(memory_budget("ranks", 256), lambda entry: entry[1])
 _ANALYSES = ByteLRU(memory_budget("analyses", 16), lambda entry: entry[1])
+_RULES = ByteLRU(memory_budget("rules", 16), lambda entry: entry[1])
 _FLIGHTS = Flights()
 
 
 def clear():
     _RANKS.clear()
     _ANALYSES.clear()
+    _RULES.clear()
 
 
 def pool_key(pool):
@@ -67,3 +69,20 @@ def analysis(key, build):
         value, timing = build()
         _ANALYSES[key] = (copy.deepcopy(value), _size(value) + _size(key))
         return value, timing
+
+
+def rule(key, build):
+    if key is None:
+        return build()
+    with _FLIGHTS.hold(("rule", key)):
+        hit = _RULES.get(key)
+        if hit is None:
+            value = build()
+            if value is not None:
+                value["_hits"].setflags(write=False)
+            size = _size(key) + _size(value)
+            if value is not None:
+                size += value["_hits"].nbytes
+            hit = value, size
+            _RULES[key] = hit
+        return hit[0].copy() if hit[0] is not None else None

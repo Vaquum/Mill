@@ -64,7 +64,7 @@ class Graph:
             # Polars' JSON float parser need not round every decimal literal
             # to the original bit pattern. Reject such plans, rather than
             # changing an indicator by even one ULP.
-            if json.loads(restored.meta.serialize(format="json")) != tree:
+            if json.dumps(json.loads(restored.meta.serialize(format="json")), sort_keys=True) != key:
                 raise NotPlannable()
             shared = f"{self.prefix}{len(self.nodes)}"
             self.interned[key] = shared
@@ -156,7 +156,7 @@ class Frame:
         return Frame(self.graph, renamed)
 
 
-def evaluate(raw, requests, *, errors=False):
+def evaluate(raw, requests, *, errors=False, publish=None):
     """Evaluate a batch, sharing identical native expression nodes across producers."""
     graph, planned, positions, results = Graph(raw), [], [], [None] * len(requests)
     for i, (producer, params) in enumerate(requests):
@@ -176,6 +176,8 @@ def evaluate(raw, requests, *, errors=False):
             if not errors:
                 raise
             results[i] = exc
+        if publish is not None:
+            publish({i: results[i]})
     if planned:
         try:
             computed = graph.collect(planned)
@@ -193,4 +195,6 @@ def evaluate(raw, requests, *, errors=False):
                     computed.append(exc)
         for i, part in zip(positions, computed):
             results[i] = part
+        if publish is not None:
+            publish(dict(zip(positions, computed)))
     return results

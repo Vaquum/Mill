@@ -52,6 +52,30 @@ def test_empty_view_has_a_persisted_zero_column_pool(arrow_store):
     assert pool.values.shape == (1, 0)
 
 
+def test_opaque_factory_checkpoints_before_the_next_kernel_in_a_batch(arrow_store, monkeypatch):
+    arrow_store.write("time_1h", [ns(2024, 1, 1)])
+    raw = GetData().get_time_bars("1h_time_bars")
+    clock, calls = [0.], []
+    def factory(name):
+        def run(frame):
+            n = frame.height  # rejects the expression-only protocol
+            calls.append(name)
+            clock[0] += 2
+            return pl.DataFrame({name: [1.]*n})
+        run._mill_native_plan = True
+        return {"producer": run, "source": "raw", "params": ()}
+    monkeypatch.setattr(feature_registry, "REGISTRY", {name: factory(name) for name in ("a", "b", "c")})
+    monkeypatch.setattr(pool_store.time, "perf_counter", lambda: clock[0])
+    with pytest.raises(pool_store.PoolPending):
+        pool_store.pool_for(raw, "1h_time_bars", None, serve._frame_digest(raw), quantum=1)
+    assert calls == ["a"]
+    with pytest.raises(pool_store.PoolPending):
+        pool_store.pool_for(raw, "1h_time_bars", None, serve._frame_digest(raw), quantum=1)
+    assert calls == ["a", "b"]
+    result, _, _ = pool_store.pool_for(raw, "1h_time_bars", None, serve._frame_digest(raw), quantum=1)
+    assert calls == ["a", "b", "c"] and result.names == ("a", "b", "c")
+
+
 def test_background_preparation_continues_after_new_bars_arrive(monkeypatch):
     from types import SimpleNamespace
     state, calls = [0], []

@@ -37,7 +37,7 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
     parser.add_argument("--warm-kernels", action="store_true", help="measure compiled-kernel setup separately before cold QC")
@@ -60,7 +60,7 @@ def arguments():
         parser.error("bootstrap ablation requires --warm-kernels to compare execution separately from compilation")
     allowed = {"native": ("workload", "features", "views", "discover", "pool"),
                "pairs": ("qc",), "edges": ("qc",), "bootstrap": ("qc",),
-               "null": ("discover",), "reuse": ("discover",)}
+               "null": ("discover",), "reuse": ("discover",), "rules": ("discover",)}
     if args.ablate != "none" and args.case not in allowed[args.ablate]:
         parser.error("ablation does not apply to this workload")
     if args.ablate == "native" and args.case == "discover" and args.discover_phase == "search":
@@ -199,7 +199,7 @@ def worker(args):
         record.doc["ablation"] = args.ablate
         if args.ablate == "native":
             from mill import expressions, table
-            def eager(raw, requests, *, errors=False):
+            def eager(raw, requests, *, errors=False, publish=None):
                 results = []
                 for producer, params in requests:
                     try:
@@ -208,8 +208,12 @@ def worker(args):
                         if not errors:
                             raise
                         results.append(exc)
+                    if publish is not None:
+                        publish({len(results)-1: results[-1]})
                 return results
             expressions.evaluate = table.evaluate = discover.evaluate = eager
+        elif args.ablate == "rules":
+            discover.discovery_reuse.rule = lambda key, build: build()
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
