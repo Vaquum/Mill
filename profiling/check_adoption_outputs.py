@@ -42,7 +42,7 @@ def worker(args):
         import catalog_service
         driver, phases = catalog_service, ("cold",)
         extra = ["--bar", "1h_time_bars"]
-    record = args.scratch/"run.json"
+    record = args.output.with_name(args.output.name+".run.json")
     sys.argv = [driver.__file__, *extra, "--parquet", str(args.parquet), "--output", str(record),
                 "--worker", "--scratch", str(args.scratch)]
     if args.kind == "view":
@@ -65,6 +65,8 @@ def main():
     parser.add_argument("--worker", action="store_true")
     parser.add_argument("--scratch", type=Path)
     args = parser.parse_args()
+    if args.parquet.resolve() in {args.output.resolve(), args.output.with_name(args.output.name+".run.json").resolve()}:
+        parser.error("output cannot overwrite the source")
     if args.worker:
         worker(args)
         return 0
