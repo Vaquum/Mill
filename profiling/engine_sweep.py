@@ -69,7 +69,13 @@ def arguments():
         parser.error("native ablation requires building a pool")
     if args.related_searches and args.transition_searches:
         parser.error("related and transition searches use separate bounded invocations")
+    if args.transition_searches and (args.case != "discover" or args.discover_phase != "search" or args.reps != 1):
+        parser.error("source transitions require a persisted search pool and --reps 1; repeat whole invocations")
     return args
+
+
+def source_bound_context_key(source_key, row_bits, pool, index):
+    return (source_key, row_bits) if source_key is not None else None
 
 
 def peak_bytes():
@@ -222,7 +228,7 @@ def worker(args):
         elif args.ablate == "json":
             serve.encode_rows = lambda frame: serve.orjson.dumps({"columns": frame.columns, "rows": frame.rows()})
         elif args.ablate == "context":
-            discover.discovery_reuse.context_key = lambda source_key, row_bits, pool, index: (source_key, row_bits)
+            discover.discovery_reuse.context_key = source_bound_context_key
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
@@ -486,6 +492,7 @@ def worker(args):
                     discover.discovery_reuse.clear()
                 return search()
             answer = measure("discover_full", cold_search)
+            original_pool_bytes, original_pool_columns = pool.values.nbytes, len(pool.names)
             if args.transition_searches:
                 began = time.perf_counter_ns()
                 advanced = Path(directory) / "advanced-pool"
@@ -507,10 +514,13 @@ def worker(args):
                                          ms=np.load(advanced / "ms.npy", mmap_mode="r", allow_pickle=False))
                 record.doc["transition_fixture"] = {"synthetic": True, "appended_rows": 1,
                     "appended_values": "repeat final pool row; outside the original statistical context",
+                    "cache_state": "original query executed; advanced snapshot never previously searched",
                     "setup_ms": (time.perf_counter_ns()-began)/1e6}
                 transitioned = measure("discover_source_advance", lambda: search(
-                    display=(int(pool.ms[0]), int(pool.ms[-1])+step)))
+                    display=(int(pool.ms[0]), int(pool.ms[-1])+step)), reps=1)
                 record.doc["parity_transition"] = content_digest({k: v for k, v in transitioned.items() if k != "timing_ms"})
+                record.doc["transition_discovery"] = {"rows": int(pool.ms.size), "pool_bytes": pool.values.nbytes,
+                    "timing_last_ms": transitioned["timing_ms"], "context_rows": transitioned["context"]["bars"]}
             if args.related_searches:
                 related = {"repeat": measure("discover_repeat", search),
                     "display": measure("discover_display_change", lambda: search(top=1, max_points=128,
@@ -522,7 +532,7 @@ def worker(args):
                 related["windows"] = measure("discover_changed_windows", new_windows)
                 record.doc["parity_related"] = {name: content_digest({k: v for k, v in result.items()
                     if k != "timing_ms"}) for name, result in related.items()}
-            record.doc["discovery"] = {"columns": len(pool.names), "pool_bytes": pool.values.nbytes,
+            record.doc["discovery"] = {"columns": original_pool_columns, "pool_bytes": original_pool_bytes,
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}
             record.doc["parity_discovery"] = content_digest({k: v for k, v in answer.items() if k != "timing_ms"})
