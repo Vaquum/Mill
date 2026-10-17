@@ -25,7 +25,8 @@ def worker(source, output, bar, scratch):
         boundary="same research process, IPC and JSON as /discover; no HTTP socket/auth")
     began = time.perf_counter_ns()
     from mill import serve
-    from mill.bars import arrow_latest_path, arrow_series, time_bar_seconds
+    from mill.bars import arrow_series, time_bar_seconds
+    from mill.settings import arrow_latest_path
     from mill.get_data import GetData
     from mill.research import ResearchBusy
     import polars as pl
