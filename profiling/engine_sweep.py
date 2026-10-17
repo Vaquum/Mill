@@ -274,6 +274,8 @@ def worker(args):
                 if cold:
                     for cache in (serve._RAW_CACHE, serve._RESULTS, table._PRODUCERS, get_data._DATA):
                         cache.clear()
+                    if hasattr(targets, "_RESULTS"):
+                        targets._RESULTS.clear()
                 return [(view.NAME, *serve._ensure(bar, getattr(view, "TARGET", "next_return"), list(view.SPEC)))
                         for view in ALL]
             result = measure("all_views_cold_first", lambda: batch(True), reps=1)

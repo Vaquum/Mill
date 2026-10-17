@@ -5,6 +5,11 @@ import inspect
 import polars as pl
 
 import limen.targets as _LT
+from .memo import ByteLRU, Flights
+from .settings import memory_budget
+
+_RESULTS = ByteLRU(memory_budget("targets", 16), lambda frame: frame.estimated_size())
+_FLIGHTS = Flights()
 
 
 _BINDINGS: dict[str, tuple[type, dict[str, object]]] = {
@@ -39,6 +44,17 @@ def apply(raw: pl.DataFrame, name: str) -> pl.DataFrame:
         raise ValueError(f"Unknown target: {name!r}.")
     cls, kwargs = _BINDINGS[name]
     return cls(train_data=raw, target_name=name, **kwargs).transform(raw)
+
+
+def for_source(raw, name, source_key):
+    """A target depends on the source snapshot, not on a view's feature spec."""
+    key = (source_key, name)
+    with _FLIGHTS.hold(key):
+        result = _RESULTS.get(key)
+        if result is None:
+            result = apply(raw, name).select("datetime", name)
+            _RESULTS[key] = result
+        return result.clone()
 
 
 def binding(name: str) -> dict[str, object]:

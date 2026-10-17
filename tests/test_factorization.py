@@ -127,6 +127,23 @@ def test_opaque_kernel_runs_once_on_its_original_path():
     assert result["opaque"].equals(raw["close"] * 2, check_names=False)
 
 
+def test_target_is_a_source_node_independent_of_feature_spec(monkeypatch):
+    from mill import targets
+    targets._RESULTS.clear()
+    raw = _raw()
+    original, calls = targets.apply, []
+    def counted(frame, name):
+        calls.append(name)
+        return original(frame, name)
+    monkeypatch.setattr(targets, "apply", counted)
+    first = targets.for_source(raw, "next_return", ("source", 1))
+    first.drop_in_place("next_return")
+    again = targets.for_source(raw, "next_return", ("source", 1))
+    assert again.equals(original(raw, "next_return").select("datetime", "next_return"))
+    targets.for_source(raw, "next_return", ("source", 2))
+    assert calls == ["next_return", "next_return"]
+
+
 @pytest.mark.parametrize("n", [29, 30, 257, 5001, 20001])
 def test_pair_factorization_is_bit_identical_with_pair_specific_samples(n):
     rng = np.random.default_rng(9821)

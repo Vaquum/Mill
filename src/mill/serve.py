@@ -538,7 +538,7 @@ def _ensure(
             if target == "none":
                 result = features
             else:
-                tdf = targets.apply(raw, target).select(pl.col("datetime"), pl.col(target))
+                tdf = targets.for_source(raw, target, _producer_key(bar, version))
                 result = features.join(tdf, on="datetime", how="left")
         payload = _serialize(result) if serialize else None
         _RESULTS[key] = (payload, result)
