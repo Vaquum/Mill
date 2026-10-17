@@ -12,7 +12,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
+from mill.http_server import BoundedHTTPServer as ThreadingHTTPServer
 
 import numpy as np
 import pytest
@@ -111,7 +111,7 @@ def test_a_rewrite_of_the_open_bar_alone_keeps_what_was_computed(
     assert serve._ensure("1h_time_bars", "none", [])[1] is frame
 
 
-def _pool(raw, pause=None) -> discover.Pool:
+def _pool(raw, pause=None, **kwargs) -> discover.Pool:
     """A pool without columns over the bars, for the server's bookkeeping alone."""
     return discover.Pool(names=(), natives=(), factories=(), sources=(), params=(),
                          ms=raw["datetime"].dt.epoch("ms").to_numpy(), values=np.empty((raw.height, 0)), skipped=())
@@ -122,7 +122,7 @@ def test_the_last_pool_answers_while_the_next_one_builds(
 ) -> None:
     built, release = [], threading.Event()
 
-    def catalog_pool(raw, pause=None):
+    def catalog_pool(raw, pause=None, **kwargs):
         if built:
             assert release.wait(5), "the test never released the second build"
         built.append(raw.height)
@@ -156,7 +156,7 @@ def test_warming_builds_each_time_bars_pool_fewest_bars_first(
 ) -> None:
     built = []
 
-    def catalog_pool(raw, pause=None):
+    def catalog_pool(raw, pause=None, **kwargs):
         built.append(raw.height)
         return _pool(raw)
 
@@ -173,7 +173,7 @@ def test_view_pools_never_evict_a_time_bars_catalog_pool(
     arrow_store: ArrowStore, fresh_caches: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(discover, "catalog_pool", _pool)
-    monkeypatch.setattr(discover, "spec_pool", lambda raw, spec, pause=None: _pool(raw))
+    monkeypatch.setattr(discover, "spec_pool", lambda raw, spec, pause=None, **kwargs: _pool(raw))
     monkeypatch.setattr(serve, "_VIEW_SPECS", {f"v{i}": [{"factory": "close", "params": {}}] for i in range(5)})
     arrow_store.write("time_1h", _TS)
     serve._pool_for("1h_time_bars", {"kind": "catalog"})

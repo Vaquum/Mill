@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "case": "qc",
+  "status": "complete",
+  "worker_pid": 75026,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "qc_precompute_cold",
+      "samples_ms": [
+        2095.494333
+      ],
+      "median_ms": 2095.494333
+    },
+    {
+      "name": "qc_precompute_second_cold",
+      "samples_ms": [
+        1921.398083
+      ],
+      "median_ms": 1921.398083
+    },
+    {
+      "name": "qc_report_warm_kernel_cache",
+      "samples_ms": [
+        14.002958,
+        13.000208,
+        12.311834
+      ],
+      "median_ms": 13.000208
+    },
+    {
+      "name": "qc_report_for_precomputed",
+      "samples_ms": [
+        0.13,
+        0.071792,
+        0.064833
+      ],
+      "median_ms": 0.071792
+    },
+    {
+      "name": "qc_sweep_sizes_1_2_3",
+      "samples_ms": [
+        2.800333,
+        2.474084,
+        3.760875
+      ],
+      "median_ms": 2.800333
+    },
+    {
+      "name": "grade_map",
+      "samples_ms": [
+        0.196625,
+        0.121625,
+        0.11125
+      ],
+      "median_ms": 0.121625
+    },
+    {
+      "name": "report_json",
+      "samples_ms": [
+        0.07725,
+        0.065417,
+        0.053667
+      ],
+      "median_ms": 0.065417
+    }
+  ],
+  "peak_rss_bytes": 480133120,
+  "serve_import_ms": 3773.931834,
+  "import_ms": 4212.161375,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "35efb2f5b571b366dfeb7521b663751599c6691e",
+    "source_tree_sha256": "6faeb44aab45b68dad43c2489ab8e5fbf735e4cc1deb0d2e950e726d9a27e275"
+  },
+  "source": {
+    "file": "15m_time_bars_84b0a8617eeeb5d8.parquet",
+    "sha256": "e53f3e8f71a9b738a368e11f8e5942d098bfda6ff8e764ce115fb22e52c4f08c"
+  },
+  "input": {
+    "source_rows": 83136,
+    "rows": 83136,
+    "columns": 17,
+    "frame_bytes": 11306496,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:45:00+00:00",
+    "bar": "15m_time_bars",
+    "k": 8,
+    "reps": 3
+  },
+  "bootstrap_signatures_before": [],
+  "qc_cold_sections_ms": {
+    "_block_size": 49.80375,
+    "_edge_map": 1154.16325,
+    "_regime_map": 142.334417,
+    "_health_map": 71.686208,
+    "_pair_map": 674.102375
+  },
+  "bootstrap_signatures_after": [
+    "(Array(float64, 1, 'C', False, aligned=True), Array(float64, 1, 'C', False, aligned=True), Array(int64, 2, 'C', False, aligned=True))"
+  ],
+  "parity_report": "3b2468bf891715d4c14edf7db74d9394043a0ca504b5a2aabd6ea06f110fa658",
+  "kernel_cache_entries": 96,
+  "pair_count": 28
+}

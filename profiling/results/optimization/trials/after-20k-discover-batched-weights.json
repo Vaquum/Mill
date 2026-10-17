@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "case": "discover",
+  "status": "complete",
+  "worker_pid": 75826,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "pool_build",
+      "samples_ms": [
+        6031.730209
+      ],
+      "median_ms": 6031.730209
+    },
+    {
+      "name": "discover_full",
+      "samples_ms": [
+        4199.051708
+      ],
+      "median_ms": 4199.051708
+    }
+  ],
+  "peak_rss_bytes": 598130688,
+  "serve_import_ms": 2698.682,
+  "import_ms": 3109.692625,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "35efb2f5b571b366dfeb7521b663751599c6691e",
+    "source_tree_sha256": "6faeb44aab45b68dad43c2489ab8e5fbf735e4cc1deb0d2e950e726d9a27e275"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 8,
+    "reps": 1
+  },
+  "discovery": {
+    "columns": 259,
+    "pool_bytes": 43064448,
+    "timing_last_ms": {
+      "rank": 124.09,
+      "screen": 39.86,
+      "null": 804.16,
+      "stage_two": 3228.9,
+      "total": 4197.64
+    },
+    "events": 40,
+    "intervals": true,
+    "candidates": 3
+  },
+  "parity_pool": "fcd4dd55306ad5994dbd559b08f7c583e7a78df753d2ce10f7de866f04a63297",
+  "parity_discovery": "900021c276a099421b31037aa2df9d1f19e96118b099493004942021dd1d0015"
+}

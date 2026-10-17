@@ -11,20 +11,26 @@ import secrets
 import threading
 import time
 import webbrowser
+import weakref
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from importlib.resources import files
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 import numpy as np
 import polars as pl
+import orjson
 
-from . import api_reference, discover, feature_registry, grading, qc, targets
+from . import api_reference, discover, feature_registry, grading, targets
+from .research import Worker, ResearchBusy, ResearchTimeout
+from .http_server import BoundedHTTPServer
 from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS, arrow_series
 from .cache_store import write_json_atomic
+from .get_data import bar_identity
+from .memo import ByteLRU, Flights
 from .settings import (
     APP_NAME,
     ARROW_LATEST_NAME,
@@ -34,6 +40,7 @@ from .settings import (
     config_root,
     host,
     port,
+    memory_budget,
 )
 from .table import build_from_spec, klines
 from .views import ALL as VIEWS
@@ -91,20 +98,25 @@ _API_REFERENCE_BYTES = json.dumps(_API_REFERENCE).encode()
 
 # One dict so payload and frame publish in a single assignment: the fast
 # path below reads without a lock, and a reader must never see one half.
-_RESULTS: dict[tuple[str, int, str, str], tuple[bytes, pl.DataFrame]] = {}
-_QC_CACHE: dict[tuple[str, int, str, str, tuple[str, ...], str, str, str, str], bytes] = {}
+_RESULTS = ByteLRU(memory_budget("results", 128),
+                   lambda item: len(item[0] or b"") + item[1].estimated_size())
+_QC_CACHE = ByteLRU(memory_budget("qc", 16), len)
 # Single-flight: one lock per QC cache key so identical concurrent requests
 # compute once; created under _REGISTRY_LOCK, same lifetime as the cache entry.
-_QC_LOCKS: dict[tuple[str, int, str, str, tuple[str, ...], str, str, str, str], threading.Lock] = {}
+_QC_LOCKS = weakref.WeakValueDictionary()
 # Each bar series' closed bars, their version and the file's write time they were read at.
-_RAW_CACHE: dict[str, tuple[pl.DataFrame, int, int]] = {}
-_BAR_LOCKS: dict[str, threading.Lock] = {}
+_RAW_CACHE = ByteLRU(memory_budget("served_raw", 64), lambda item: item[0].estimated_size())
+_RAW_IDENTITIES = {}
+_RAW_VERSIONS = {}
+_RAW_DIGESTS = {}
+_RAW_FLIGHTS = Flights()
+_BAR_LOCKS = weakref.WeakValueDictionary()
 _REGISTRY_LOCK = threading.Lock()
-# Find features pools: a catalog pool holds every default-parameter column of a bar series
-# (about 120 MB on 1h, 490 MB on 15m). Each time bar keeps its one catalog pool, and the most
-# recent few view pools are kept beside them; each builds once.
-_POOLS: dict[tuple[str, int, str], discover.Pool] = {}
-_POOL_LOCKS: dict[tuple[str, int, str], threading.Lock] = {}
+# Private in-process pool helpers use a byte LRU. HTTP research persists pools
+# as memory maps and checkpoints factories between bounded worker jobs.
+_POOLS = ByteLRU(memory_budget("pools", 256),
+                 lambda pool: pool.values.nbytes + pool.ms.nbytes)
+_POOL_LOCKS = weakref.WeakValueDictionary()
 _VIEW_POOLS_MAX = 3
 # Searches under way, by ticket. Pools build in Python factories that hold the interpreter's lock, so a
 # search beside a build takes about twice as long: a refresh waits between factories for the searches
@@ -124,6 +136,45 @@ _SAVED_VIEWS: dict[str, dict[str, Any]] = {}
 _APP_USERNAME = ""
 _APP_PASSWORD = ""
 _API_SECRET = ""
+_RESEARCH = Worker()
+_RESEARCH_ADMISSION = threading.BoundedSemaphore(2)
+_PERSIST_POOLS = False
+
+
+def _research_report(frame, target):
+    return _RESEARCH.run("report", frame=frame, target=target)
+
+
+def _research_context():
+    with _REGISTRY_LOCK:
+        views = dict(_VIEW_SPECS)
+    return {"views": views, "environment": {
+        name: os.environ.get(name) for name in ("MILL_ARROW_DIR", "MILL_CACHE_DIR")
+    }}
+
+
+def _research_discover(body):
+    return _RESEARCH.run("discover", body=body, **_research_context())
+
+
+def _warm_research():
+    completed = {}
+    bars = sorted(TIME_BAR_SECONDS, key=TIME_BAR_SECONDS.get, reverse=True)
+    while True:
+        for bar in bars:
+            identity = bar_identity(bar)
+            if completed.get(bar) == identity:
+                continue
+            try:
+                if _RESEARCH.run("warm", bar=bar, **_research_context())["complete"]:
+                    completed[bar] = identity
+            except (ResearchBusy, ResearchTimeout):
+                pass
+            except Exception as exc:
+                print(f"catalog warmup {bar}: {exc}", flush=True)
+                completed[bar] = identity
+            time.sleep(0.05)
+        time.sleep(5)
 
 
 def _require_auth_env() -> None:
@@ -229,10 +280,7 @@ def _serialize(df: pl.DataFrame) -> bytes:
         pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("datetime"),
         *feat_exprs,
     )
-    return json.dumps(
-        {"columns": out.columns, "rows": out.rows()},
-        allow_nan=False,
-    ).encode()
+    return orjson.dumps({"columns": out.columns, "rows": out.rows()})
 
 
 def _source_version(bar: str) -> int:
@@ -248,15 +296,37 @@ def _raw_for(bar: str) -> tuple[pl.DataFrame, int]:
 
     The store rewrites the file while a bar is open, so the version moves only when the closed bars change.
     """
-    written = _source_version(bar)
-    hit = _RAW_CACHE.get(bar)
-    if hit is not None and hit[2] == written:
-        return hit[0], hit[1]
-    raw = klines(bar)
-    version = hit[1] if hit is not None and raw.equals(hit[0]) else written
-    _RAW_CACHE[bar] = (raw, version, written)
-    _retire(bar, version)
-    return raw, version
+    with _RAW_FLIGHTS.hold(bar):
+        identity = bar_identity(bar)
+        written = identity[1][0] if identity[1] is not None else 0
+        hit = _RAW_CACHE.get(bar)
+        if hit is not None and _RAW_IDENTITIES.get(bar) == identity:
+            return hit[0], hit[1]
+        raw = klines(bar)
+        previous_identity = _RAW_IDENTITIES.get(bar)
+        unchanged = hit is not None and raw.equals(hit[0])
+        digest = _RAW_DIGESTS[bar] if unchanged else _frame_digest(raw)
+        if previous_identity is not None and previous_identity[0] == identity[0] and _RAW_DIGESTS.get(bar) == digest:
+            version = _RAW_VERSIONS[bar]
+        else:
+            previous = _RAW_VERSIONS.get(bar, -1)
+            version = max(written, previous + 1)
+        _RAW_CACHE[bar] = (raw, version, written)
+        _RAW_IDENTITIES[bar] = identity
+        _RAW_VERSIONS[bar] = version
+        _RAW_DIGESTS[bar] = digest
+        _retire(bar, version)
+        return raw, version
+
+
+def _frame_digest(raw):
+    digest = hashlib.sha256(str(raw.schema).encode())
+    digest.update(raw.hash_rows(seed=0).to_numpy().tobytes())
+    return digest.hexdigest()
+
+
+def _producer_key(bar: str, version: int):
+    return (str(arrow_latest_path(arrow_series(bar)).resolve()), bar, version)
 
 
 def _retire(bar: str, version: int) -> None:
@@ -446,32 +516,31 @@ def _bucket_labels(
 
 
 def _ensure(
-    bar: str, target: str, spec: list[dict[str, Any]]
-) -> tuple[bytes, pl.DataFrame]:
+    bar: str, target: str, spec: list[dict[str, Any]], *, serialize: bool = True
+) -> tuple[bytes | None, pl.DataFrame]:
     sh = _spec_hash(spec)
     raw, version = _raw_for(bar)
     key = (bar, version, target, sh)
     entry = _RESULTS.get(key)
-    if entry is not None:
+    if entry is not None and (not serialize or entry[0] is not None):
         return entry
     with _REGISTRY_LOCK:
-        bar_lock = _BAR_LOCKS.setdefault(bar, threading.Lock())
+        bar_lock = _BAR_LOCKS.setdefault(key, threading.Lock())
     with bar_lock:
         entry = _RESULTS.get(key)
-        if entry is not None:
+        if entry is not None and (not serialize or entry[0] is not None):
             return entry
-        if spec:
-            features = build_from_spec(raw, spec)
+        if entry is not None:
+            result = entry[1]
         else:
-            features = raw.select(pl.col("datetime"))
-        if target == "none":
-            result = features
-        else:
-            tdf = targets.apply(raw, target).select(
-                pl.col("datetime"), pl.col(target)
-            )
-            result = features.join(tdf, on="datetime", how="left")
-        payload = _serialize(result)
+            features = (build_from_spec(raw, spec, cache_key=_producer_key(bar, version))
+                        if spec else raw.select(pl.col("datetime")))
+            if target == "none":
+                result = features
+            else:
+                tdf = targets.apply(raw, target).select(pl.col("datetime"), pl.col(target))
+                result = features.join(tdf, on="datetime", how="left")
+        payload = _serialize(result) if serialize else None
         _RESULTS[key] = (payload, result)
     return payload, result
 
@@ -496,6 +565,9 @@ def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, floa
         key = (bar, version, f"view:{name}:{_spec_hash(spec)}")
     else:
         raise ValueError("pool kind must be 'catalog' or 'view'")
+    if _PERSIST_POOLS:
+        from .pool_store import pool_for
+        return pool_for(raw, bar, spec, _RAW_DIGESTS[bar])
     hit = _POOLS.get(key)
     if hit is not None:
         return hit, True, 0.0
@@ -531,7 +603,9 @@ def _build_pool(
     if hit is not None:
         return hit, True, 0.0
     began = time.perf_counter()
-    built = discover.catalog_pool(raw, pause) if spec is None else discover.spec_pool(raw, spec, pause)
+    source = _producer_key(key[0], key[1])
+    built = (discover.catalog_pool(raw, pause, cache_key=source) if spec is None
+             else discover.spec_pool(raw, spec, pause, cache_key=source))
     with _REGISTRY_LOCK:
         same = [k for k in _POOLS if k[0] == key[0] and k[2] == key[2]]
         # A later version may have landed while this one built; then this one is already behind.
@@ -542,7 +616,9 @@ def _build_pool(
             if key[2] != "catalog":
                 views = [k for k in _POOLS if k[2] != "catalog"]
                 while len(views) >= _VIEW_POOLS_MAX:
-                    del _POOLS[views.pop(0)]
+                    evicted = views.pop(0)
+                    del _POOLS[evicted]
+                    _POOL_LOCKS.pop(evicted, None)
             _POOLS[key] = built
     return built, False, (time.perf_counter() - began) * 1000
 
@@ -758,10 +834,24 @@ def _delete_view(name: str) -> tuple[int, str]:
 
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
+        self._dispatch(self._get)
+
+    def _dispatch(self, route) -> None:
         url = urlsplit(self.path)
         if not self._authorized(url.path):
             self._unauthorized()
             return
+        research = url.path in {"/qc", "/discover"}
+        if research and not _RESEARCH_ADMISSION.acquire(blocking=False):
+            self._send(503, "application/json", b'{"error":"research_busy","detail":"retry shortly"}')
+            return
+        try:
+            route(url)
+        finally:
+            if research:
+                _RESEARCH_ADMISSION.release()
+
+    def _get(self, url) -> None:
         if url.path == "/health":
             self._send(200, "application/json", b'{"status":"ok"}')
         elif url.path == "/":
@@ -864,7 +954,7 @@ class _Handler(BaseHTTPRequestHandler):
                     self._send(200, "application/json", cached)
                     return
                 try:
-                    _payload, frame = _ensure(bar, target, spec)
+                    _payload, frame = _ensure(bar, target, spec, serialize=False)
                     if cols:
                         sel = ["datetime", *(c for c in cols if c in frame.columns)]
                         if target != "none" and target in frame.columns:
@@ -879,10 +969,13 @@ class _Handler(BaseHTTPRequestHandler):
                         cut_n,
                         target if target != "none" else None,
                     )
-                    report = qc.report(sub, target if target != "none" else None)
+                    report = _research_report(sub, target if target != "none" else None)
                     report["grades"] = grading.grade_map(
                         report, target=target if target != "none" else None
                     )
+                except (ResearchBusy, ResearchTimeout) as exc:
+                    self._send(503, "text/plain", str(exc).encode())
+                    return
                 except Exception as exc:
                     self._send(500, "text/plain", f"qc failed: {exc}".encode())
                     return
@@ -899,10 +992,9 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(404, "text/plain", b"")
 
     def do_POST(self) -> None:
-        url = urlsplit(self.path)
-        if not self._authorized(url.path):
-            self._unauthorized()
-            return
+        self._dispatch(self._post)
+
+    def _post(self, url) -> None:
         if url.path == "/save_view":
             length = int(self.headers.get("Content-Length") or 0)
             try:
@@ -930,7 +1022,10 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(400, "application/json", json.dumps({"error": "invalid_request", "detail": f"bad json: {exc}"}).encode())
                 return
             try:
-                answer = _discover(request)
+                answer = _research_discover(request)
+            except (ResearchBusy, ResearchTimeout) as exc:
+                self._send(503, "application/json", json.dumps({"error": "research_busy", "detail": str(exc)}).encode())
+                return
             except (ValueError, TypeError, KeyError) as exc:
                 self._send(400, "application/json", json.dumps({"error": "invalid_request", "detail": str(exc)}).encode())
                 return
@@ -1034,6 +1129,8 @@ class _Handler(BaseHTTPRequestHandler):
     ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", ctype)
+        if status == 503:
+            self.send_header("Retry-After", "1")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
@@ -1068,8 +1165,8 @@ def main() -> None:
         f"  ->  {url}",
         flush=True,
     )
-    server = ThreadingHTTPServer((bind_host, bind_port), _Handler)
-    threading.Thread(target=_warm, daemon=True).start()
+    server = BoundedHTTPServer((bind_host, bind_port), _Handler)
+    threading.Thread(target=_warm_research, daemon=True).start()
     webbrowser.open(url)
     server.serve_forever()
 

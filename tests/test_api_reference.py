@@ -9,7 +9,7 @@ import re
 import threading
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
+from mill.http_server import BoundedHTTPServer as ThreadingHTTPServer
 from pathlib import Path
 
 import pytest

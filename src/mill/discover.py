@@ -28,6 +28,7 @@ import polars as pl
 from limen.sfd.rule_based.predicates import build_predicate
 
 from . import feature_registry
+from .table import produce
 
 MODES = ("inside", "lead")
 MAX_LEADERS = 12
@@ -58,17 +59,17 @@ class Pool:
     skipped: tuple[str, ...]
 
 
-def catalog_pool(raw: pl.DataFrame, pause: Callable[[], None] | None = None) -> Pool:
+def catalog_pool(raw: pl.DataFrame, pause: Callable[[], None] | None = None, *, cache_key=None) -> Pool:
     """Every registry producer whose parameters all have defaults, at those defaults."""
     entries = []
     for factory, entry in feature_registry.REGISTRY.items():
         params = {p["name"]: p["default"] for p in entry["params"]}
         if all(value is not None for value in params.values()):
             entries.append((factory, entry["source"], params, entry["producer"], {}))
-    return _build(raw, entries, pause)
+    return _build(raw, entries, pause, cache_key)
 
 
-def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]], pause: Callable[[], None] | None = None) -> Pool:
+def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]], pause: Callable[[], None] | None = None, *, cache_key=None) -> Pool:
     """The columns of a Mill view's spec, each with the parameters the view gives it."""
     entries = []
     for item in spec:
@@ -76,10 +77,10 @@ def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]], pause: Callable
         entry = feature_registry.REGISTRY[factory]
         params = {p["name"]: p["default"] for p in entry["params"]} | given
         entries.append((factory, entry["source"], params, entry["producer"], given))
-    return _build(raw, entries, pause)
+    return _build(raw, entries, pause, cache_key)
 
 
-def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = None) -> Pool:
+def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = None, cache_key=None) -> Pool:
     """Each entry's columns; pause, when given, runs before each producer, so a caller can hold the build there."""
     names: list[str] = []
     natives: list[str] = []
@@ -90,7 +91,7 @@ def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = 
         if pause is not None:
             pause()
         try:
-            part = producer(raw, **given)
+            part = producer(raw, **given) if cache_key is None else produce(raw, factory, given, cache_key)
         except Exception:
             skipped.append(factory)
             continue
@@ -255,6 +256,10 @@ def _weighted_auc_sorted(ys: np.ndarray, starts: np.ndarray, order: np.ndarray,
     w = weights[:, order]
     pos = np.add.reduceat(w * ys, starts, axis=1)
     neg = np.add.reduceat(w * (1.0 - ys), starts, axis=1)
+    return _auc_counts(pos, neg)
+
+
+def _auc_counts(pos: np.ndarray, neg: np.ndarray) -> np.ndarray:
     below = np.cumsum(neg, axis=1) - neg
     with np.errstate(invalid="ignore", divide="ignore"):
         return (pos * (below + 0.5 * neg)).sum(axis=1) / (pos.sum(axis=1) * neg.sum(axis=1))
@@ -272,14 +277,25 @@ def bootstrap_interval(x: np.ndarray, y: np.ndarray, block: int, seed: int) -> t
     order = np.argsort(x, kind="stable")
     xs, ys = x[order], y[order]
     groups = np.flatnonzero(np.r_[True, xs[1:] != xs[:-1]])
+    binary = np.all((y == 0) | (y == 1))
+    if binary:
+        codes = np.empty(n, dtype=np.int64)
+        codes[order] = np.repeat(np.arange(groups.size), np.diff(np.r_[groups, n]))
+        labels = codes * 2 + y.astype(np.int64)
     draws = np.empty(_BOOTSTRAP_DRAWS)
     for offset in range(0, _BOOTSTRAP_DRAWS, _BOOTSTRAP_BATCH):
         batch = starts[offset:offset + _BOOTSTRAP_BATCH]
         size = batch.shape[0]
         rows = ((batch[:, :, None] + np.arange(block)) % n).reshape(size, -1)[:, :n]
-        flat = rows + (np.arange(size) * n)[:, None]
-        weights = np.bincount(flat.ravel(), minlength=size * n).reshape(size, n)
-        draws[offset:offset + size] = _weighted_auc_sorted(ys, groups, order, weights.astype(np.float64))
+        if binary:
+            width = groups.size * 2
+            flat = labels[rows] + (np.arange(size) * width)[:, None]
+            counts = np.bincount(flat.ravel(), minlength=size * width).reshape(size, groups.size, 2)
+            draws[offset:offset + size] = _auc_counts(counts[:, :, 1].astype(float), counts[:, :, 0].astype(float))
+        else:
+            flat = rows + (np.arange(size) * n)[:, None]
+            weights = np.bincount(flat.ravel(), minlength=size * n).reshape(size, n)
+            draws[offset:offset + size] = _weighted_auc_sorted(ys, groups, order, weights.astype(np.float64))
     draws = draws[np.isfinite(draws)]
     if draws.size == 0:
         return None

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import threading
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
@@ -10,18 +9,42 @@ from limen import HistoricalData
 
 from .bars import (
     BAR_VALUE_COLUMNS,
+    TIME_BAR_SECONDS,
+    arrow_series,
     dollar_bar_name,
     dollar_bar_series,
     time_bar_name,
     time_bar_seconds,
     time_bar_series,
 )
-from .cache_store import cache_path, read_fresh, write_cache
+from .cache_store import cache_path, cache_refresh, file_identity as source_identity, read_fresh, write_cache
 from .frames import normalize_datetime, read_parquet, write_parquet
-from .settings import arrow_latest_path
+from .settings import arrow_latest_path, memory_budget
+from .memo import ByteLRU, Flights
 
 
-_LIMEN_LOCK = threading.Lock()
+_DATA = ByteLRU(memory_budget("raw", 64), lambda value: value[1].estimated_size())
+_DATA_FLIGHTS = Flights()
+
+
+def _criteria(name, series, start=None, end=None, row_count_limit=None, n_rows=None):
+    criteria = {"kind": "arrow_bar_store", "bar": name, "series": series,
+                "start": start, "end": end, "row_count_limit": row_count_limit, "n_rows": n_rows}
+    if name in TIME_BAR_SECONDS:
+        criteria["closed"] = True
+    return criteria
+
+
+def disk_identity(path):
+    return tuple(source_identity(p) for p in (path.with_suffix(".arrow"), path, path.with_suffix(".json")))
+
+
+def bar_identity(bar):
+    series = arrow_series(bar)
+    source = arrow_latest_path(series)
+    identity = source_identity(source)
+    disk = disk_identity(cache_path(bar, _criteria(bar, series))) if identity is None else None
+    return (str(source.absolute()), identity, disk)
 
 
 def _date_part(value: str | None) -> date | None:
@@ -53,6 +76,10 @@ def _limit_rows(data: pl.DataFrame, limit: int | None) -> pl.DataFrame:
 
 def _closed(data: pl.DataFrame, seconds: int, written_ns: int) -> pl.DataFrame:
     """The bars that had closed when the store wrote its file: it also writes the open bar, and rewrites it as trades arrive."""
+    times = data["datetime"].dt.epoch("ms")
+    if not times.null_count() and times.is_sorted():
+        stop = times.search_sorted(written_ns // 1_000_000 - seconds * 1000, side="right")
+        return data.slice(0, int(stop))
     return data.filter(pl.col("datetime").dt.epoch("ms") + seconds * 1000 <= written_ns // 1_000_000)
 
 
@@ -109,16 +136,7 @@ class GetData:
         series = time_bar_series(bar_size)
         source = arrow_latest_path(series)
         limit = row_count_limit if row_count_limit is not None else n_rows
-        criteria = {
-            "kind": "arrow_bar_store",
-            "bar": name,
-            "series": series,
-            "start": start_date_limit,
-            "end": end_date_limit,
-            "row_count_limit": row_count_limit,
-            "n_rows": n_rows,
-            "closed": True,
-        }
+        criteria = _criteria(name, series, start_date_limit, end_date_limit, row_count_limit, n_rows)
 
         def fetch() -> pl.DataFrame:
             # When the store wrote the file, read before the bars: a bar closed by then is closed in what is read.
@@ -145,15 +163,7 @@ class GetData:
         name = dollar_bar_name(bar_size)
         series = dollar_bar_series(bar_size)
         limit = row_count_limit if row_count_limit is not None else n_rows
-        criteria = {
-            "kind": "arrow_bar_store",
-            "bar": name,
-            "series": series,
-            "start": start_date_limit,
-            "end": end_date_limit,
-            "row_count_limit": row_count_limit,
-            "n_rows": n_rows,
-        }
+        criteria = _criteria(name, series, start_date_limit, end_date_limit, row_count_limit, n_rows)
         return self._cached(
             name,
             criteria,
@@ -172,21 +182,29 @@ class GetData:
         source: Path,
     ) -> pl.DataFrame:
         path = cache_path(label, criteria)
-        cached = read_fresh(path, source)
-        if cached is not None:
-            return self._store(cached)
-        with _LIMEN_LOCK:
+        key = str(path.absolute())
+        identity = source_identity(source)
+        hit = _DATA.get(key)
+        if hit is not None and (hit[0] == identity if identity is not None else hit[2] == disk_identity(path)):
+            return self._store(hit[1].clone())
+        with _DATA_FLIGHTS.hold(key), cache_refresh(path):
+            identity = source_identity(source)
+            hit = _DATA.get(key)
+            if hit is not None and (hit[0] == identity if identity is not None else hit[2] == disk_identity(path)):
+                return self._store(hit[1].clone())
             cached = read_fresh(path, source)
             if cached is not None:
-                return self._store(cached)
+                _DATA[key] = (identity, cached, disk_identity(path))
+                return self._store(cached.clone())
             # The source's version before reading it: a write during the read leaves the cache stale.
             try:
                 stamp = source.stat().st_mtime_ns
             except FileNotFoundError:
                 stamp = None
             data = fetch()
-            write_cache(path, data, criteria, stamp)
-            return self._store(data)
+            write_cache(path, data, criteria, stamp, identity)
+            _DATA[key] = (identity, data, disk_identity(path))
+            return self._store(data.clone())
 
     def _store(self, data: pl.DataFrame) -> pl.DataFrame:
         self.data = data

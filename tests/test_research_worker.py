@@ -1,0 +1,95 @@
+import os
+import subprocess
+import sys
+
+import polars as pl
+import pytest
+
+from mill import qc
+from mill.research import Worker, ResearchBusy, ResearchTimeout
+
+
+def test_real_worker_matches_report_and_runs_outside_server_process():
+    frame = pl.DataFrame({"a": [1.0, None, 2.0, 2.0]})
+    worker = Worker(timeout=15)
+    try:
+        assert worker.run("report", frame=frame, target=None) == qc.report(frame, None)
+        assert worker._process.pid != os.getpid()
+        pid = worker._process.pid
+        assert worker.run("report", frame=frame, target=None) == qc.report(frame, None)
+        assert worker._process.pid == pid
+    finally:
+        worker.close()
+    assert worker._process is None
+
+
+def test_worker_deadline_reaps_process_and_can_restart():
+    worker = Worker(timeout=0.1)
+    process = subprocess.Popen([sys.executable, "-c", "import time; input(); time.sleep(30)"],
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    worker._process = process
+    try:
+        with pytest.raises(ResearchTimeout):
+            worker.run("report", target=None)
+        assert process.poll() is not None and worker._process is None
+        worker.timeout = 15
+        assert worker.run("report", frame=pl.DataFrame({"a": [1.0]}), target=None)["n_rows"] == 1
+    finally:
+        worker.close()
+
+
+def test_worker_admits_only_one_active_and_one_waiting_request():
+    worker = Worker()
+    assert worker._slots.acquire(False) and worker._slots.acquire(False)
+    try:
+        with pytest.raises(ResearchBusy):
+            worker.run("report", target=None)
+    finally:
+        worker._slots.release()
+        worker._slots.release()
+        worker.close()
+
+
+def test_serialization_failure_is_reported_without_killing_worker():
+    worker = Worker(timeout=5)
+    script = """
+from mill import research
+research._execute = lambda req: {'bad': float('nan')} if req['kind'] == 'bad' else {'ok': True}
+research.main()
+"""
+    worker._process = subprocess.Popen([sys.executable, "-c", script], stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE)
+    try:
+        pid = worker._process.pid
+        with pytest.raises(ValueError, match="Out of range float"):
+            worker.run("bad")
+        assert worker.run("good") == {"ok": True}
+        assert worker._process.pid == pid and worker._process.poll() is None
+    finally:
+        worker.close()
+
+
+@pytest.mark.parametrize("value", ["invalid", "0", "9"])
+def test_invalid_worker_configuration_is_a_server_error(monkeypatch, value):
+    monkeypatch.setenv("MILL_RESEARCH_THREADS", value)
+    worker = Worker()
+    with pytest.raises(RuntimeError, match="MILL_RESEARCH_THREADS"):
+        worker.run("discover", body={})
+    assert worker._process is None
+
+
+def test_slow_reaping_closes_pipes_without_masking_the_original_error(monkeypatch):
+    from io import BytesIO
+    class Process:
+        stdin, stdout = BytesIO(), BytesIO()
+        def poll(self): return None
+        def terminate(self): pass
+        def kill(self): pass
+        def wait(self, timeout): raise subprocess.TimeoutExpired("test", timeout)
+    worker = Worker()
+    process = Process()
+    worker._process = process
+    monkeypatch.setattr("mill.research.select.select", lambda *args: ([], [], []))
+    with pytest.raises(ResearchTimeout, match="execution deadline"):
+        worker.run("report", target=None)
+    assert process.stdin.closed and process.stdout.closed and worker._process is None
