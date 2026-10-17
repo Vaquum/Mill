@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "case": "data",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "arrow_read_normalize_select",
+      "samples_ms": [
+        19.679542,
+        6.317375,
+        41.097959,
+        9.342625,
+        5.989583
+      ],
+      "median_ms": 9.342625
+    },
+    {
+      "name": "get_data_cold_cache",
+      "samples_ms": [
+        63.274375
+      ],
+      "median_ms": 63.274375
+    },
+    {
+      "name": "get_data_disk_cache_hit",
+      "samples_ms": [
+        23.208541,
+        21.702084,
+        16.435708,
+        23.766875,
+        17.988541
+      ],
+      "median_ms": 21.702084
+    },
+    {
+      "name": "get_data_tail_100_cold",
+      "samples_ms": [
+        22.280292
+      ],
+      "median_ms": 22.280292
+    },
+    {
+      "name": "raw_for_first",
+      "samples_ms": [
+        19.54575
+      ],
+      "median_ms": 19.54575
+    },
+    {
+      "name": "raw_for_memory_hit",
+      "samples_ms": [
+        0.05175,
+        0.013458,
+        0.009625,
+        0.025833,
+        0.011167
+      ],
+      "median_ms": 0.013458
+    },
+    {
+      "name": "raw_for_unchanged_rewrite",
+      "samples_ms": [
+        40.339042,
+        28.209,
+        35.836209,
+        13.931458,
+        26.957792
+      ],
+      "median_ms": 28.209
+    },
+    {
+      "name": "raw_for_changed_closed_bar",
+      "samples_ms": [
+        17.789167
+      ],
+      "median_ms": 17.789167
+    }
+  ],
+  "peak_rss_bytes": 432816128,
+  "import_ms": 8799.947583,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "6e864599aeac276cd874600309fafa95afdb2351"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "k": 8,
+    "reps": 5
+  },
+  "version_changed": true
+}

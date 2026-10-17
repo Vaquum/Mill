@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "case": "discover",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "pool_build",
+      "samples_ms": [
+        4559.396417
+      ],
+      "median_ms": 4559.396417
+    },
+    {
+      "name": "discover_full",
+      "samples_ms": [
+        2043.128834,
+        2085.667375,
+        2317.681584
+      ],
+      "median_ms": 2085.667375
+    }
+  ],
+  "peak_rss_bytes": 1204355072,
+  "import_ms": 3999.967958,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "d6fa6bd35e85c7fa2114cb6c41f077cc0eca8fbe"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "k": 8,
+    "reps": 3
+  },
+  "discovery": {
+    "columns": 259,
+    "pool_bytes": 43064448,
+    "timing_last_ms": {
+      "rank": 106.73,
+      "screen": 21.28,
+      "null": 605.1,
+      "stage_two": 1583.79,
+      "total": 2317.58
+    },
+    "events": 40,
+    "intervals": true,
+    "candidates": 3
+  }
+}

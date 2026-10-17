@@ -1,0 +1,265 @@
+{
+  "schema": 1,
+  "case": "views",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "target:ema_breakout",
+      "samples_ms": [
+        0.765958
+      ],
+      "median_ms": 0.765958
+    },
+    {
+      "name": "target:forward_breakout",
+      "samples_ms": [
+        0.736125
+      ],
+      "median_ms": 0.736125
+    },
+    {
+      "name": "target:forward_vol_normalized_return",
+      "samples_ms": [
+        8.62925
+      ],
+      "median_ms": 8.62925
+    },
+    {
+      "name": "target:next_bar_down",
+      "samples_ms": [
+        0.187791
+      ],
+      "median_ms": 0.187791
+    },
+    {
+      "name": "target:next_bar_up",
+      "samples_ms": [
+        0.160167
+      ],
+      "median_ms": 0.160167
+    },
+    {
+      "name": "target:next_return",
+      "samples_ms": [
+        0.280083
+      ],
+      "median_ms": 0.280083
+    },
+    {
+      "name": "target:abs_forward_vol_normalized_return",
+      "samples_ms": [
+        4.965125
+      ],
+      "median_ms": 4.965125
+    },
+    {
+      "name": "view:gen3",
+      "samples_ms": [
+        6.91075,
+        4.719542,
+        4.824958
+      ],
+      "median_ms": 4.824958
+    },
+    {
+      "name": "view_json:gen3",
+      "samples_ms": [
+        37.100709,
+        35.150709,
+        41.2725
+      ],
+      "median_ms": 37.100709,
+      "columns": 14,
+      "payload_bytes": 1665246
+    },
+    {
+      "name": "view:gen4",
+      "samples_ms": [
+        12.271875,
+        15.043542,
+        12.51025
+      ],
+      "median_ms": 12.51025
+    },
+    {
+      "name": "view_json:gen4",
+      "samples_ms": [
+        59.328959,
+        59.849917,
+        57.445917
+      ],
+      "median_ms": 59.328959,
+      "columns": 18,
+      "payload_bytes": 2327703
+    },
+    {
+      "name": "view:jolt",
+      "samples_ms": [
+        13.711458,
+        13.3755,
+        14.25075
+      ],
+      "median_ms": 13.711458
+    },
+    {
+      "name": "view_json:jolt",
+      "samples_ms": [
+        68.890792,
+        67.67125,
+        66.401291
+      ],
+      "median_ms": 67.67125,
+      "columns": 23,
+      "payload_bytes": 2754331
+    },
+    {
+      "name": "view:log_return",
+      "samples_ms": [
+        2.234334,
+        1.490875,
+        1.326
+      ],
+      "median_ms": 1.490875
+    },
+    {
+      "name": "view_json:log_return",
+      "samples_ms": [
+        46.141208,
+        44.844708,
+        43.946958
+      ],
+      "median_ms": 44.844708,
+      "columns": 9,
+      "payload_bytes": 1847855
+    },
+    {
+      "name": "view:nth_time_period",
+      "samples_ms": [
+        1.399875,
+        1.261125,
+        1.172584
+      ],
+      "median_ms": 1.261125
+    },
+    {
+      "name": "view_json:nth_time_period",
+      "samples_ms": [
+        22.524583,
+        22.277458,
+        21.971292
+      ],
+      "median_ms": 22.277458,
+      "columns": 11,
+      "payload_bytes": 1162029
+    },
+    {
+      "name": "view:ochlv",
+      "samples_ms": [
+        0.245584,
+        0.096666,
+        0.084083
+      ],
+      "median_ms": 0.096666
+    },
+    {
+      "name": "view_json:ochlv",
+      "samples_ms": [
+        36.091709,
+        44.128541,
+        38.27075
+      ],
+      "median_ms": 38.27075,
+      "columns": 6,
+      "payload_bytes": 1501159
+    },
+    {
+      "name": "view:roc",
+      "samples_ms": [
+        3.009542,
+        2.65525,
+        2.44625
+      ],
+      "median_ms": 2.65525
+    },
+    {
+      "name": "view_json:roc",
+      "samples_ms": [
+        47.888583,
+        46.937708,
+        46.772833
+      ],
+      "median_ms": 46.937708,
+      "columns": 9,
+      "payload_bytes": 1850378
+    },
+    {
+      "name": "view:super",
+      "samples_ms": [
+        12.340834,
+        12.493125,
+        13.244375
+      ],
+      "median_ms": 12.493125
+    },
+    {
+      "name": "view_json:super",
+      "samples_ms": [
+        62.470625,
+        61.064875,
+        61.373375
+      ],
+      "median_ms": 61.373375,
+      "columns": 19,
+      "payload_bytes": 2553568
+    }
+  ],
+  "peak_rss_bytes": 436862976,
+  "import_ms": 3686.988709,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "b47a6e22bfbd7647012a2dc7ac8a89063748b949"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 8,
+    "reps": 3
+  }
+}

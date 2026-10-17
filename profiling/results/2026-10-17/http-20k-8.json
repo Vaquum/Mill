@@ -1,0 +1,301 @@
+{
+  "schema": 1,
+  "case": "http",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "http_data_first",
+      "samples_ms": [
+        182.612459
+      ],
+      "median_ms": 182.612459
+    },
+    {
+      "name": "http_data_warm",
+      "samples_ms": [
+        1.508584,
+        1.446167,
+        1.394875,
+        1.402833,
+        1.40375
+      ],
+      "median_ms": 1.40375
+    },
+    {
+      "name": "http_identical_cold_batch_c4",
+      "samples_ms": [
+        159.200459
+      ],
+      "median_ms": 159.200459
+    },
+    {
+      "name": "http_warm_batch_c1",
+      "samples_ms": [
+        20.733333
+      ],
+      "median_ms": 20.733333
+    },
+    {
+      "name": "http_warm_batch_c4",
+      "samples_ms": [
+        14.651542
+      ],
+      "median_ms": 14.651542
+    },
+    {
+      "name": "http_warm_batch_c8",
+      "samples_ms": [
+        32.34775
+      ],
+      "median_ms": 32.34775
+    }
+  ],
+  "peak_rss_bytes": 444170240,
+  "import_ms": 3402.10025,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "b47a6e22bfbd7647012a2dc7ac8a89063748b949"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 8,
+    "reps": 5
+  },
+  "identical_cold_build_calls": 1,
+  "http_c1": [
+    {
+      "ms": 1.6025,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.56975,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.400708,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.33525,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.273917,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.212292,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.378417,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.33625,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.184542,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.144458,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.149292,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.142834,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.209042,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.194208,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.206958,
+      "bytes": 2141406
+    },
+    {
+      "ms": 1.154375,
+      "bytes": 2141406
+    }
+  ],
+  "http_c4": [
+    {
+      "ms": 3.035916,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.249458,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.720125,
+      "bytes": 2141406
+    },
+    {
+      "ms": 4.370042,
+      "bytes": 2141406
+    },
+    {
+      "ms": 4.270792,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.722416,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.891,
+      "bytes": 2141406
+    },
+    {
+      "ms": 4.153542,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.254458,
+      "bytes": 2141406
+    },
+    {
+      "ms": 2.8785,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.302708,
+      "bytes": 2141406
+    },
+    {
+      "ms": 2.999042,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.357959,
+      "bytes": 2141406
+    },
+    {
+      "ms": 2.566917,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.290875,
+      "bytes": 2141406
+    },
+    {
+      "ms": 2.709125,
+      "bytes": 2141406
+    }
+  ],
+  "http_c8": [
+    {
+      "ms": 5.555042,
+      "bytes": 2141406
+    },
+    {
+      "ms": 6.275917,
+      "bytes": 2141406
+    },
+    {
+      "ms": 3.607792,
+      "bytes": 2141406
+    },
+    {
+      "ms": 5.686958,
+      "bytes": 2141406
+    },
+    {
+      "ms": 31.806542,
+      "bytes": 2141406
+    },
+    {
+      "ms": 6.037667,
+      "bytes": 2141406
+    },
+    {
+      "ms": 7.213375,
+      "bytes": 2141406
+    },
+    {
+      "ms": 7.344708,
+      "bytes": 2141406
+    },
+    {
+      "ms": 4.799542,
+      "bytes": 2141406
+    },
+    {
+      "ms": 5.208,
+      "bytes": 2141406
+    },
+    {
+      "ms": 5.470208,
+      "bytes": 2141406
+    },
+    {
+      "ms": 5.320583,
+      "bytes": 2141406
+    },
+    {
+      "ms": 5.006208,
+      "bytes": 2141406
+    },
+    {
+      "ms": 5.08625,
+      "bytes": 2141406
+    },
+    {
+      "ms": 5.028959,
+      "bytes": 2141406
+    },
+    {
+      "ms": 4.760791,
+      "bytes": 2141406
+    }
+  ]
+}

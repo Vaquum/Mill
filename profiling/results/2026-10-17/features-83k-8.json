@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "case": "features",
+  "status": "complete",
+  "measurements": [
+    {
+      "name": "build_features",
+      "samples_ms": [
+        663.131959,
+        692.125792,
+        779.701459,
+        555.255125,
+        441.995125
+      ],
+      "median_ms": 663.131959
+    },
+    {
+      "name": "target_next_return",
+      "samples_ms": [
+        0.857458,
+        1.01825,
+        0.351292,
+        0.298,
+        0.266459
+      ],
+      "median_ms": 0.351292
+    },
+    {
+      "name": "join_target",
+      "samples_ms": [
+        6.972792,
+        2.732167,
+        3.001125,
+        2.560458,
+        2.305375
+      ],
+      "median_ms": 2.732167
+    },
+    {
+      "name": "serialize_json",
+      "samples_ms": [
+        316.801542,
+        238.133041,
+        236.044416,
+        253.630167,
+        291.294291
+      ],
+      "median_ms": 253.630167
+    },
+    {
+      "name": "ensure_cold",
+      "samples_ms": [
+        813.43625
+      ],
+      "median_ms": 813.43625
+    },
+    {
+      "name": "ensure_memory_hit",
+      "samples_ms": [
+        0.072375,
+        0.022375,
+        0.017542,
+        0.015542,
+        0.014833
+      ],
+      "median_ms": 0.017542
+    },
+    {
+      "name": "ensure_plus_one_feature",
+      "samples_ms": [
+        1080.328375
+      ],
+      "median_ms": 1080.328375
+    }
+  ],
+  "peak_rss_bytes": 636518400,
+  "import_ms": 4974.896167,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "polars_threads": 10,
+    "numba_threads": 10,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": null,
+      "NUMBA_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null
+    },
+    "engine_sha": "b47a6e22bfbd7647012a2dc7ac8a89063748b949"
+  },
+  "source": {
+    "file": "15m_time_bars_84b0a8617eeeb5d8.parquet",
+    "sha256": "e53f3e8f71a9b738a368e11f8e5942d098bfda6ff8e764ce115fb22e52c4f08c"
+  },
+  "input": {
+    "source_rows": 83136,
+    "rows": 83136,
+    "columns": 17,
+    "frame_bytes": 11306496,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:45:00+00:00",
+    "bar": "15m_time_bars",
+    "k": 8,
+    "reps": 5
+  },
+  "result": {
+    "columns": 10,
+    "frame_bytes": 6703879,
+    "payload_bytes": 8526656
+  }
+}

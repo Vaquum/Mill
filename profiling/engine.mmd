@@ -1,0 +1,19 @@
+flowchart TD
+    Arrow[Arrow bar store] --> GetData[GetData: normalize, closed bars, Parquet cache]
+    Parquet[Local Parquet] --> GetData
+    GetData --> Raw[Server raw cache: source mtime and closed-frame equality]
+    Raw --> Build[build_from_spec: serial registered Limen factories]
+    Build --> Join[Optional target calculation and datetime join]
+    Join --> Result[Result cache: frame plus eagerly built JSON]
+    Result --> Data[GET /data: full-history JSON]
+    Result --> Filter[GET /qc: select, date filter, row grouping]
+    Filter --> Kernels[Sort, NumPy arrays, health, pairs, edge bootstrap, regimes]
+    Kernels --> Primitives[Content-memoized kernels and QC primitives]
+    Primitives --> QC[Report, grades and QC JSON]
+    Raw --> Pool[Catalog or view pool: dense float64 matrix]
+    Pool --> Rank[Context selection and per-column ranks]
+    Rank --> Null[Exact circular-shift null by chunked FFT]
+    Null --> Leaders[Cluster leaders, bootstrap intervals, fit rules]
+    Leaders --> Discovery[POST /discover: candidates, rules and sampled series]
+    Raw -. background replacement while old pool answers .-> Pool
+    Startup[Import Numba warmup, then background warming of five time-bar catalogs] --> Pool
