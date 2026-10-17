@@ -18,6 +18,7 @@ from scipy import stats
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from statsmodels.tsa.stattools import acf, adfuller, kpss
 from .memo import ByteLRU
+from .pairwise import Workspace
 from .settings import memory_budget
 
 
@@ -89,11 +90,7 @@ def _memoized(fn):
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        key = (
-            name,
-            tuple(_arg_key(a) for a in args),
-            tuple(sorted((k, _arg_key(v)) for k, v in kwargs.items())),
-        )
+        key = _kernel_key(name, args, kwargs)
         cached = _KERNEL_CACHE.get(key, _MISS)
         if cached is not _MISS:
             return cached
@@ -102,6 +99,11 @@ def _memoized(fn):
         return value
 
     return wrapper
+
+
+def _kernel_key(name, args, kwargs):
+    return (name, tuple(_arg_key(a) for a in args),
+            tuple(sorted((k, _arg_key(v)) for k, v in kwargs.items())))
 
 
 def clear_kernel_cache() -> None:
@@ -289,15 +291,25 @@ def _edge_map(
     blocks: dict[str, int | None],
     target_label: str,
 ) -> dict[str, tuple]:
-    return {
-        col: _edge_metrics(
-            arrays[col],
-            target_arr,
-            _joint_block(blocks, col, target_label),
-            _seed_for(col),
-        )
-        for col in feature_cols
-    }
+    results, work = {}, None
+    for col in feature_cols:
+        args = (arrays[col], target_arr, _joint_block(blocks, col, target_label), _seed_for(col))
+        key = _kernel_key("_edge_metrics", args, {})
+        result = _KERNEL_CACHE.get(key, _MISS)
+        if result is _MISS:
+            if work is None:
+                work = Workspace(arrays, max_n=target_arr.size, mi_max_n=_MI_MAX_N, min_n=100)
+            def mi(x, y):
+                mi_key = _kernel_key("_mutual_info", (x, y), {})
+                value = _KERNEL_CACHE.get(mi_key, _MISS)
+                if value is _MISS:
+                    value = work.edge_mi(col, target_label, lambda: _mutual_info(x, y))
+                    _KERNEL_CACHE[mi_key] = value
+                return value
+            result = _edge_calculations(*args, mi)
+            _KERNEL_CACHE[key] = result
+        results[col] = result
+    return results
 
 
 def _edge_rows(
@@ -327,13 +339,17 @@ def _edge_metrics(
     deciles. The CI and MI beneath keep their own memos, so a cold call
     computes exactly what the inline loop did.
     """
+    return _edge_calculations(x, y, block, seed, _mutual_info)
+
+
+def _edge_calculations(x, y, block, seed, mutual_information):
     mask = ~np.isnan(x) & ~np.isnan(y)
     xc, yc = x[mask], y[mask]
     if xc.size < 100:
         return None, None, None, None, None, None
     spearman = _safe(lambda a: float(stats.spearmanr(a, yc).statistic), xc)
     lo, hi = _bootstrap_spearman_ci(xc, yc, block, seed=seed)
-    mi = _mutual_info(xc, yc)
+    mi = mutual_information(xc, yc)
     spread, monotonic = _decile_metrics(xc, yc)
     return spearman, lo, hi, mi, spread, monotonic
 
@@ -390,10 +406,20 @@ def _pair_map(
     feature_cols: Sequence[str],
 ) -> dict[tuple[str, str], tuple]:
     pairs: dict[tuple[str, str], tuple] = {}
+    work = None
     for i, left in enumerate(feature_cols):
         xi = arrays[left]
         for right in feature_cols[i + 1 :]:
-            pairs[(left, right)] = _pair_metrics(xi, arrays[right])
+            key = _kernel_key("_pair_metrics", (xi, arrays[right]), {})
+            value = _KERNEL_CACHE.get(key, _MISS)
+            if value is _MISS:
+                if work is None:
+                    work = Workspace({name: arrays[name] for name in feature_cols},
+                                     max_n=_PAIRWISE_MAX_N, mi_max_n=_PAIRWISE_MI_MAX_N,
+                                     min_n=_PAIRWISE_MIN_N)
+                value = work.pair(left, right)
+                _KERNEL_CACHE[key] = value
+            pairs[(left, right)] = value
     return pairs
 
 
@@ -625,12 +651,46 @@ def _bootstrap_spearman_estimates(
     estimates = np.empty(n_iter, dtype=np.float64)
     codes_x, codes_y = _rank_codes(arr_x), _rank_codes(arr_y)
     has_nan = np.isnan(arr_x).any() or np.isnan(arr_y).any()
-    for i in prange(n_iter):
-        if has_nan:
-            value = _pearson(_rankdata_1d(arr_x[idx[i]]), _rankdata_1d(arr_y[idx[i]]))
-        else:
-            value = _pearson(_sample_ranks(codes_x, idx[i]), _sample_ranks(codes_y, idx[i]))
-        estimates[i] = 0.0 if np.isnan(value) else value
+    # Each draw's average ranks sum exactly to n(n+1)/2. Count both columns
+    # in one index pass and reduce directly from the rank tables: sampled
+    # rank arrays, repeated means and centered/multiplied arrays are redundant.
+    nx, ny = codes_x.max() + 1, codes_y.max() + 1
+    # Fixed lanes keep scratch bounded and avoid runtime thread-ID globals,
+    # which prevent Numba from persisting this kernel's compiled code.
+    lanes = min(8, n_iter)
+    work_x = np.empty((lanes, nx), dtype=np.float64)
+    work_y = np.empty((lanes, ny), dtype=np.float64)
+    for lane in prange(lanes):
+        rx, ry = work_x[lane], work_y[lane]
+        for i in range(lane, n_iter, lanes):
+            if has_nan:
+                value = _pearson(_rankdata_1d(arr_x[idx[i]]), _rankdata_1d(arr_y[idx[i]]))
+            else:
+                rx[:] = 0
+                ry[:] = 0
+                for row in idx[i]:
+                    rx[codes_x[row]] += 1
+                    ry[codes_y[row]] += 1
+                below = 0.
+                for group in range(nx):
+                    count = rx[group]
+                    rx[group] = below + (count + 1) / 2.
+                    below += count
+                below = 0.
+                for group in range(ny):
+                    count = ry[group]
+                    ry[group] = below + (count + 1) / 2.
+                    below += count
+                mean = (idx.shape[1] + 1) / 2.
+                xx, yy, xy = 0., 0., 0.
+                for row in idx[i]:
+                    x, y = rx[codes_x[row]] - mean, ry[codes_y[row]] - mean
+                    xx += x*x
+                    yy += y*y
+                    xy += x*y
+                denominator = np.sqrt(xx*yy)
+                value = xy / denominator if denominator else 0.
+            estimates[i] = 0.0 if np.isnan(value) else value
     return estimates
 
 

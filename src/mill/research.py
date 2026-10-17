@@ -129,6 +129,10 @@ def _execute(request):
     global _WORKER_ENV
     environment = request["environment"]
     if environment != _WORKER_ENV:
+        from . import discovery_reuse
+        discovery_reuse.clear()
+        from . import targets
+        targets._RESULTS.clear()
         from .get_data import _DATA
         from .table import _PRODUCERS
         for cache in (serve._RAW_CACHE, serve._RESULTS, serve._QC_CACHE, serve._POOLS, _DATA, _PRODUCERS):

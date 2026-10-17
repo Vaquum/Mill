@@ -12,8 +12,8 @@ import time
 import numpy as np
 import polars as pl
 
-from . import discover, feature_registry
-from .cache_store import _atomic_path, write_json_atomic
+from . import discover, feature_registry, expressions
+from .cache_store import _atomic_path, file_identity, write_json_atomic
 from .settings import cache_root, memory_budget
 
 
@@ -30,18 +30,21 @@ def _revision():
                   "limen": distribution("vaquum_limen").read_text("direct_url.json"),
                   "polars": version("polars"),
                   "wrapper": Path(feature_registry.__file__).read_text(),
+                  "planner": Path(expressions.__file__).read_text(),
                   "builder": Path(__file__).read_text()})
 
 
 def _load(directory):
+    stamp = file_identity(directory / "ready.json")
     metadata = json.loads((directory / "ready.json").read_text())
     fields = {k: tuple(v) for k, v in metadata.items()}
-    values = np.load(directory / "values.npy", allow_pickle=False, mmap_mode="r")
-    ms = np.load(directory / "ms.npy", allow_pickle=False, mmap_mode="r")
-    if values.shape != (ms.size, len(fields["names"])):
+    pool = discover.mapped_pool(directory, fields)
+    if stamp != file_identity(directory / "ready.json"):
+        raise RuntimeError("persisted pool metadata changed while opening; retry")
+    if pool.values.shape != (pool.ms.size, len(fields["names"])):
         raise ValueError("invalid persisted pool shape")
     os.utime(directory, None)
-    return discover.Pool(**fields, ms=ms, values=values)
+    return pool
 
 
 def _entries(spec):
@@ -127,20 +130,28 @@ def pool_for(raw, bar, spec, digest, *, quantum=5):
     directory.mkdir(exist_ok=True)
     began = time.perf_counter()
     entries = _entries(spec)
-    for i, (factory, given, _, entry) in enumerate(entries):
-        path = directory / f"{i}.arrow"
-        skipped = directory / f"{i}.skip"
-        if not path.exists() and not skipped.exists():
-            try:
-                part = entry["producer"](raw, **given)
-            except Exception:
-                write_json_atomic(skipped, {"factory": factory})
-            else:
-                with _atomic_path(path) as temporary:
-                    part.write_ipc(temporary, compression="uncompressed")
+    pending = [(i, entry) for i, entry in enumerate(entries)
+               if not (directory / f"{i}.arrow").exists() and not (directory / f"{i}.skip").exists()]
+    batch_size = 1 if quantum <= 0 else 8
+    completed = 0
+    for start in range(0, len(pending), batch_size):
+        batch = pending[start:start+batch_size]
+        def publish(parts):
+            nonlocal completed
+            for local, part in parts.items():
+                i, (factory, given, _, entry) = batch[local]
+                path, skipped = directory / f"{i}.arrow", directory / f"{i}.skip"
+                if isinstance(part, Exception):
+                    write_json_atomic(skipped, {"factory": factory})
+                else:
+                    with _atomic_path(path) as temporary:
+                        part.write_ipc(temporary, compression="uncompressed")
+                completed += 1
             _trim(root, directory)
-            if time.perf_counter() - began >= quantum and i + 1 < len(entries):
+            if time.perf_counter() - began >= quantum and completed < len(pending):
                 raise PoolPending("catalog construction is progressing; retry shortly")
+        expressions.evaluate(raw, [(entry[3]["producer"], entry[1]) for _, entry in batch],
+                             errors=True, publish=publish)
     _assemble(directory, raw, entries)
     _trim(root, directory)
     return _load(directory), False, (time.perf_counter() - began) * 1000

@@ -16,6 +16,7 @@ Producer = Callable[..., pl.DataFrame]
 def _raw_producer(name: str) -> Producer:
     def run(raw: pl.DataFrame) -> pl.DataFrame:
         return raw.select(pl.col(name))
+    run._mill_native_plan = True
     return run
 
 
@@ -29,6 +30,7 @@ def _limen_producer(fn: Callable[..., pl.DataFrame]) -> Producer:
             return out.select(new)
         suffix = "__" + "_".join(f"{k}={params[k]}" for k in sorted(params))
         return out.select(new).rename({c: f"{c}{suffix}" for c in new})
+    run._mill_native_plan = True
     return run
 
 

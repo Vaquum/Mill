@@ -43,6 +43,7 @@ from .settings import (
     memory_budget,
 )
 from .table import build_from_spec, klines
+from .serialization import encode_rows
 from .views import ALL as VIEWS
 
 _INDEX = files("mill").joinpath("assets", "index.html")
@@ -280,7 +281,7 @@ def _serialize(df: pl.DataFrame) -> bytes:
         pl.col("datetime").dt.to_string("%Y-%m-%d %H:%M").alias("datetime"),
         *feat_exprs,
     )
-    return orjson.dumps({"columns": out.columns, "rows": out.rows()})
+    return encode_rows(out)
 
 
 def _source_version(bar: str) -> int:
@@ -538,7 +539,7 @@ def _ensure(
             if target == "none":
                 result = features
             else:
-                tdf = targets.apply(raw, target).select(pl.col("datetime"), pl.col(target))
+                tdf = targets.for_source(raw, target, _producer_key(bar, version))
                 result = features.join(tdf, on="datetime", how="left")
         payload = _serialize(result) if serialize else None
         _RESULTS[key] = (payload, result)

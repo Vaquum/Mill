@@ -21,13 +21,16 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from importlib.metadata import version
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import polars as pl
 from limen.sfd.rule_based.predicates import build_predicate
 
-from . import feature_registry
+from . import feature_registry, discovery_reuse
+from .expressions import evaluate
+from .cache_store import file_identity
 from .table import produce
 
 MODES = ("inside", "lead")
@@ -57,6 +60,18 @@ class Pool:
     ms: np.ndarray
     values: np.ndarray
     skipped: tuple[str, ...]
+    _identity: tuple | None = None
+
+
+def mapped_pool(directory, fields):
+    """Capture the identity of the files actually mapped, across atomic replacement."""
+    paths = [Path(directory) / name for name in ("values.npy", "ms.npy")]
+    before = tuple(file_identity(path) for path in paths)
+    values, ms = (np.load(path, allow_pickle=False, mmap_mode="r") for path in paths)
+    if None in before or before != tuple(file_identity(path) for path in paths):
+        raise RuntimeError("persisted pool changed while opening; retry")
+    identity = tuple((str(path.absolute()), token) for path, token in zip(paths, before))
+    return Pool(**fields, ms=ms, values=values, _identity=identity)
 
 
 def catalog_pool(raw: pl.DataFrame, pause: Callable[[], None] | None = None, *, cache_key=None) -> Pool:
@@ -87,12 +102,24 @@ def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = 
     meta: list[tuple[str, str, dict[str, Any]]] = []
     arrays: list[np.ndarray] = []
     skipped: list[str] = []
-    for factory, source, params, producer, given in entries:
-        if pause is not None:
-            pause()
-        try:
-            part = producer(raw, **given) if cache_key is None else produce(raw, factory, given, cache_key)
-        except Exception:
+    def produced():
+        # Keep the existing pause boundary exact when a caller supplies one;
+        # otherwise compile bounded batches, rather than one giant catalog.
+        size = 1 if pause is not None or cache_key is not None else 16
+        for start in range(0, len(entries), size):
+            batch = entries[start:start+size]
+            if pause is not None:
+                pause()
+            if cache_key is None:
+                parts = evaluate(raw, [(e[3], e[4]) for e in batch], errors=True)
+            else:
+                try:
+                    parts = [produce(raw, batch[0][0], batch[0][4], cache_key)]
+                except Exception as exc:
+                    parts = [exc]
+            yield from zip(batch, parts)
+    for (factory, source, params, producer, given), part in produced():
+        if isinstance(part, Exception):
             skipped.append(factory)
             continue
         for column in part.columns:
@@ -212,18 +239,25 @@ def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
     best = np.zeros(shifts.size)
     if shifts.size == 0 or ranks.shape[1] == 0:
         return best
-    fy = np.conj(np.fft.rfft(y))[:, None]
-    for c0 in range(0, ranks.shape[1], _FFT_CHUNK):
-        block = ranks[:, c0:c0 + _FFT_CHUNK]
-        valid = ~np.isnan(block)
-        v = valid.astype(np.float64)
-        s1 = np.fft.irfft(fy * np.fft.rfft(np.where(valid, block, 0.0), axis=0), n=n, axis=0)[shifts]
-        n1 = np.rint(np.fft.irfft(fy * np.fft.rfft(v, axis=0), n=n, axis=0)[shifts])
-        n0 = v.sum(axis=0) - n1
-        with np.errstate(invalid="ignore", divide="ignore"):
-            sep = np.abs((s1 - n1 * (n1 + 1) / 2) / (n1 * n0) - 0.5)
-        sep[~np.isfinite(sep)] = 0.0
-        best = np.maximum(best, sep.max(axis=1))
+    fy = np.conj(np.fft.rfft(y))
+    # Counts depend on the missing-row pattern, not on column ranks. Many
+    # factories share the same warmup, so compute each pattern's null once.
+    patterns = {}
+    for j in range(ranks.shape[1]):
+        valid = ~np.isnan(ranks[:, j])
+        key = np.packbits(valid).tobytes()
+        patterns.setdefault(key, []).append(j)
+    for key, columns in patterns.items():
+        valid = np.unpackbits(np.frombuffer(key, dtype=np.uint8), count=n).astype(float)
+        n1 = np.rint(np.fft.irfft(fy * np.fft.rfft(valid), n=n)[shifts])[:, None]
+        n0 = valid.sum() - n1
+        for c0 in range(0, len(columns), _FFT_CHUNK):
+            block = ranks[:, columns[c0:c0 + _FFT_CHUNK]]
+            s1 = np.fft.irfft(fy[:, None] * np.fft.rfft(np.nan_to_num(block), axis=0), n=n, axis=0)[shifts]
+            with np.errstate(invalid="ignore", divide="ignore"):
+                sep = np.abs((s1 - n1 * (n1 + 1) / 2) / (n1 * n0) - 0.5)
+            sep[~np.isfinite(sep)] = 0.0
+            best = np.maximum(best, sep.max(axis=1))
     return best
 
 
@@ -466,26 +500,14 @@ def spans(hits: np.ndarray, ms: np.ndarray, step_ms: int, start_ms: int, end_ms:
     return [[int(ms[a]), int(ms[b - 1] + step_ms)] for a, b in runs(hits & inside)[:limit]]
 
 
-def discover(
-    pool: Pool, *, step_ms: int, windows: Sequence[tuple[int, int]], mode: str, lead_bars: int,
-    context: tuple[int, int], display: tuple[int, int], top: int, max_points: int,
-    bar_source: dict[str, Any], label: str,
-) -> dict[str, Any]:
-    """Rank the pool against the marked bars, measure chance, and describe the leaders."""
+def _analyze(pool, index, y, intervals, rank_key):
+    """Statistics independent of display, requested leader count and rendering."""
     clock0 = time.perf_counter()
-    marked, left_out = target(pool.ms, step_ms, windows, mode, lead_bars)
-    rows = (pool.ms >= context[0]) & (pool.ms + step_ms <= context[1]) & ~left_out
-    marked &= rows
-    events = runs(marked)
-    if not events:
-        raise ValueError("no marked bar falls inside the context")
-    if not (rows & ~marked).any():
-        raise ValueError("the context has no unmarked bar to compare against")
-    index = np.flatnonzero(rows)
-    y = marked[index].astype(np.float64)
-    values = (pool.values[index[0]:index[-1] + 1]
-              if index.size and index[-1] - index[0] + 1 == index.size else pool.values[index])
-    ranks = column_ranks(values)
+    def build_ranks():
+        values = (pool.values[index[0]:index[-1] + 1]
+                  if index.size and index[-1] - index[0] + 1 == index.size else pool.values[index])
+        return column_ranks(values)
+    ranks = discovery_reuse.ranks(rank_key, build_ranks)
     timing = {"rank": time.perf_counter() - clock0}
 
     clock1 = time.perf_counter()
@@ -503,7 +525,6 @@ def discover(
     critical = critical_separation(null)
 
     clock3 = time.perf_counter()
-    intervals = len(events) >= MIN_EVENTS_FOR_INTERVALS
     leaders: list[dict[str, Any]] = []
     kept: list[int] = []
     for j in ranked[:_SCREEN_LEADERS]:
@@ -519,23 +540,56 @@ def discover(
     # top takes a prefix of that order over the same clusters, so asking for fewer never changes who leads.
     order = sorted(range(len(leaders)), key=lambda i: (
         leaders[i]["conservative"] is None, -(leaders[i]["conservative"] or 0.0), -leaders[i]["separation"]))
-    leaders = [_describe(leaders[i], pool, kept[i], marked, rows, events, step_ms, context, display, max_points,
-                         bar_source, label) for i in order[:top]]
     timing["stage_two"] = time.perf_counter() - clock3
+    return {"leaders": leaders, "kept": kept, "order": order, "longest": longest,
+            "screened": int(ranked.size),
+            "chance": {"method": "circular-shift", "shifts": int(null.size), "min_shift": int(min_shift),
+                       "alpha": 1 / _BEYOND_ONE_IN, "critical": None if critical is None else round(critical, 4),
+                       "best": round(float(separation[ranked[0]]), 4) if ranked.size else None}}, timing
+
+
+def discover(
+    pool: Pool, *, step_ms: int, windows: Sequence[tuple[int, int]], mode: str, lead_bars: int,
+    context: tuple[int, int], display: tuple[int, int], top: int, max_points: int,
+    bar_source: dict[str, Any], label: str,
+) -> dict[str, Any]:
+    """Rank the pool, reuse only immutable numerical state, then render leaders."""
+    clock0 = time.perf_counter()
+    marked, left_out = target(pool.ms, step_ms, windows, mode, lead_bars)
+    rows = (pool.ms >= context[0]) & (pool.ms + step_ms <= context[1]) & ~left_out
+    marked &= rows
+    events = runs(marked)
+    if not events:
+        raise ValueError("no marked bar falls inside the context")
+    if not (rows & ~marked).any():
+        raise ValueError("the context has no unmarked bar to compare against")
+    index = np.flatnonzero(rows)
+    y = marked[index].astype(np.float64)
+    intervals = len(events) >= MIN_EVENTS_FOR_INTERVALS
+    source_key = discovery_reuse.pool_key(pool)
+    rank_key = (source_key, np.packbits(rows).tobytes()) if source_key is not None else None
+    constants = (_SCREEN_LEADERS, _CLUSTER_RHO, _BOOTSTRAP_DRAWS, _MIN_BLOCK, _BEYOND_ONE_IN,
+                 _FFT_CHUNK, _BOOTSTRAP_BATCH, MAX_LEADERS, MIN_EVENTS_FOR_INTERVALS, _TIE)
+    key = (rank_key, np.packbits(marked).tobytes(), constants) if rank_key is not None else None
+    state, timing = discovery_reuse.analysis(key, lambda: _analyze(pool, index, y, intervals, rank_key))
+    clock3 = time.perf_counter()
+    leaders = [_describe(state["leaders"][i], pool, state["kept"][i], marked, rows, events, step_ms,
+                         context, display, max_points, bar_source, label,
+                         (key, state["kept"][i], _PERSISTENCE) if key is not None else None)
+               for i in state["order"][:top]]
+    timing["stage_two"] += time.perf_counter() - clock3
     timing["total"] = time.perf_counter() - clock0
 
     return {
         "target": {"mode": mode, "lead_bars": lead_bars if mode == "lead" else None,
                    "windows": [list(w) for w in windows], "marked_bars": int(marked.sum()),
-                   "events": len(events), "longest_run": int(longest)},
+                   "events": len(events), "longest_run": int(state["longest"])},
         "context": {"start_ms": int(context[0]), "end_ms": int(context[1]), "bars": int(index.size),
                     "unmarked_bars": int(index.size - marked.sum())},
         "evidence": "events" if len(events) > 1 else "description",
         "intervals": intervals,
-        "chance": {"method": "circular-shift", "shifts": int(null.size), "min_shift": int(min_shift),
-                   "alpha": 1 / _BEYOND_ONE_IN, "critical": None if critical is None else round(critical, 4),
-                   "best": round(float(separation[ranked[0]]), 4) if ranked.size else None},
-        "screened": int(ranked.size),
+        "chance": state["chance"],
+        "screened": state["screened"],
         "timing_ms": {k: round(v * 1000, 2) for k, v in timing.items()},
         "candidates": leaders,
     }
@@ -572,11 +626,12 @@ def _leader(
 def _describe(
     out: dict[str, Any], pool: Pool, j: int, marked: np.ndarray, rows: np.ndarray,
     events: list[tuple[int, int]], step_ms: int, context: tuple[int, int], display: tuple[int, int],
-    max_points: int, bar_source: dict[str, Any], label: str,
+    max_points: int, bar_source: dict[str, Any], label: str, rule_key=None,
 ) -> dict[str, Any]:
     """A returned leader's fitted rule, its hits and manifest, and its series."""
     column, values = pool.names[j], pool.values[:, j]
-    rule = fit_rule(values, pool.natives[j], out["direction"], marked, rows, events)
+    rule = discovery_reuse.rule(rule_key, lambda: fit_rule(
+        values, pool.natives[j], out["direction"], marked, rows, events))
     if rule is not None:
         hits = rule.pop("_hits")
         value = np.format_float_positional(rule["value"], trim="-")
