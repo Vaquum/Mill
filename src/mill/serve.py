@@ -10,6 +10,8 @@ import secrets
 import threading
 import time
 import webbrowser
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
@@ -103,6 +105,10 @@ _REGISTRY_LOCK = threading.Lock()
 _POOLS: dict[tuple[str, int, str], discover.Pool] = {}
 _POOL_LOCKS: dict[tuple[str, int, str], threading.Lock] = {}
 _VIEW_POOLS_MAX = 3
+# Searches under way. Pools build in Python factories that hold the interpreter's lock, so a search
+# beside a build takes about twice as long: a build waits between factories while any search runs.
+_SEARCHES = threading.Condition()
+_SEARCHING = 0
 _DISCOVER_LIMITS = {"windows": 500, "lead_bars": 96, "top": discover.MAX_LEADERS, "max_points": 4096}
 
 _VIEW_SPECS: dict[str, list[dict[str, Any]]] = {}
@@ -521,7 +527,8 @@ def _build_pool(
     if hit is not None:
         return hit, True, 0.0
     began = time.perf_counter()
-    built = discover.catalog_pool(raw) if spec is None else discover.spec_pool(raw, spec)
+    built = (discover.catalog_pool(raw, _between_factories) if spec is None
+             else discover.spec_pool(raw, spec, _between_factories))
     with _REGISTRY_LOCK:
         same = [k for k in _POOLS if k[0] == key[0] and k[2] == key[2]]
         # A later version may have landed while this one built; then this one is already behind.
@@ -535,6 +542,26 @@ def _build_pool(
                     del _POOLS[views.pop(0)]
             _POOLS[key] = built
     return built, False, (time.perf_counter() - began) * 1000
+
+
+@contextmanager
+def _search() -> Iterator[None]:
+    """Count a search while it runs."""
+    global _SEARCHING
+    with _SEARCHES:
+        _SEARCHING += 1
+    try:
+        yield
+    finally:
+        with _SEARCHES:
+            _SEARCHING -= 1
+            _SEARCHES.notify_all()
+
+
+def _between_factories() -> None:
+    """Hold a pool build until no search runs."""
+    with _SEARCHES:
+        _SEARCHES.wait_for(lambda: _SEARCHING == 0)
 
 
 def _warm() -> None:
@@ -593,12 +620,13 @@ def _discover(body: Any) -> dict[str, Any]:
     context, display = context or whole, display or whole
     first, last = (datetime.fromtimestamp(ms / 1000, timezone.utc).date().isoformat() for ms in (whole[0], whole[1] - 1))
     window = {"start": first, "end": last}
-    out = discover.discover(
-        pool, step_ms=step_ms, windows=spans, mode=mode,
-        lead_bars=_bounded_int(body, "lead_bars", 4, 1), context=context, display=display,
-        top=_bounded_int(body, "top", 5, 1), max_points=_bounded_int(body, "max_points", 2000, 100),
-        bar_source=_BAR_DATA_SOURCES[bar], label=bar,
-    )
+    with _search():
+        out = discover.discover(
+            pool, step_ms=step_ms, windows=spans, mode=mode,
+            lead_bars=_bounded_int(body, "lead_bars", 4, 1), context=context, display=display,
+            top=_bounded_int(body, "top", 5, 1), max_points=_bounded_int(body, "max_points", 2000, 100),
+            bar_source=_BAR_DATA_SOURCES[bar], label=bar,
+        )
     out["bar"] = bar
     out["step_ms"] = step_ms
     out["window"] = window
