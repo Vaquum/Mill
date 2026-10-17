@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "case": "workload",
+  "status": "error",
+  "worker_pid": 49447,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [],
+  "peak_rss_bytes": 26755072,
+  "error": "ModuleNotFoundError: No module named 'typing_extensions'"
+}

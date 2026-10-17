@@ -30,6 +30,7 @@ def _revision():
                   "limen": distribution("vaquum_limen").read_text("direct_url.json"),
                   "polars": version("polars"),
                   "wrapper": Path(feature_registry.__file__).read_text(),
+                  "catalog": feature_registry.catalog(),
                   "planner": Path(expressions.__file__).read_text(),
                   "builder": Path(__file__).read_text()})
 
