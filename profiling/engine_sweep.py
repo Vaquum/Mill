@@ -179,6 +179,7 @@ def frame_digest(frame):
 
 def worker(args):
     record = Recorder(args)
+    record.doc["profiler_sha256"] = source_digest(Path(__file__))
     # Set before Mill imports; all cache/store/config mutations stay in this directory.
     scratch = nullcontext(str(args.scratch)) if args.scratch else tempfile.TemporaryDirectory(prefix="mill_engine_sweep_")
     with scratch as directory:
@@ -412,6 +413,7 @@ def worker(args):
             measure("report_json", lambda: json.dumps(report, allow_nan=False).encode())
             record.doc["kernel_cache_entries"] = len(qc._KERNEL_CACHE)
             record.doc["pair_count"] = len(prim.pairs)
+            record.doc["feature_columns"] = len(prim.feature_cols)
         elif args.case == "pool":
             from mill import pool_store
             digest = serve._frame_digest(raw)
@@ -427,6 +429,8 @@ def worker(args):
             measure("service_catalog_mmap_hit", lambda: pool_store.pool_for(raw, bar, None, digest))
             record.doc["partial_preparation_steps_ms"] = partial
             record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
+            record.doc["parity_pool_metadata"] = content_digest({name: getattr(pool, name) for name in
+                ("names", "natives", "factories", "sources", "params", "skipped")})
             record.doc["mapped_values"] = isinstance(pool.values, np.memmap)
         elif args.case == "discover":
             identity = {"source": record.doc["source"], "input": record.doc["input"],
@@ -450,6 +454,8 @@ def worker(args):
             else:
                 pool = measure("pool_build", lambda: discover.catalog_pool(raw) if args.catalog else discover.spec_pool(raw, spec), reps=1)
             record.doc["parity_pool"] = content_digest({"names": pool.names, "values": matrix_digest(pool.values)})
+            record.doc["parity_pool_metadata"] = content_digest({name: getattr(pool, name) for name in
+                ("names", "natives", "factories", "sources", "params", "skipped")})
             if args.discover_phase == "pool":
                 args.pool_artifact.mkdir(parents=True, exist_ok=True)
                 np.save(args.pool_artifact / "ms.npy", pool.ms, allow_pickle=False)
@@ -571,13 +577,15 @@ def worker(args):
             prefix = f"http://127.0.0.1:{server.server_port}"
             route = "/data?" + urlencode({"bars": bar, "target": "next_return", "features": json.dumps(spec)})
             auth = {"Authorization": "Basic " + base64.b64encode(b"profile:local").decode()}
-            def request(route):
+            def request(route, validate=False):
                 began = time.perf_counter_ns()
                 with urlopen(Request(prefix + route, headers=auth), timeout=15) as response:
                     payload = response.read()
                 out = {"ms": (time.perf_counter_ns() - began) / 1e6, "bytes": len(payload)}
                 if route.startswith("/qc?"):
                     out["report_digest"] = content_digest(json.loads(payload))
+                if validate:
+                    out["data_digest"] = content_digest(json.loads(payload))
                 return out
             try:
                 measure("http_data_first", lambda: request(route), reps=1)
