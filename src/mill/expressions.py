@@ -163,7 +163,7 @@ def evaluate(raw, requests, *, errors=False, publish=None):
         if getattr(producer, "_mill_native_plan", False):
             try:
                 part = producer(graph.frame(), **params)
-            except (NotPlannable, TypeError, ValueError, AttributeError, pl.exceptions.PolarsError):
+            except Exception:
                 pass
             else:
                 if isinstance(part, Frame):
@@ -181,7 +181,7 @@ def evaluate(raw, requests, *, errors=False, publish=None):
     if planned:
         try:
             computed = graph.collect(planned)
-        except pl.exceptions.PolarsError:
+        except Exception:
             # Preserve per-factory failures in catalogs: one invalid planned
             # expression must not suppress other factories in the batch.
             computed = []

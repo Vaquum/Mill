@@ -68,6 +68,35 @@ def test_a_failing_native_factory_does_not_suppress_other_catalog_outputs():
     assert result[2].equals(good(raw, window=4))
 
 
+@pytest.mark.parametrize("error", [RuntimeError, ZeroDivisionError])
+def test_python_native_factory_failures_retain_catalog_skip_behavior(error, monkeypatch, tmp_path):
+    from mill import pool_store, serve
+    from mill.feature_registry import _limen_producer
+    def bad(raw):
+        raise error("factory failure")
+    registry = {"one": {"producer": feature_registry._raw_producer("close"), "source": "raw", "params": ()},
+                "bad": {"producer": _limen_producer(bad), "source": "raw", "params": ()},
+                "two": {"producer": feature_registry._raw_producer("open"), "source": "raw", "params": ()}}
+    monkeypatch.setattr(feature_registry, "REGISTRY", registry)
+    monkeypatch.setenv("MILL_CACHE_DIR", str(tmp_path))
+    raw = _raw()
+    ordinary = discover.catalog_pool(raw)
+    persisted, _, _ = pool_store.pool_for(raw, "1h_time_bars", None, serve._frame_digest(raw))
+    assert ordinary.skipped == persisted.skipped == ("bad",)
+    assert ordinary.names == persisted.names == ("close", "open")
+    np.testing.assert_array_equal(ordinary.values, persisted.values)
+
+
+def test_protocol_specific_runtime_error_falls_back_to_real_frame():
+    from mill.feature_registry import _limen_producer
+    def needs_frame(frame):
+        if not isinstance(frame, pl.DataFrame):
+            raise RuntimeError("requires an eager frame")
+        return frame.with_columns((pl.col("close")*2).alias("double"))
+    raw, producer = _raw(), _limen_producer(needs_frame)
+    assert evaluate(raw, [(producer, {})], errors=True)[0].equals(producer(raw))
+
+
 @pytest.mark.parametrize("swap", [False, True])
 def test_raw_column_renames_and_swaps_preserve_original_lineage(swap):
     from mill.feature_registry import _limen_producer
