@@ -46,6 +46,7 @@ _BOOTSTRAP_BATCH = 8
 _BEYOND_ONE_IN = 20
 # FFT and direct sums agree far closer than this; a near tie counts against the column.
 _TIE = 1e-9
+_FAST_AUC_BOOTSTRAP = True
 
 
 @dataclass(frozen=True)
@@ -335,6 +336,20 @@ def bootstrap_interval(x: np.ndarray, y: np.ndarray, block: int, seed: int) -> t
     if binary:
         codes = np.empty(n, dtype=np.int64)
         codes[order] = np.repeat(np.arange(groups.size), np.diff(np.r_[groups, n]))
+        if _FAST_AUC_BOOTSTRAP and n <= 2**23:
+            # At this bound all counts fit Int32 and every half-integer win
+            # total fits Float64 exactly. Preserve the original RNG starts.
+            from .auc_bootstrap import draws as exact_draws
+            positive = y == 1
+            positive_groups = np.unique(codes[positive]).astype(np.int32)
+            slots = np.full(n, -1, dtype=np.int32)
+            slots[positive] = np.searchsorted(positive_groups, codes[positive]).astype(np.int32)
+            draws = exact_draws(codes.astype(np.int32), slots, positive_groups, starts, block, groups.size)
+            draws = draws[np.isfinite(draws)]
+            if not draws.size:
+                return None
+            lo, hi = np.quantile(draws, [0.05, 0.95])
+            return float(lo), float(hi)
         labels = codes * 2 + y.astype(np.int64)
     draws = np.empty(_BOOTSTRAP_DRAWS)
     for offset in range(0, _BOOTSTRAP_DRAWS, _BOOTSTRAP_BATCH):
@@ -590,7 +605,7 @@ def discover(
     row_bits = np.packbits(rows).tobytes() if source_key is not None else None
     rank_key = discovery_reuse.context_key(source_key, row_bits, pool, index)
     constants = (_SCREEN_LEADERS, _CLUSTER_RHO, _BOOTSTRAP_DRAWS, _MIN_BLOCK, _BEYOND_ONE_IN,
-                 _FFT_CHUNK, _BOOTSTRAP_BATCH, MAX_LEADERS, MIN_EVENTS_FOR_INTERVALS, _TIE)
+                 _FFT_CHUNK, _BOOTSTRAP_BATCH, MAX_LEADERS, MIN_EVENTS_FOR_INTERVALS, _TIE, _FAST_AUC_BOOTSTRAP)
     key = (rank_key, np.packbits(y.astype(bool)).tobytes(), intervals, constants) if rank_key is not None else None
     rule_scope = (source_key, row_bits, np.packbits(marked).tobytes()) if source_key is not None else None
     state, timing = discovery_reuse.analysis(key, lambda: _analyze(pool, index, y, intervals, rank_key))

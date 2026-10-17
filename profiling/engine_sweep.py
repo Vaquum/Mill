@@ -37,7 +37,7 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json", "context", "compact"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json", "context", "compact", "auc"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
     parser.add_argument("--transition-searches", action="store_true", help="measure an explicitly synthetic appended pool row outside the original context")
@@ -62,7 +62,7 @@ def arguments():
     allowed = {"native": ("workload", "features", "views", "discover", "pool"),
                "pairs": ("qc",), "edges": ("qc",), "bootstrap": ("qc",),
                "null": ("discover",), "reuse": ("discover",), "rules": ("discover",),
-               "json": ("workload", "features", "http"), "context": ("discover",), "compact": ("discover",)}
+               "json": ("workload", "features", "http"), "context": ("discover",), "compact": ("discover",), "auc": ("discover",)}
     if args.ablate != "none" and args.case not in allowed[args.ablate]:
         parser.error("ablation does not apply to this workload")
     if args.ablate == "native" and args.case == "discover" and args.discover_phase == "search":
@@ -232,6 +232,8 @@ def worker(args):
         elif args.ablate == "compact":
             original_ranks = discover.column_ranks
             discover.column_ranks = lambda values, **kwargs: original_ranks(values, compact=False)
+        elif args.ablate == "auc":
+            discover._FAST_AUC_BOOTSTRAP = False
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
