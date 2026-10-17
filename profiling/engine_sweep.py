@@ -17,7 +17,7 @@ import tempfile
 import time
 
 
-CASES = ("startup", "data", "features", "factories", "views", "qc", "discover", "pool", "http", "memory")
+CASES = ("startup", "data", "features", "factories", "views", "qc", "discover", "pool", "http", "memory", "workload")
 FACTORIES = ("rsi", "mom", "roc", "rocp", "cci", "cmo", "willr", "atr",
              "natr", "trix", "apo", "ppo", "bop", "mfi", "kama", "tema",
              "dema", "wma", "sma", "ema", "midpoint", "linearreg", "tsf",
@@ -37,6 +37,8 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "null"), default="none")
+    parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -50,6 +52,8 @@ def arguments():
         parser.error("memory cases require full input; --rows limits compute, not source decoding")
     if args.discover_phase != "combined" and (args.case != "discover" or args.pool_artifact is None):
         parser.error("split discovery requires --case discover and --pool-artifact")
+    if args.ablate == "null" and not args.reference_source:
+        parser.error("null ablation requires --reference-source")
     return args
 
 
@@ -181,6 +185,25 @@ def worker(args):
         from mill.table import build_from_spec
         from mill.settings import arrow_latest_path
         from mill.bars import arrow_series, time_bar_seconds
+        record.doc["ablation"] = args.ablate
+        if args.ablate == "native":
+            from mill import table
+            table.produce_many = lambda raw, spec, cache_key=None: [
+                table.produce(raw, item["factory"], item.get("params") or {}, cache_key) for item in spec]
+        elif args.ablate == "pairs":
+            def original_pairs(arrays, cols):
+                return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
+                        for i, left in enumerate(cols) for right in cols[i+1:]}
+            qc._pair_map = original_pairs
+        elif args.ablate == "null":
+            import ast
+            source = args.reference_source / "src/mill/discover.py"
+            tree = ast.parse(source.read_text())
+            node = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "shift_null")
+            namespace = {"np": np, "_FFT_CHUNK": discover._FFT_CHUNK}
+            exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), "exec"), namespace)
+            discover.shift_null = namespace["shift_null"]
+            record.doc["ablation_reference_sha256"] = source_digest(source)
         record.doc["import_ms"] = (time.perf_counter_ns() - began) / 1e6
         record.doc["environment"] = environment()
         if args.case == "startup":
@@ -208,7 +231,23 @@ def worker(args):
         os.utime(path, ns=(stamp, stamp))
         spec = [{"factory": name, "params": {}} for name in FACTORIES[:args.k]]
         measure = record.measure
-        if args.case == "data":
+        if args.case == "workload":
+            from mill import get_data, table
+            from mill.views import ALL
+            def batch(cold=False):
+                if cold:
+                    for cache in (serve._RAW_CACHE, serve._RESULTS, table._PRODUCERS, get_data._DATA):
+                        cache.clear()
+                return [(view.NAME, *serve._ensure(bar, getattr(view, "TARGET", "next_return"), list(view.SPEC)))
+                        for view in ALL]
+            result = measure("all_views_cold_first", lambda: batch(True), reps=1)
+            measure("all_views_cold_repeated", lambda: batch(True))
+            measure("all_views_steady", batch)
+            record.doc["parity_workload"] = {name: {"frame": frame_digest(frame),
+                "payload": hashlib.sha256(payload).hexdigest()} for name, payload, frame in result}
+            record.doc["output_bytes"] = sum(len(payload) for _, payload, _ in result)
+            record.doc["workload_views"] = [view.NAME for view in ALL]
+        elif args.case == "data":
             loader = GetData()
             measure("arrow_read_normalize_select", lambda: loader._load_arrow(series, None, None))
             data = measure("get_data_cold_cache", lambda: loader.get_time_bars(bar), reps=1)
