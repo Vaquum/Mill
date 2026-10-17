@@ -17,7 +17,9 @@ def test_native_rows_match_orjson_for_scalar_types_and_escaping(n):
         "bool": pl.Series(rng.integers(0, 2, n).astype(bool)),
         "text": pl.Series(([None, 'a"b\\c\n\t}\x00', 'ä🙂', 'null']*((n+3)//4))[:n], dtype=pl.String)})
     expected = orjson.loads(orjson.dumps({"columns": frame.columns, "rows": frame.rows()}))
-    assert orjson.loads(encode_rows(frame)) == expected
+    actual = orjson.loads(encode_rows(frame))
+    assert actual == expected
+    assert [[type(v) for v in row] for row in actual["rows"]] == [[type(v) for v in row] for row in expected["rows"]]
 
 
 def test_float_extremes_and_signed_zero_round_trip_exactly():
@@ -29,6 +31,7 @@ def test_float_extremes_and_signed_zero_round_trip_exactly():
     expected = orjson.loads(orjson.dumps({"columns": frame.columns, "rows": frame.rows()}))
     actual = orjson.loads(encode_rows(frame))
     assert actual == expected
+    assert [type(row[0]) for row in actual["rows"]] == [type(row[0]) for row in expected["rows"]]
     assert np.signbit(actual["rows"][0][0]) and not np.signbit(actual["rows"][1][0])
 
 

@@ -626,6 +626,9 @@ def worker(args):
                     "p50_ms": float(np.percentile([s["ms"] for s in samples], 50)),
                     "p95_ms": float(np.percentile([s["ms"] for s in samples], 95)),
                     "max_ms": max(s["ms"] for s in samples)}
+                # Output validation is outside the timed request batches.
+                record.doc["parity_http_data"] = request(route, validate=True)["data_digest"]
+                record.doc["parity_http_qc"] = qc_result["report_digest"]
             finally:
                 if hasattr(serve, "_RESEARCH"):
                     serve._RESEARCH.close()
