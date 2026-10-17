@@ -1,0 +1,160 @@
+"""Independent differential gates for shared native plans and QC cohorts."""
+import itertools
+
+import numpy as np
+import polars as pl
+import pytest
+from sklearn.neighbors import KDTree
+
+from mill import discover, feature_registry, qc
+from mill.expressions import Graph, evaluate
+from mill.pairwise import Workspace, radius_counts
+from mill.table import build_from_spec
+from mill.views import ALL
+
+
+def _raw(n=256):
+    rng = np.random.default_rng(814)
+    close = 100 + np.cumsum(rng.normal(size=n))
+    values = {name: rng.uniform(1, 100, n) for name in feature_registry._RAW_COLUMNS}
+    values.update(close=close, open=close + 0.1, high=close + 1, low=close - 1)
+    return pl.DataFrame(values).with_columns(
+        pl.datetime_range(pl.datetime(2024, 1, 1), pl.datetime(2024, 1, 1) + pl.duration(hours=n-1),
+                          interval="1h", time_zone="UTC", eager=True).alias("datetime"))
+
+
+@pytest.mark.parametrize("view", ALL, ids=lambda view: view.NAME)
+def test_view_graph_is_exactly_the_eager_reference(view):
+    raw = _raw()
+    expected = pl.concat([raw.select("datetime"), *[
+        feature_registry.producer_for(item["factory"])(raw, **item.get("params", {}))
+        for item in view.SPEC]], how="horizontal")
+    actual = build_from_spec(raw, view.SPEC)
+    assert actual.schema == expected.schema
+    assert actual.equals(expected)
+
+
+def test_every_eligible_factory_matches_its_original_producer():
+    raw = _raw()
+    for name, entry in feature_registry.REGISTRY.items():
+        if any(p["default"] is None for p in entry["params"]):
+            continue
+        producer = entry["producer"]
+        try:
+            expected = producer(raw)
+        except Exception as error:
+            with pytest.raises(type(error)):
+                evaluate(raw, [(producer, {})])
+        else:
+            actual = evaluate(raw, [(producer, {})])[0]
+            assert actual.schema == expected.schema, name
+            assert actual.equals(expected), name
+
+
+def test_variants_share_native_nodes_but_keep_parameter_column_names():
+    graph = Graph(_raw())
+    producer = feature_registry.producer_for("parkinson_volatility")
+    first = producer(graph.frame(), window=1)
+    before = len(graph.nodes)
+    second = producer(graph.frame(), window=4)
+    assert len(graph.nodes) == before + 1  # squared log range is shared
+    actual = graph.collect([first, second])
+    assert actual[0].columns == ["parkinson_volatility__window=1"]
+    assert actual[1].columns == ["parkinson_volatility__window=4"]
+    for part, window in zip(actual, (1, 4)):
+        assert part.equals(producer(graph.raw, window=window))
+
+
+def test_opaque_kernel_runs_once_on_its_original_path():
+    from mill.feature_registry import _limen_producer
+    calls = []
+    def opaque(frame):
+        def run(series):
+            calls.append(1)
+            return series * 2
+        return frame.with_columns(pl.col("close").map_batches(run, return_dtype=pl.Float64).alias("opaque"))
+    raw = _raw()
+    result = evaluate(raw, [(_limen_producer(opaque), {})])[0]
+    assert calls == [1]
+    assert result["opaque"].equals(raw["close"] * 2, check_names=False)
+
+
+@pytest.mark.parametrize("n", [29, 30, 257, 5001, 20001])
+def test_pair_factorization_is_bit_identical_with_pair_specific_samples(n):
+    rng = np.random.default_rng(9821)
+    arrays = {f"f{i}": rng.normal(size=n) for i in range(4)}
+    arrays["f0"][:7] = np.nan
+    arrays["f1"][::11] = np.nan
+    arrays["f2"] = np.round(arrays["f2"])
+    arrays["f3"][:] = 1
+    work = Workspace(arrays, max_n=qc._PAIRWISE_MAX_N, mi_max_n=qc._PAIRWISE_MI_MAX_N,
+                     min_n=qc._PAIRWISE_MIN_N)
+    for left, right in itertools.combinations(arrays, 2):
+        expected = qc._pair_metrics.__wrapped__(arrays[left], arrays[right])
+        assert work.pair(left, right) == expected, (n, left, right)
+
+
+def test_infinities_keep_spearman_and_reject_mi_like_reference():
+    rng = np.random.default_rng(83)
+    arrays = {"left": rng.normal(size=301), "right": rng.normal(size=301)}
+    arrays["left"][::17] = np.inf
+    work = Workspace(arrays, max_n=20000, mi_max_n=5000, min_n=30)
+    assert work.pair("left", "right") == qc._pair_metrics.__wrapped__(*arrays.values())
+
+
+def test_sorted_radius_counts_match_kdtree_at_floating_point_boundaries():
+    rng = np.random.default_rng(82)
+    values = np.r_[rng.normal(size=180), np.zeros(8), np.nextafter(1., 0.), 1., np.nextafter(1., 2.)]
+    radii = np.r_[np.abs(rng.normal(size=180)), np.zeros(8), 1., np.spacing(1.), np.spacing(1.)]
+    expected = KDTree(values[:, None], metric="chebyshev").query_radius(
+        values[:, None], radii, count_only=True)
+    np.testing.assert_array_equal(radius_counts(values, np.sort(values), radii), expected)
+
+
+def test_preparations_are_reused_only_for_identical_rows_and_remain_bounded(monkeypatch):
+    rng = np.random.default_rng(882)
+    arrays = {str(i): rng.normal(size=200) for i in range(8)}
+    work = Workspace(arrays, max_n=20000, mi_max_n=5000, min_n=30)
+    calls = []
+    original = qc.stats.rankdata
+    monkeypatch.setattr(qc.stats, "rankdata", lambda x: (calls.append(1), original(x))[1])
+    for left, right in itertools.combinations(arrays, 2):
+        work.pair(left, right)
+    assert len(calls) == len(arrays)  # 8 rankings, rather than 2 * C(8,2)
+    assert work.prepared.bytes <= work.prepared.budget
+    monkeypatch.setenv("MILL_PAIR_WORK_MIB", "0")
+    uncached = Workspace(arrays, max_n=20000, mi_max_n=5000, min_n=30)
+    assert uncached.pair("0", "1") == work.pair("0", "1")
+    assert len(uncached.prepared) == 0
+
+
+def _original_null(y, ranks, shift):
+    n = y.size
+    indices = np.arange(shift, n-shift+1)
+    best = np.zeros(indices.size)
+    fy = np.conj(np.fft.rfft(y))[:, None]
+    for c0 in range(0, ranks.shape[1], discover._FFT_CHUNK):
+        block = ranks[:, c0:c0+discover._FFT_CHUNK]
+        valid = ~np.isnan(block)
+        v = valid.astype(float)
+        s1 = np.fft.irfft(fy * np.fft.rfft(np.where(valid, block, 0.), axis=0), n=n, axis=0)[indices]
+        n1 = np.rint(np.fft.irfft(fy * np.fft.rfft(v, axis=0), n=n, axis=0)[indices])
+        with np.errstate(invalid="ignore", divide="ignore"):
+            sep = np.abs((s1 - n1*(n1+1)/2)/(n1*(v.sum(axis=0)-n1)) - .5)
+        sep[~np.isfinite(sep)] = 0
+        best = np.maximum(best, sep.max(axis=1))
+    return best
+
+
+@pytest.mark.parametrize("unique", [False, True])
+def test_shared_null_counts_match_reference_for_shared_and_unique_missingness(unique):
+    rng = np.random.default_rng(941)
+    values = rng.normal(size=(997, 35))
+    for j in range(values.shape[1]):
+        if unique:
+            values[rng.random(997) < .03, j] = np.nan
+        else:
+            values[:j % 3, j] = np.nan
+    ranks = discover.column_ranks(values)
+    y = rng.integers(0, 2, size=997).astype(float)
+    np.testing.assert_array_equal(discover.shift_null(y, ranks, 17), _original_null(y, ranks, 17))

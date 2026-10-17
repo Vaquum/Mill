@@ -212,18 +212,25 @@ def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
     best = np.zeros(shifts.size)
     if shifts.size == 0 or ranks.shape[1] == 0:
         return best
-    fy = np.conj(np.fft.rfft(y))[:, None]
-    for c0 in range(0, ranks.shape[1], _FFT_CHUNK):
-        block = ranks[:, c0:c0 + _FFT_CHUNK]
-        valid = ~np.isnan(block)
-        v = valid.astype(np.float64)
-        s1 = np.fft.irfft(fy * np.fft.rfft(np.where(valid, block, 0.0), axis=0), n=n, axis=0)[shifts]
-        n1 = np.rint(np.fft.irfft(fy * np.fft.rfft(v, axis=0), n=n, axis=0)[shifts])
-        n0 = v.sum(axis=0) - n1
-        with np.errstate(invalid="ignore", divide="ignore"):
-            sep = np.abs((s1 - n1 * (n1 + 1) / 2) / (n1 * n0) - 0.5)
-        sep[~np.isfinite(sep)] = 0.0
-        best = np.maximum(best, sep.max(axis=1))
+    fy = np.conj(np.fft.rfft(y))
+    # Counts depend on the missing-row pattern, not on column ranks. Many
+    # factories share the same warmup, so compute each pattern's null once.
+    patterns = {}
+    for j in range(ranks.shape[1]):
+        valid = ~np.isnan(ranks[:, j])
+        key = np.packbits(valid).tobytes()
+        patterns.setdefault(key, []).append(j)
+    for key, columns in patterns.items():
+        valid = np.unpackbits(np.frombuffer(key, dtype=np.uint8), count=n).astype(float)
+        n1 = np.rint(np.fft.irfft(fy * np.fft.rfft(valid), n=n)[shifts])[:, None]
+        n0 = valid.sum() - n1
+        for c0 in range(0, len(columns), _FFT_CHUNK):
+            block = ranks[:, columns[c0:c0 + _FFT_CHUNK]]
+            s1 = np.fft.irfft(fy[:, None] * np.fft.rfft(np.nan_to_num(block), axis=0), n=n, axis=0)[shifts]
+            with np.errstate(invalid="ignore", divide="ignore"):
+                sep = np.abs((s1 - n1 * (n1 + 1) / 2) / (n1 * n0) - 0.5)
+            sep[~np.isfinite(sep)] = 0.0
+            best = np.maximum(best, sep.max(axis=1))
     return best
 
 

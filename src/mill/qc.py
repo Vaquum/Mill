@@ -18,6 +18,7 @@ from scipy import stats
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from statsmodels.tsa.stattools import acf, adfuller, kpss
 from .memo import ByteLRU
+from .pairwise import Workspace
 from .settings import memory_budget
 
 
@@ -89,11 +90,7 @@ def _memoized(fn):
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        key = (
-            name,
-            tuple(_arg_key(a) for a in args),
-            tuple(sorted((k, _arg_key(v)) for k, v in kwargs.items())),
-        )
+        key = _kernel_key(name, args, kwargs)
         cached = _KERNEL_CACHE.get(key, _MISS)
         if cached is not _MISS:
             return cached
@@ -102,6 +99,11 @@ def _memoized(fn):
         return value
 
     return wrapper
+
+
+def _kernel_key(name, args, kwargs):
+    return (name, tuple(_arg_key(a) for a in args),
+            tuple(sorted((k, _arg_key(v)) for k, v in kwargs.items())))
 
 
 def clear_kernel_cache() -> None:
@@ -390,10 +392,20 @@ def _pair_map(
     feature_cols: Sequence[str],
 ) -> dict[tuple[str, str], tuple]:
     pairs: dict[tuple[str, str], tuple] = {}
+    work = None
     for i, left in enumerate(feature_cols):
         xi = arrays[left]
         for right in feature_cols[i + 1 :]:
-            pairs[(left, right)] = _pair_metrics(xi, arrays[right])
+            key = _kernel_key("_pair_metrics", (xi, arrays[right]), {})
+            value = _KERNEL_CACHE.get(key, _MISS)
+            if value is _MISS:
+                if work is None:
+                    work = Workspace({name: arrays[name] for name in feature_cols},
+                                     max_n=_PAIRWISE_MAX_N, mi_max_n=_PAIRWISE_MI_MAX_N,
+                                     min_n=_PAIRWISE_MIN_N)
+                value = work.pair(left, right)
+                _KERNEL_CACHE[key] = value
+            pairs[(left, right)] = value
     return pairs
 
 
