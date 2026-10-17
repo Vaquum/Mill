@@ -304,7 +304,7 @@ def _raw_for(bar: str) -> tuple[pl.DataFrame, int]:
             return hit[0], hit[1]
         raw = klines(bar)
         previous_identity = _RAW_IDENTITIES.get(bar)
-        unchanged = previous_identity == identity or (hit is not None and raw.equals(hit[0]))
+        unchanged = hit is not None and raw.equals(hit[0])
         digest = _RAW_DIGESTS[bar] if unchanged else _frame_digest(raw)
         if previous_identity is not None and previous_identity[0] == identity[0] and _RAW_DIGESTS.get(bar) == digest:
             version = _RAW_VERSIONS[bar]

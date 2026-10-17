@@ -1,5 +1,6 @@
 """Run repository checks with a hard deadline below one minute."""
 import os
+from contextlib import suppress
 from pathlib import Path
 import signal
 import subprocess
@@ -35,7 +36,7 @@ def main():
                 if time.monotonic() >= deadline:
                     raise subprocess.TimeoutExpired("regression groups", 50)
                 time.sleep(0.02)
-            return max(child.returncode for child in children)
+            return 1 if any(child.returncode != 0 for child in children) else 0
         except subprocess.TimeoutExpired:
             return 124
         finally:
@@ -45,7 +46,8 @@ def main():
                         os.killpg(child.pid, signal.SIGKILL)
                     except ProcessLookupError:
                         pass
-                child.wait(timeout=1)
+                with suppress(subprocess.TimeoutExpired):
+                    child.wait(timeout=1)
             for path in logs:
                 if path.exists():
                     sys.stdout.write(path.read_text())

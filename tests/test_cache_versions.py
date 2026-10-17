@@ -61,6 +61,7 @@ def test_cross_process_refresh_cannot_publish_old_bars_after_newer_bars(arrow_st
     ready, release = tmp_path / "ready", tmp_path / "release"
     script = """
 import sys, time
+from pathlib import Path
 from mill.get_data import GetData
 original = GetData._load_arrow
 def paused(self, *args):
@@ -102,3 +103,24 @@ print(GetData().get_time_bars('1h_time_bars').height)
         if child.poll() is None:
             child.kill()
         child.wait(timeout=1)
+
+
+def test_source_change_during_evicted_reload_recomputes_the_content_version(arrow_store, monkeypatch):
+    times = [ns(2024, 1, 1), ns(2024, 1, 2)]
+    arrow_store.write("time_1h", times[:1])
+    monkeypatch.setattr(serve, "_RAW_CACHE", ByteLRU(0, lambda x: x[0].estimated_size()))
+    monkeypatch.setattr(serve, "_RESULTS", {})
+    old, _ = serve._ensure("1h_time_bars", "none", [])
+    real = serve.klines
+    raced = []
+    def changing(bar):
+        if not raced:
+            raced.append(True)
+            source = arrow_store.root / "time_1h" / "latest.arrow"
+            source.rename(source.with_name("old.arrow"))
+            arrow_store.write("time_1h", times)
+        return real(bar)
+    monkeypatch.setattr(serve, "klines", changing)
+    for _ in range(2):
+        payload, frame = serve._ensure("1h_time_bars", "none", [])
+        assert frame.height == 2 and payload is not old
