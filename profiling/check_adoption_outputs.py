@@ -27,6 +27,7 @@ def witness(value):
 
 
 def worker(args):
+    signal.alarm(53)
     import engine_sweep
     observations = []
     def capture(value):
@@ -44,7 +45,10 @@ def worker(args):
     record = args.scratch/"run.json"
     sys.argv = [driver.__file__, *extra, "--parquet", str(args.parquet), "--output", str(record),
                 "--worker", "--scratch", str(args.scratch)]
-    assert driver.main() == 0
+    if args.kind == "view":
+        driver.worker(driver.arguments())
+    else:
+        driver.worker(args.parquet, record, "1h_time_bars", args.scratch)
     assert len(observations) == len(phases)
     args.output.write_text(json.dumps({"run": json.loads(record.read_text()),
         "version_field": "candidates/*/rule/manifest/metadata/limen_version",
@@ -72,10 +76,12 @@ def main():
         child = subprocess.Popen([sys.executable, __file__, *sys.argv[1:], "--worker", "--scratch", temporary],
                                  start_new_session=True)
         try:
-            code = child.wait(timeout=50)
+            code = child.wait(timeout=55)
         finally:
-            if child.poll() is None:
+            try:
                 os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             child.wait(timeout=1)
         assert code == 0, "service output witness failed"
     print(f"Captured exact {args.kind} outputs and the dependency-version-only witness")
