@@ -34,6 +34,40 @@ def test_view_graph_is_exactly_the_eager_reference(view):
     assert actual.equals(expected)
 
 
+@pytest.mark.parametrize("kind", ["empty", "nullable", "chunked"])
+def test_native_view_plans_preserve_empty_null_and_chunk_layout_behavior(kind):
+    raw = _raw()
+    if kind == "empty":
+        raw = raw.head(0)
+    elif kind == "nullable":
+        raw = raw.with_columns(pl.when(pl.int_range(pl.len()) % 13 == 0).then(None)
+                               .otherwise(pl.col(c)).alias(c) for c in raw.columns if c != "datetime")
+    else:
+        raw = pl.concat([raw[:73], raw[73:]], rechunk=False)
+    for view in ALL:
+        requests = [(feature_registry.producer_for(item["factory"]), item.get("params", {})) for item in view.SPEC]
+        for actual, (producer, params) in zip(evaluate(raw, requests, errors=True), requests):
+            try:
+                expected = producer(raw, **params)
+            except Exception as exc:
+                assert isinstance(actual, type(exc)), view.NAME
+            else:
+                assert not isinstance(actual, Exception), view.NAME
+                assert actual.schema == expected.schema and actual.equals(expected), view.NAME
+
+
+def test_a_failing_native_factory_does_not_suppress_other_catalog_outputs():
+    from mill.feature_registry import _limen_producer
+    def invalid(raw):
+        return raw.with_columns(pl.col("missing").alias("bad"))
+    raw = _raw()
+    good = feature_registry.producer_for("parkinson_volatility")
+    result = evaluate(raw, [(good, {"window": 1}), (_limen_producer(invalid), {}), (good, {"window": 4})], errors=True)
+    assert result[0].equals(good(raw, window=1))
+    assert isinstance(result[1], pl.exceptions.ColumnNotFoundError)
+    assert result[2].equals(good(raw, window=4))
+
+
 def test_every_eligible_factory_matches_its_original_producer():
     raw = _raw()
     for name, entry in feature_registry.REGISTRY.items():

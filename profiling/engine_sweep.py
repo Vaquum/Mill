@@ -187,9 +187,18 @@ def worker(args):
         from mill.bars import arrow_series, time_bar_seconds
         record.doc["ablation"] = args.ablate
         if args.ablate == "native":
-            from mill import table
-            table.produce_many = lambda raw, spec, cache_key=None: [
-                table.produce(raw, item["factory"], item.get("params") or {}, cache_key) for item in spec]
+            from mill import expressions, table
+            def eager(raw, requests, *, errors=False):
+                results = []
+                for producer, params in requests:
+                    try:
+                        results.append(producer(raw, **params))
+                    except Exception as exc:
+                        if not errors:
+                            raise
+                        results.append(exc)
+                return results
+            expressions.evaluate = table.evaluate = discover.evaluate = eager
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
@@ -217,7 +226,7 @@ def worker(args):
             record.save()
             return
         record.doc["source"] = {"file": args.parquet.name, "sha256": source_digest(args.parquet)}
-        raw = GetData().from_parquet(args.parquet)
+        raw = record.measure("source_read", lambda: GetData().from_parquet(args.parquet), reps=1)
         source_rows = raw.height
         if args.rows:
             raw = raw.tail(args.rows)
@@ -225,6 +234,7 @@ def worker(args):
                                "columns": raw.width, "frame_bytes": raw.estimated_size(),
                                "start": str(raw["datetime"][0]), "end": str(raw["datetime"][-1]),
                                "bar": args.bar, "k": args.k, "reps": args.reps}
+        fixture_began = time.perf_counter_ns()
         bar = args.bar
         series = arrow_series(bar)
         path = arrow_latest_path(series)
@@ -234,6 +244,7 @@ def worker(args):
         # Make every fixture bar closed, including sources with future timestamps.
         stamp = max(time.time_ns(), int(raw["datetime"].dt.epoch("ns")[-1]) + time_bar_seconds(bar) * 1_000_000_000)
         os.utime(path, ns=(stamp, stamp))
+        record.doc["fixture_prepare_ms"] = (time.perf_counter_ns() - fixture_began) / 1e6
         spec = [{"factory": name, "params": {}} for name in FACTORIES[:args.k]]
         measure = record.measure
         if args.case == "workload":

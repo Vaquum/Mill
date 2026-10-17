@@ -31,6 +31,13 @@ counts depend on target labels, shifts and the complete validity pattern, while
 rank sums remain column-specific. Only one pattern's counts and a bounded
 column tile are live at once.
 
+Native plans apply to view frames and bounded catalog/checkpoint batches. One
+factory failure retains the original per-factory skip behavior. Bootstrap rank
+means are exactly `(n+1)/2`; at the existing 20,000-row cap all rank products and
+sums are exactly representable half/quarter integers. Reducing those directly
+removes sampled/centered arrays without changing floating-point results.
+Scratch has at most eight lanes; no allocation occurs inside the draw loop.
+
 Measurement gates: repeated matched full-history runs against the reference,
 including cold setup, feature building, target joins, output serialization,
 research execution and steady state; separate ablations for native expression
