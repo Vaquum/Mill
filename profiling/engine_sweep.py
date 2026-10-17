@@ -37,7 +37,7 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json", "context"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse", "rules", "json", "context", "compact"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
     parser.add_argument("--transition-searches", action="store_true", help="measure an explicitly synthetic appended pool row outside the original context")
@@ -62,7 +62,7 @@ def arguments():
     allowed = {"native": ("workload", "features", "views", "discover", "pool"),
                "pairs": ("qc",), "edges": ("qc",), "bootstrap": ("qc",),
                "null": ("discover",), "reuse": ("discover",), "rules": ("discover",),
-               "json": ("workload", "features", "http"), "context": ("discover",)}
+               "json": ("workload", "features", "http"), "context": ("discover",), "compact": ("discover",)}
     if args.ablate != "none" and args.case not in allowed[args.ablate]:
         parser.error("ablation does not apply to this workload")
     if args.ablate == "native" and args.case == "discover" and args.discover_phase == "search":
@@ -229,6 +229,9 @@ def worker(args):
             serve.encode_rows = lambda frame: serve.orjson.dumps({"columns": frame.columns, "rows": frame.rows()})
         elif args.ablate == "context":
             discover.discovery_reuse.context_key = source_bound_context_key
+        elif args.ablate == "compact":
+            original_ranks = discover.column_ranks
+            discover.column_ranks = lambda values, **kwargs: original_ranks(values, compact=False)
         elif args.ablate == "pairs":
             def original_pairs(arrays, cols):
                 return {(left, right): qc._pair_metrics(arrays[left], arrays[right])
@@ -255,7 +258,18 @@ def worker(args):
                 ast.fix_missing_locations(node)
             namespace = dict(module.__dict__)
             exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), "exec"), namespace)
-            setattr(module, name, namespace[name])
+            if args.ablate == "null":
+                original_null = namespace[name]
+                class DoubleTiles:
+                    def __init__(self, values):
+                        self.values, self.shape = values, values.shape
+                    def __getitem__(self, key):
+                        return self.values[key].astype(np.float64, copy=False)
+                def reference_null(y, ranks, shift, *, promote_ranks=False):
+                    return original_null(y, DoubleTiles(ranks) if promote_ranks else ranks, shift)
+                setattr(module, name, reference_null)
+            else:
+                setattr(module, name, namespace[name])
             record.doc["ablation_reference_sha256"] = source_digest(source)
         record.doc["import_ms"] = (time.perf_counter_ns() - began) / 1e6
         record.doc["environment"] = environment()

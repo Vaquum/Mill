@@ -311,7 +311,7 @@ def test_compact_ranks_are_lossless_and_keep_double_precision_statistics():
     np.testing.assert_array_equal(compact.astype(np.float64), full)
     y = rng.integers(0, 2, size=len(values)).astype(float)
     np.testing.assert_array_equal(discover._screen_auc(y, compact), discover.auc(y, full))
-    np.testing.assert_array_equal(discover.shift_null(y, compact, 13), discover.shift_null(y, full, 13))
+    np.testing.assert_array_equal(discover.shift_null(y, compact, 13, promote_ranks=True), discover.shift_null(y, full, 13))
     assert discover._rank_dtype(2**23, True) == pl.Float32
     assert discover._rank_dtype(2**23+1, True) == pl.Float64
     assert discover._rank_dtype(10, False) == pl.Float64

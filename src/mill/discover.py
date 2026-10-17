@@ -244,7 +244,7 @@ def auc(y: np.ndarray, ranks: np.ndarray) -> np.ndarray:
     return out
 
 
-def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
+def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int, *, promote_ranks: bool = False) -> np.ndarray:
     """The best separation |AUC - 0.5| in the pool for every allowed circular shift of y.
 
     Shifts closer than min_shift to zero (either way) are excluded, so with
@@ -270,7 +270,9 @@ def shift_null(y: np.ndarray, ranks: np.ndarray, min_shift: int) -> np.ndarray:
         n1 = np.rint(np.fft.irfft(fy * np.fft.rfft(valid), n=n)[shifts])[:, None]
         n0 = valid.sum() - n1
         for c0 in range(0, len(columns), _FFT_CHUNK):
-            block = ranks[:, columns[c0:c0 + _FFT_CHUNK]].astype(np.float64, copy=False)
+            block = ranks[:, columns[c0:c0 + _FFT_CHUNK]]
+            if promote_ranks:
+                block = block.astype(np.float64, copy=False)
             s1 = np.fft.irfft(fy[:, None] * np.fft.rfft(np.nan_to_num(block), axis=0), n=n, axis=0)[shifts]
             with np.errstate(invalid="ignore", divide="ignore"):
                 sep = np.abs((s1 - n1 * (n1 + 1) / 2) / (n1 * n0) - 0.5)
@@ -538,7 +540,7 @@ def _analyze(pool, index, y, intervals, rank_key):
     clock2 = time.perf_counter()
     longest = max(b - a for a, b in runs(y.astype(bool)))
     min_shift = longest
-    null = shift_null(y, ranks, min_shift)
+    null = shift_null(y, ranks, min_shift, promote_ranks=ranks.dtype == np.float32)
     timing["null"] = time.perf_counter() - clock2
     critical = critical_separation(null)
 

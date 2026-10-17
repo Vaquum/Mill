@@ -105,3 +105,21 @@ def test_recorded_measurements_match_their_samples():
         for measurement in result["measurements"]:
             assert all(value >= 0 for value in measurement["samples_ms"]), path
             assert measurement["median_ms"] == statistics.median(measurement["samples_ms"]), path
+
+
+def test_transition_summary_describes_its_own_snapshot(parquet, tmp_path):
+    artifact = tmp_path / "pool"
+    built, output = tmp_path / "built.json", tmp_path / "transition.json"
+    subprocess.run(command(parquet, built, "discover", "--k", "1", "--reps", "1",
+                           "--discover-phase", "pool", "--pool-artifact", str(artifact)), check=True, timeout=45)
+    subprocess.run(command(parquet, output, "discover", "--k", "1", "--reps", "1",
+                           "--discover-phase", "search", "--pool-artifact", str(artifact),
+                           "--transition-searches"), check=True, timeout=45)
+    result = json.loads(output.read_text())
+    primary, advanced = result["discovery"], result["transition_discovery"]
+    assert primary["pool_bytes"] == result["input"]["rows"] * primary["columns"] * 8
+    assert advanced["pool_bytes"] == primary["pool_bytes"] + primary["columns"] * 8
+    assert advanced["rows"] == result["input"]["rows"] + 1
+    assert advanced["context_rows"] == result["input"]["rows"]
+    samples = next(m["samples_ms"] for m in result["measurements"] if m["name"] == "discover_source_advance")
+    assert len(samples) == 1

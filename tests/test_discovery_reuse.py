@@ -127,7 +127,7 @@ def test_source_advances_outside_context_reuse_stats_but_refresh_full_series_rul
     counts = []
     original = discover.shift_null
     with monkeypatch.context() as patch:
-        patch.setattr(discover, "shift_null", lambda *args: (counts.append(1), original(*args))[1])
+        patch.setattr(discover, "shift_null", lambda *args, **kwargs: (counts.append(1), original(*args, **kwargs))[1])
         _answer(old, options)
         updated = options | {"display": (int(new.ms[0]), int(new.ms[-1])+3_600_000)}
         actual = _answer(new, updated)
@@ -142,7 +142,7 @@ def test_source_advances_outside_context_reuse_stats_but_refresh_full_series_rul
     np.save(changed / "ms.npy", new.ms)
     corrected = discover.mapped_pool(changed, fields)
     with monkeypatch.context() as patch:
-        patch.setattr(discover, "shift_null", lambda *args: (counts.append(1), original(*args))[1])
+        patch.setattr(discover, "shift_null", lambda *args, **kwargs: (counts.append(1), original(*args, **kwargs))[1])
         actual = _answer(corrected, updated)
         assert len(counts) == 2
     assert actual == _answer(replace(corrected, _identity=None), updated)
