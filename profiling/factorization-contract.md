@@ -4,6 +4,12 @@ Reference: merged Mill `847cd481e82b1000496db082e52acb4d9794c207`, with the
 same installed Limen, Polars, NumPy, SciPy, sklearn and Numba versions, raw source
 bytes, complete closed history, thread settings and workload parameters.
 
+The separate [dependency-adoption experiment](adoption.md) holds optimized Mill
+code fixed while changing the dependency. Exported rule provenance reports the
+new `metadata.limen_version`; every other published value and decision remains
+exact. Its reconstruction witnesses must reproduce the original cold-response
+hashes. This is an expected provenance update, not a numerical tolerance.
+
 Supported inputs remain the registry's existing factories and parameters, raw
 bar schema, saved views, targets, QC selection/grouping and discovery context,
 event windows and options. Empty/short series, ties, constants, nulls/NaNs,

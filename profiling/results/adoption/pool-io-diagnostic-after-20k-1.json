@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "case": "pool",
+  "status": "complete",
+  "worker_pid": 60027,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        78.844208
+      ],
+      "median_ms": 78.844208,
+      "process_cpu_samples_ms": [
+        29.82
+      ]
+    },
+    {
+      "name": "service_catalog_prepare",
+      "samples_ms": [
+        5800.291917
+      ],
+      "median_ms": 5800.291917,
+      "process_cpu_samples_ms": [
+        3729.02
+      ]
+    },
+    {
+      "name": "service_catalog_mmap_hit",
+      "samples_ms": [
+        46.655125
+      ],
+      "median_ms": 46.655125,
+      "process_cpu_samples_ms": [
+        4.781
+      ]
+    }
+  ],
+  "peak_rss_bytes": 369819648,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "serve_import_ms": 110.099583,
+  "ablation": "none",
+  "import_ms": 1458.354708,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 28.2734375,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "5.29.2"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "vcs": "git",
+        "commit_id": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
+        "requested_revision": "728a6eefc19cde2cb0fa3f5312b185e2877bc330"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "ff4c810d67079234d382decab3ad444f226789d7",
+    "source_tree_sha256": "f111359b54083e0879e0dc2c40d358e3775ea593d674adbedc14e43f60a95cd1"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 8,
+    "reps": 1
+  },
+  "fixture_prepare_ms": 17.05475,
+  "partial_preparation_steps_ms": [
+    5041.100292
+  ],
+  "parity_pool": "fcd4dd55306ad5994dbd559b08f7c583e7a78df753d2ce10f7de866f04a63297",
+  "parity_pool_metadata": "7155a1b039d0963bca2cbd695b8d389762854dc6f278f692f72440f68e96c7d9",
+  "mapped_values": true,
+  "pool_trim_profile": {
+    "calls": 127,
+    "wall_ms": 263.0958369999999,
+    "process_cpu_ms": 186.72099999999995
+  },
+  "diagnostic_scope": "One instrumented full 20k catalog; dependencies pre-imported to install timer; import_ms is not a complete cold import. No speedup comparison."
+}
