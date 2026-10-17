@@ -15,5 +15,5 @@ jobs:
           python-version: "3.12"
       - run: pip install -e .[test]
       - run: python profiling/prepare_limen_reference.py
-      - run: env POLARS_MAX_THREADS=2 NUMBA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python profiling/compare_limen.py --output /tmp/limen-compatibility.json
+      - run: env POLARS_MAX_THREADS=2 NUMBA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python profiling/check_limen.py --output /tmp/limen-compatibility.json
       - run: env POLARS_MAX_THREADS=2 NUMBA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python profiling/check.py
