@@ -37,7 +37,8 @@ _CLUSTER_RHO = 0.9
 _BOOTSTRAP_DRAWS = 200
 _MIN_BLOCK = 24
 _PERSISTENCE = (1, 2, 3)
-_FFT_CHUNK = 64
+_FFT_CHUNK = 16
+_BOOTSTRAP_BATCH = 8
 _BEYOND_ONE_IN = 20
 # FFT and direct sums agree far closer than this; a near tie counts against the column.
 _TIE = 1e-9
@@ -102,7 +103,9 @@ def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = 
             natives.append(column.split("__", 1)[0] if given else column)
             meta.append((factory, source, params))
             arrays.append(part[column].cast(pl.Float64).to_numpy())
-    values = np.column_stack(arrays) if arrays else np.empty((raw.height, 0))
+    values = np.empty((raw.height, len(arrays)), dtype=np.float64, order="F")
+    for j, array in enumerate(arrays):
+        values[:, j] = array
     values[~np.isfinite(values)] = np.nan
     return Pool(
         names=tuple(names),
@@ -180,7 +183,7 @@ def column_ranks(values: np.ndarray) -> np.ndarray:
     if values.shape[1] == 0:
         return values.copy()
     frame = pl.from_numpy(values).fill_nan(None)
-    return frame.select(pl.all().rank("average")).to_numpy().astype(np.float64)
+    return frame.select(pl.all().rank("average")).to_numpy().astype(np.float64, copy=False)
 
 
 def auc(y: np.ndarray, ranks: np.ndarray) -> np.ndarray:
@@ -244,6 +247,11 @@ def weighted_auc(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.ndarra
     order = np.argsort(x, kind="stable")
     xs, ys = x[order], y[order]
     starts = np.flatnonzero(np.r_[True, xs[1:] != xs[:-1]])
+    return _weighted_auc_sorted(ys, starts, order, weights)
+
+
+def _weighted_auc_sorted(ys: np.ndarray, starts: np.ndarray, order: np.ndarray,
+                         weights: np.ndarray) -> np.ndarray:
     w = weights[:, order]
     pos = np.add.reduceat(w * ys, starts, axis=1)
     neg = np.add.reduceat(w * (1.0 - ys), starts, axis=1)
@@ -261,10 +269,17 @@ def bootstrap_interval(x: np.ndarray, y: np.ndarray, block: int, seed: int) -> t
     rng = np.random.default_rng(seed)
     count = -(-n // block)
     starts = rng.integers(0, n, size=(_BOOTSTRAP_DRAWS, count))
-    rows = ((starts[:, :, None] + np.arange(block)) % n).reshape(_BOOTSTRAP_DRAWS, -1)[:, :n]
-    flat = rows + (np.arange(_BOOTSTRAP_DRAWS) * n)[:, None]
-    weights = np.bincount(flat.ravel(), minlength=_BOOTSTRAP_DRAWS * n).reshape(_BOOTSTRAP_DRAWS, n)
-    draws = weighted_auc(x, y, weights.astype(np.float64))
+    order = np.argsort(x, kind="stable")
+    xs, ys = x[order], y[order]
+    groups = np.flatnonzero(np.r_[True, xs[1:] != xs[:-1]])
+    draws = np.empty(_BOOTSTRAP_DRAWS)
+    for offset in range(0, _BOOTSTRAP_DRAWS, _BOOTSTRAP_BATCH):
+        batch = starts[offset:offset + _BOOTSTRAP_BATCH]
+        size = batch.shape[0]
+        rows = ((batch[:, :, None] + np.arange(block)) % n).reshape(size, -1)[:, :n]
+        flat = rows + (np.arange(size) * n)[:, None]
+        weights = np.bincount(flat.ravel(), minlength=size * n).reshape(size, n)
+        draws[offset:offset + size] = _weighted_auc_sorted(ys, groups, order, weights.astype(np.float64))
     draws = draws[np.isfinite(draws)]
     if draws.size == 0:
         return None
@@ -452,7 +467,9 @@ def discover(
         raise ValueError("the context has no unmarked bar to compare against")
     index = np.flatnonzero(rows)
     y = marked[index].astype(np.float64)
-    ranks = column_ranks(pool.values[index])
+    values = (pool.values[index[0]:index[-1] + 1]
+              if index.size and index[-1] - index[0] + 1 == index.size else pool.values[index])
+    ranks = column_ranks(values)
     timing = {"rank": time.perf_counter() - clock0}
 
     clock1 = time.perf_counter()
