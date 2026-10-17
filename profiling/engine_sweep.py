@@ -16,7 +16,7 @@ import tempfile
 import time
 
 
-CASES = ("startup", "data", "features", "factories", "qc", "discover", "http", "memory")
+CASES = ("startup", "data", "features", "factories", "views", "qc", "discover", "http", "memory")
 FACTORIES = ("rsi", "mom", "roc", "rocp", "cci", "cmo", "willr", "atr",
              "natr", "trix", "apo", "ppo", "bop", "mfi", "kama", "tema",
              "dema", "wma", "sma", "ema", "midpoint", "linearreg", "tsf",
@@ -120,7 +120,7 @@ def worker(args):
         record.doc["input"] = {"source_rows": source_rows, "rows": raw.height,
                                "columns": raw.width, "frame_bytes": raw.estimated_size(),
                                "start": str(raw["datetime"][0]), "end": str(raw["datetime"][-1]),
-                               "k": args.k, "reps": args.reps}
+                               "bar": args.bar, "k": args.k, "reps": args.reps}
         bar = args.bar
         series = arrow_series(bar)
         path = arrow_latest_path(series)
@@ -152,6 +152,13 @@ def worker(args):
             os.utime(path, ns=(stamp + 1_000_000_000, stamp + 1_000_000_000))
             measure("raw_for_changed_closed_bar", lambda: serve._raw_for(bar), reps=1)
             record.doc["version_changed"] = serve._raw_for(bar)[1] != first_version
+            from concurrent.futures import ThreadPoolExecutor
+            from unittest.mock import patch
+            serve._RAW_CACHE.clear()
+            with patch.object(serve, "klines", wraps=serve.klines) as load:
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    measure("raw_for_concurrent_first_c4", lambda: list(executor.map(serve._raw_for, [bar] * 4)), reps=1)
+                record.doc["concurrent_raw_load_calls"] = load.call_count
         elif args.case in {"features", "memory"}:
             frame = measure("build_features", lambda: build_from_spec(raw, spec))
             target = measure("target_next_return", lambda: targets.apply(raw, "next_return").select("datetime", "next_return"))
@@ -188,6 +195,13 @@ def worker(args):
             pool = measure("catalog_pool", lambda: discover.catalog_pool(raw), reps=1)
             record.doc["pool"] = {"columns": len(pool.names), "bytes": pool.values.nbytes,
                                    "skipped": list(pool.skipped)}
+        elif args.case == "views":
+            for name in targets.NAMES:
+                measure("target:" + name, lambda n=name: targets.apply(raw, n), reps=1)
+            for view in serve.VIEWS:
+                frame = measure("view:" + view.NAME, lambda v=view: build_from_spec(raw, v.SPEC))
+                payload = measure("view_json:" + view.NAME, lambda: serve._serialize(frame))
+                record.doc["measurements"][-1].update(columns=frame.width, payload_bytes=len(payload))
         elif args.case == "qc":
             from unittest.mock import patch
             frame = build_from_spec(raw, spec).join(targets.apply(raw, "next_return").select("datetime", "next_return"), on="datetime", how="left")
@@ -250,6 +264,12 @@ def worker(args):
             try:
                 measure("http_data_first", lambda: request(route), reps=1)
                 measure("http_data_warm", lambda: request(route))
+                serve._RESULTS.clear()
+                from unittest.mock import patch
+                with patch.object(serve, "build_from_spec", wraps=serve.build_from_spec) as build:
+                    with ThreadPoolExecutor(max_workers=4) as executor:
+                        measure("http_identical_cold_batch_c4", lambda: list(executor.map(request, [route] * 4)), reps=1)
+                    record.doc["identical_cold_build_calls"] = build.call_count
                 for concurrency in (1, 4, 8):
                     with ThreadPoolExecutor(max_workers=concurrency) as executor:
                         results = measure(f"http_warm_batch_c{concurrency}",
