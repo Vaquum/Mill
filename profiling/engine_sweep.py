@@ -58,6 +58,13 @@ def arguments():
         parser.error("null/bootstrap ablation requires --reference-source")
     if args.ablate == "bootstrap" and not args.warm_kernels:
         parser.error("bootstrap ablation requires --warm-kernels to compare execution separately from compilation")
+    allowed = {"native": ("workload", "features", "views", "discover", "pool"),
+               "pairs": ("qc",), "edges": ("qc",), "bootstrap": ("qc",),
+               "null": ("discover",), "reuse": ("discover",)}
+    if args.ablate != "none" and args.case not in allowed[args.ablate]:
+        parser.error("ablation does not apply to this workload")
+    if args.ablate == "native" and args.case == "discover" and args.discover_phase == "search":
+        parser.error("native ablation requires building a pool")
     return args
 
 
