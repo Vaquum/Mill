@@ -12,7 +12,7 @@ import time
 import numpy as np
 import polars as pl
 
-from . import discover, feature_registry
+from . import discover, feature_registry, expressions
 from .cache_store import _atomic_path, write_json_atomic
 from .settings import cache_root, memory_budget
 
@@ -30,6 +30,7 @@ def _revision():
                   "limen": distribution("vaquum_limen").read_text("direct_url.json"),
                   "polars": version("polars"),
                   "wrapper": Path(feature_registry.__file__).read_text(),
+                  "planner": Path(expressions.__file__).read_text(),
                   "builder": Path(__file__).read_text()})
 
 
@@ -127,20 +128,22 @@ def pool_for(raw, bar, spec, digest, *, quantum=5):
     directory.mkdir(exist_ok=True)
     began = time.perf_counter()
     entries = _entries(spec)
-    for i, (factory, given, _, entry) in enumerate(entries):
-        path = directory / f"{i}.arrow"
-        skipped = directory / f"{i}.skip"
-        if not path.exists() and not skipped.exists():
-            try:
-                part = entry["producer"](raw, **given)
-            except Exception:
+    pending = [(i, entry) for i, entry in enumerate(entries)
+               if not (directory / f"{i}.arrow").exists() and not (directory / f"{i}.skip").exists()]
+    batch_size = 1 if quantum <= 0 else 8
+    for start in range(0, len(pending), batch_size):
+        batch = pending[start:start+batch_size]
+        parts = expressions.evaluate(raw, [(entry[3]["producer"], entry[1]) for _, entry in batch], errors=True)
+        for (i, (factory, given, _, entry)), part in zip(batch, parts):
+            path, skipped = directory / f"{i}.arrow", directory / f"{i}.skip"
+            if isinstance(part, Exception):
                 write_json_atomic(skipped, {"factory": factory})
             else:
                 with _atomic_path(path) as temporary:
                     part.write_ipc(temporary, compression="uncompressed")
             _trim(root, directory)
-            if time.perf_counter() - began >= quantum and i + 1 < len(entries):
-                raise PoolPending("catalog construction is progressing; retry shortly")
+        if time.perf_counter() - began >= quantum and start + batch_size < len(pending):
+            raise PoolPending("catalog construction is progressing; retry shortly")
     _assemble(directory, raw, entries)
     _trim(root, directory)
     return _load(directory), False, (time.perf_counter() - began) * 1000

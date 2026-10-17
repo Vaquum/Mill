@@ -28,6 +28,7 @@ import polars as pl
 from limen.sfd.rule_based.predicates import build_predicate
 
 from . import feature_registry
+from .expressions import evaluate
 from .table import produce
 
 MODES = ("inside", "lead")
@@ -87,12 +88,24 @@ def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = 
     meta: list[tuple[str, str, dict[str, Any]]] = []
     arrays: list[np.ndarray] = []
     skipped: list[str] = []
-    for factory, source, params, producer, given in entries:
-        if pause is not None:
-            pause()
-        try:
-            part = producer(raw, **given) if cache_key is None else produce(raw, factory, given, cache_key)
-        except Exception:
+    def produced():
+        # Keep the existing pause boundary exact when a caller supplies one;
+        # otherwise compile bounded batches, rather than one giant catalog.
+        size = 1 if pause is not None or cache_key is not None else 16
+        for start in range(0, len(entries), size):
+            batch = entries[start:start+size]
+            if pause is not None:
+                pause()
+            if cache_key is None:
+                parts = evaluate(raw, [(e[3], e[4]) for e in batch], errors=True)
+            else:
+                try:
+                    parts = [produce(raw, batch[0][0], batch[0][4], cache_key)]
+                except Exception as exc:
+                    parts = [exc]
+            yield from zip(batch, parts)
+    for (factory, source, params, producer, given), part in produced():
+        if isinstance(part, Exception):
             skipped.append(factory)
             continue
         for column in part.columns:

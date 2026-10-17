@@ -156,7 +156,7 @@ class Frame:
         return Frame(self.graph, renamed)
 
 
-def evaluate(raw, requests):
+def evaluate(raw, requests, *, errors=False):
     """Evaluate a batch, sharing identical native expression nodes across producers."""
     graph, planned, positions, results = Graph(raw), [], [], [None] * len(requests)
     for i, (producer, params) in enumerate(requests):
@@ -170,8 +170,27 @@ def evaluate(raw, requests):
                     planned.append(part)
                     positions.append(i)
                     continue
-        results[i] = producer(raw, **params)
+        try:
+            results[i] = producer(raw, **params)
+        except Exception as exc:
+            if not errors:
+                raise
+            results[i] = exc
     if planned:
-        for i, part in zip(positions, graph.collect(planned)):
+        try:
+            computed = graph.collect(planned)
+        except pl.exceptions.PolarsError:
+            # Preserve per-factory failures in catalogs: one invalid planned
+            # expression must not suppress other factories in the batch.
+            computed = []
+            for i in positions:
+                producer, params = requests[i]
+                try:
+                    computed.append(producer(raw, **params))
+                except Exception as exc:
+                    if not errors:
+                        raise
+                    computed.append(exc)
+        for i, part in zip(positions, computed):
             results[i] = part
     return results
