@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "case": "discover",
+  "status": "complete",
+  "worker_pid": 82185,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        18.148916
+      ],
+      "median_ms": 18.148916,
+      "process_cpu_samples_ms": [
+        9.592
+      ]
+    },
+    {
+      "name": "discover_full",
+      "samples_ms": [
+        1485.250834
+      ],
+      "median_ms": 1485.250834,
+      "process_cpu_samples_ms": [
+        1189.102
+      ]
+    },
+    {
+      "name": "discover_source_advance",
+      "samples_ms": [
+        80.28725
+      ],
+      "median_ms": 80.28725,
+      "process_cpu_samples_ms": [
+        47.6
+      ]
+    }
+  ],
+  "peak_rss_bytes": 516030464,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "import_scope": "discovery dependencies only; no frontend or QC warmup",
+  "ablation": "none",
+  "import_ms": 3605.182792,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 44.29541015625,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "e5b9e05867d164aa662a15808c4e73fc8c0ae718",
+    "source_tree_sha256": "e205ef6c55c9408b97997f67dd67e0bd47b8383d2c2dbbdc132590e8e9e90de6"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 8,
+    "reps": 1
+  },
+  "fixture_prepare_ms": 8.989875,
+  "pool_builder_source_tree_sha256": "e205ef6c55c9408b97997f67dd67e0bd47b8383d2c2dbbdc132590e8e9e90de6",
+  "parity_pool": "fcd4dd55306ad5994dbd559b08f7c583e7a78df753d2ce10f7de866f04a63297",
+  "parity_pool_metadata": "7155a1b039d0963bca2cbd695b8d389762854dc6f278f692f72440f68e96c7d9",
+  "transition_fixture": {
+    "synthetic": true,
+    "appended_rows": 1,
+    "appended_values": "repeat final pool row; outside the original statistical context",
+    "cache_state": "original query executed; advanced snapshot never previously searched",
+    "setup_ms": 58.271792
+  },
+  "parity_transition": "787743a0e22227d91b1ab9606ee32fcdc189b0c546699bd1f32938e0fdf25f02",
+  "transition_discovery": {
+    "rows": 20785,
+    "pool_bytes": 43066520,
+    "timing_last_ms": {
+      "rank": 0.0,
+      "screen": 0.0,
+      "null": 0.0,
+      "stage_two": 38.79,
+      "total": 80.21
+    },
+    "context_rows": 20784
+  },
+  "discovery": {
+    "columns": 259,
+    "pool_bytes": 43064448,
+    "timing_last_ms": {
+      "rank": 238.53,
+      "screen": 20.04,
+      "null": 732.25,
+      "stage_two": 465.25,
+      "total": 1485.17
+    },
+    "events": 40,
+    "intervals": true,
+    "candidates": 3
+  },
+  "parity_discovery": "900021c276a099421b31037aa2df9d1f19e96118b099493004942021dd1d0015"
+}

@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "case": "discover",
+  "status": "complete",
+  "worker_pid": 95017,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [
+    {
+      "name": "source_read",
+      "samples_ms": [
+        20.567042
+      ],
+      "median_ms": 20.567042,
+      "process_cpu_samples_ms": [
+        10.053
+      ]
+    },
+    {
+      "name": "discover_full",
+      "samples_ms": [
+        1871.025208
+      ],
+      "median_ms": 1871.025208,
+      "process_cpu_samples_ms": [
+        1262.517
+      ]
+    },
+    {
+      "name": "discover_repeat",
+      "samples_ms": [
+        9.782417
+      ],
+      "median_ms": 9.782417,
+      "process_cpu_samples_ms": [
+        7.21
+      ]
+    },
+    {
+      "name": "discover_display_change",
+      "samples_ms": [
+        10.067208
+      ],
+      "median_ms": 10.067208,
+      "process_cpu_samples_ms": [
+        3.257
+      ]
+    },
+    {
+      "name": "discover_changed_windows",
+      "samples_ms": [
+        1231.456375
+      ],
+      "median_ms": 1231.456375,
+      "process_cpu_samples_ms": [
+        725.463
+      ]
+    }
+  ],
+  "peak_rss_bytes": 476708864,
+  "profiler_sha256": "1a10df299b336507119f4010b47def7014f2a0a3b3ac80a80131e1670e049228",
+  "import_scope": "discovery dependencies only; no frontend or QC warmup",
+  "ablation": "none",
+  "import_ms": 4181.588958,
+  "environment": {
+    "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu_count": 10,
+    "host_load_1m": 25.99462890625,
+    "polars_threads": 4,
+    "numba_threads": 4,
+    "numba_layer": "workqueue",
+    "versions": {
+      "polars": "1.44.2",
+      "numpy": "2.4.6",
+      "numba": "0.65.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0",
+      "statsmodels": "0.14.6",
+      "vaquum_limen": "3.30.0"
+    },
+    "limen_origin": {
+      "url": "https://github.com/Vaquum/Limen.git",
+      "vcs_info": {
+        "commit_id": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "requested_revision": "86968e44022cabcae83fc38fe2ed0c7105816fa2",
+        "vcs": "git"
+      }
+    },
+    "thread_environment": {
+      "POLARS_MAX_THREADS": "4",
+      "NUMBA_NUM_THREADS": "4",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    },
+    "engine_sha": "3e23382e7bc18746ca28c6ba4b6edb2f20a07aad",
+    "source_tree_sha256": "e205ef6c55c9408b97997f67dd67e0bd47b8383d2c2dbbdc132590e8e9e90de6"
+  },
+  "source": {
+    "file": "1h_time_bars_9a5b8be319f4d65e.parquet",
+    "sha256": "414d23e75094c6719792e8b93b0682057d63d6e8cc8859d147eb1beee9722ac8"
+  },
+  "input": {
+    "source_rows": 20784,
+    "rows": 20784,
+    "columns": 17,
+    "frame_bytes": 2826624,
+    "start": "2024-01-01 00:00:00+00:00",
+    "end": "2026-05-15 23:00:00+00:00",
+    "bar": "1h_time_bars",
+    "k": 8,
+    "reps": 1
+  },
+  "fixture_prepare_ms": 7.63525,
+  "pool_builder_source_tree_sha256": "e205ef6c55c9408b97997f67dd67e0bd47b8383d2c2dbbdc132590e8e9e90de6",
+  "parity_pool": "fcd4dd55306ad5994dbd559b08f7c583e7a78df753d2ce10f7de866f04a63297",
+  "parity_pool_metadata": "7155a1b039d0963bca2cbd695b8d389762854dc6f278f692f72440f68e96c7d9",
+  "parity_related": {
+    "repeat": "900021c276a099421b31037aa2df9d1f19e96118b099493004942021dd1d0015",
+    "display": "0d3626396ab3dbfd368c5ccabe880b8bd43ba89e951dc9dbbd905260edc04b39",
+    "windows": "014c6991a7ae5b5e80428c5ec25adea082c0ab204a3827b19138c63b9498111d"
+  },
+  "discovery": {
+    "columns": 259,
+    "pool_bytes": 43064448,
+    "timing_last_ms": {
+      "rank": 302.7,
+      "screen": 29.42,
+      "null": 845.04,
+      "stage_two": 657.22,
+      "total": 1870.68
+    },
+    "events": 40,
+    "intervals": true,
+    "candidates": 3
+  },
+  "parity_discovery": "900021c276a099421b31037aa2df9d1f19e96118b099493004942021dd1d0015"
+}
