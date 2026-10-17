@@ -9,6 +9,7 @@ import sys
 import tempfile
 
 REFERENCE = "86968e44022cabcae83fc38fe2ed0c7105816fa2"
+ARCHIVE = f"https://github.com/Vaquum/Limen/archive/{REFERENCE}.tar.gz"
 DEFAULT = Path(__file__).resolve().parents[1]/".limen-reference"
 
 
@@ -44,7 +45,7 @@ def main():
         staging = Path(temporary)/"package"
         child = subprocess.Popen([sys.executable, "-m", "pip", "install", "--disable-pip-version-check",
             "--no-deps", "--target", str(staging),
-            f"git+https://github.com/Vaquum/Limen.git@{REFERENCE}"], start_new_session=True)
+            ARCHIVE], start_new_session=True)
         try:
             code = child.wait(timeout=48)
         finally:
@@ -54,7 +55,7 @@ def main():
         if code:
             return code
         origins = [json.loads(path.read_text()) for path in staging.glob("*.dist-info/direct_url.json")]
-        assert any(item.get("vcs_info", {}).get("commit_id") == REFERENCE for item in origins)
+        assert any(item.get("url") == ARCHIVE for item in origins)
         marker = {"commit": REFERENCE, "source_sha256": fingerprint(staging)}
         (staging/".mill-reference.json").write_text(json.dumps(marker))
         staging.rename(root)

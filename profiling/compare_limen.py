@@ -8,7 +8,7 @@ import sys
 import tempfile
 import time
 
-from prepare_limen_reference import DEFAULT, REFERENCE, verify
+from prepare_limen_reference import ARCHIVE, DEFAULT, REFERENCE, verify
 
 CURRENT = "728a6eefc19cde2cb0fa3f5312b185e2877bc330"
 
@@ -54,7 +54,7 @@ def main():
                     os.killpg(child.pid, signal.SIGKILL)
                 child.wait(timeout=1)
         before, after = [json.loads(path.read_text()) for path in paths]
-        assert before["origin"]["vcs_info"]["commit_id"] == REFERENCE
+        assert before["origin"].get("url") == ARCHIVE
         assert after["origin"]["vcs_info"]["commit_id"] == CURRENT
         assert before["catalog"] == after["catalog"]
         for name,value in before["versions"].items():
