@@ -60,9 +60,15 @@ class Graph:
         key = json.dumps(tree, sort_keys=True)
         shared = self.interned.get(key)
         if shared is None:
+            restored = pl.Expr.deserialize(io.StringIO(json.dumps(tree)), format="json")
+            # Polars' JSON float parser need not round every decimal literal
+            # to the original bit pattern. Reject such plans, rather than
+            # changing an indicator by even one ULP.
+            if json.loads(restored.meta.serialize(format="json")) != tree:
+                raise NotPlannable()
             shared = f"{self.prefix}{len(self.nodes)}"
             self.interned[key] = shared
-            self.nodes[shared] = (tree, dependencies)
+            self.nodes[shared] = (restored, dependencies)
         return name, shared
 
     def collect(self, parts):
@@ -81,8 +87,7 @@ class Graph:
         while needed - done:
             ready = [name for name in self.nodes if name in needed - done
                      and self.nodes[name][1] <= done]
-            expressions = [pl.Expr.deserialize(io.StringIO(json.dumps(self.nodes[name][0])),
-                           format="json").alias(name) for name in ready]
+            expressions = [self.nodes[name][0].alias(name) for name in ready]
             frame = frame.with_columns(expressions)
             done.update(ready)
         outputs, groups = [], []

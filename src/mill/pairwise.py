@@ -115,7 +115,9 @@ class Workspace:
             return None, None
         a, b = self._ranks(left, cohort), self._ranks(right, cohort)
         with np.errstate(invalid="ignore", divide="ignore"):
-            rho = np.corrcoef(a, b)[0, 1]
+            # scipy.spearmanr returns [1, 0]; the two normalized covariance
+            # entries can differ by one ULP, so preserve that direction too.
+            rho = np.corrcoef(a, b)[1, 0]
         rho = abs(float(rho)) if np.isfinite(rho) else None
         x, sx = self._marginal(left, cohort, "left")
         y, sy = self._marginal(right, cohort, "right")
