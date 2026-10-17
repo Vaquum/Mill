@@ -2,138 +2,138 @@
   "schema": 1,
   "case": "data",
   "status": "complete",
-  "worker_pid": 19886,
+  "worker_pid": 45052,
   "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
   "measurements": [
     {
       "name": "arrow_read_normalize_select",
       "samples_ms": [
-        18.961792,
-        1.879791,
-        1.621625
+        23.113083,
+        3.4225,
+        3.834125
       ],
-      "median_ms": 1.879791,
+      "median_ms": 3.834125,
       "process_cpu_samples_ms": [
-        6.264,
-        1.884,
-        1.796
+        8.737,
+        2.089,
+        2.996
       ]
     },
     {
       "name": "get_data_cold_cache",
       "samples_ms": [
-        10.057583
+        19.44925
       ],
-      "median_ms": 10.057583,
+      "median_ms": 19.44925,
       "process_cpu_samples_ms": [
-        7.117
+        12.737
       ]
     },
     {
       "name": "get_data_memory_hit",
       "samples_ms": [
-        0.152208,
-        0.065334,
-        0.055625
+        0.278167,
+        0.297834,
+        0.031541
       ],
-      "median_ms": 0.065334,
+      "median_ms": 0.278167,
       "process_cpu_samples_ms": [
-        0.152,
-        0.066,
-        0.056
+        0.165,
+        0.097,
+        0.031
       ]
     },
     {
       "name": "get_data_disk_cache_hit",
       "samples_ms": [
-        0.399541,
-        0.247583,
-        0.356667
+        0.63875,
+        1.061083,
+        0.342208
       ],
-      "median_ms": 0.356667,
+      "median_ms": 0.63875,
       "process_cpu_samples_ms": [
-        0.4,
-        0.248,
-        0.367
+        0.591,
+        0.631,
+        0.377
       ]
     },
     {
       "name": "get_data_tail_100_cold",
       "samples_ms": [
-        4.015375
+        8.764042
       ],
-      "median_ms": 4.015375,
+      "median_ms": 8.764042,
       "process_cpu_samples_ms": [
-        4.412
+        6.823
       ]
     },
     {
       "name": "raw_for_first",
       "samples_ms": [
-        4.260625
+        4.405625
       ],
-      "median_ms": 4.260625,
+      "median_ms": 4.405625,
       "process_cpu_samples_ms": [
-        6.144
+        6.332
       ]
     },
     {
       "name": "raw_for_memory_hit",
       "samples_ms": [
-        0.267292,
-        0.1885,
-        0.0875
+        0.123917,
+        0.187583,
+        0.0725
       ],
-      "median_ms": 0.1885,
+      "median_ms": 0.123917,
       "process_cpu_samples_ms": [
-        0.138,
-        0.17,
-        0.088
+        0.207,
+        0.106,
+        0.072
       ]
     },
     {
       "name": "raw_for_unchanged_rewrite",
       "samples_ms": [
-        7.386584,
-        8.584709,
-        8.172334
+        16.594667,
+        28.187791,
+        11.078541
       ],
-      "median_ms": 8.172334,
+      "median_ms": 16.594667,
       "process_cpu_samples_ms": [
-        9.011,
-        9.827,
-        9.855
+        11.989,
+        10.978,
+        10.238
       ]
     },
     {
       "name": "raw_for_changed_closed_bar",
       "samples_ms": [
-        10.986084
+        10.8585
       ],
-      "median_ms": 10.986084,
+      "median_ms": 10.8585,
       "process_cpu_samples_ms": [
-        11.138
+        11.734
       ]
     },
     {
       "name": "raw_for_concurrent_first_c4",
       "samples_ms": [
-        1.887667
+        1.118042
       ],
-      "median_ms": 1.887667,
+      "median_ms": 1.118042,
       "process_cpu_samples_ms": [
-        1.572
+        1.047
       ]
     }
   ],
-  "peak_rss_bytes": 360120320,
-  "serve_import_ms": 3600.370833,
-  "import_ms": 4174.571125,
+  "peak_rss_bytes": 359497728,
+  "serve_import_ms": 7963.73025,
+  "import_ms": 8702.080584,
   "environment": {
     "python": "3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "cpu_count": 10,
-    "host_load_1m": 23.1962890625,
+    "host_load_1m": 36.45703125,
     "polars_threads": 4,
     "numba_threads": 4,
     "numba_layer": "workqueue",
@@ -160,8 +160,8 @@
       "OPENBLAS_NUM_THREADS": "1",
       "OMP_NUM_THREADS": "1"
     },
-    "engine_sha": "29646278f7081f713aadbc4124b0132005cd323c",
-    "source_tree_sha256": "6b70596ef56735b537b5c54df457aa9516c73c21f130d2efa94485f11df61069"
+    "engine_sha": "14cc6b1341968d8955db7560fb8be4a16462fbd8",
+    "source_tree_sha256": "c1d1bcb6f2ae93d874d1fe69502ce2eff9afab69319bc59985daa92ff4e56008"
   },
   "source": {
     "file": "15m_time_bars_84b0a8617eeeb5d8.parquet",

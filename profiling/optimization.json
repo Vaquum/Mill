@@ -1,0 +1,783 @@
+{
+  "baseline_revision": "78191c6d45902e395c90e948904a5a36642ae5b2",
+  "baseline_source": "git archive of that revision, imported through a separate PYTHONPATH",
+  "comparisons": [
+    {
+      "before_file": "before-20k-discover.json",
+      "after_file": "after-20k-discover.json",
+      "exact_output_checks": {
+        "parity_pool": true,
+        "parity_discovery": true
+      }
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "exact_output_checks": {
+        "parity_frame": true,
+        "parity_payload": true
+      }
+    },
+    {
+      "before_file": "before-20k-http.json",
+      "after_file": "after-20k-http.json",
+      "exact_output_checks": {
+        "http_qc_report": true
+      }
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "exact_output_checks": {
+        "parity_report": true
+      }
+    },
+    {
+      "before_file": "before-20k30-qc.json",
+      "after_file": "after-20k30-qc.json",
+      "exact_output_checks": {
+        "parity_report": true
+      }
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "exact_output_checks": {
+        "parity_data": true
+      }
+    },
+    {
+      "before_file": "before-83k-discover-search.json",
+      "after_file": "after-83k-discover-search.json",
+      "exact_output_checks": {
+        "parity_pool": true,
+        "parity_discovery": true
+      }
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "exact_output_checks": {
+        "parity_frame": true,
+        "parity_payload": true
+      }
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "exact_output_checks": {
+        "parity_report": true
+      }
+    }
+  ],
+  "timings": [
+    {
+      "label": "Add one feature at 83k",
+      "measurement": "ensure_plus_one_feature",
+      "before_file": "before-83k-features.json",
+      "before_ms": 895.369708,
+      "after_file": "after-83k-features.json",
+      "after_ms": 387.133958,
+      "speedup": 2.3128162474447667
+    },
+    {
+      "label": "JSON encode at 83k",
+      "measurement": "serialize_json",
+      "before_file": "before-83k-features.json",
+      "before_ms": 307.215583,
+      "after_file": "after-83k-features.json",
+      "after_ms": 173.331458,
+      "speedup": 1.7724167704168274
+    },
+    {
+      "label": "GetData disk hit at 83k",
+      "measurement": "get_data_disk_cache_hit",
+      "before_file": "before-83k-data.json",
+      "before_ms": 19.219125,
+      "after_file": "after-83k-data.json",
+      "after_ms": 0.63875,
+      "speedup": 30.08864970645792
+    },
+    {
+      "label": "Unchanged closed-history refresh at 83k",
+      "measurement": "raw_for_unchanged_rewrite",
+      "before_file": "before-83k-data.json",
+      "before_ms": 49.810333,
+      "after_file": "after-83k-data.json",
+      "after_ms": 16.594667,
+      "speedup": 3.001586774835554
+    },
+    {
+      "label": "Cold QC eight factories at 20k",
+      "measurement": "qc_precompute_cold",
+      "before_file": "before-20k-qc.json",
+      "before_ms": 5114.392,
+      "after_file": "after-20k-qc.json",
+      "after_ms": 2398.698125,
+      "speedup": 2.1321532487544674
+    },
+    {
+      "label": "Cold QC thirty factories at 20k",
+      "measurement": "qc_precompute_cold",
+      "before_file": "before-20k30-qc.json",
+      "before_ms": 19072.091625,
+      "after_file": "after-20k30-qc.json",
+      "after_ms": 14508.3235,
+      "speedup": 1.3145620598410286
+    },
+    {
+      "label": "Discovery twenty thousand bars",
+      "measurement": "discover_full",
+      "before_file": "before-20k-discover.json",
+      "before_ms": 1954.07475,
+      "after_file": "after-20k-discover.json",
+      "after_ms": 1447.182042,
+      "speedup": 1.3502618836393772
+    },
+    {
+      "label": "Discovery eighty-three thousand bars",
+      "measurement": "discover_full",
+      "before_file": "before-83k-discover-search.json",
+      "before_ms": 13393.174333,
+      "after_file": "after-83k-discover-search.json",
+      "after_ms": 9685.160875,
+      "speedup": 1.382855122992472
+    }
+  ],
+  "audit_dispositions": [
+    {
+      "id": "F01",
+      "status": "implemented",
+      "evidence": "QC defers table serialization; native JSON encoder retains parsed output."
+    },
+    {
+      "id": "F02",
+      "status": "implemented",
+      "evidence": "Version/factory/parameter producer LRU and per-key flights reuse overlapping specs."
+    },
+    {
+      "id": "F03",
+      "status": "implemented",
+      "evidence": "Column-major pool, smaller FFT chunks and exact batched AUC group counts reduce transient memory."
+    },
+    {
+      "id": "F04",
+      "status": "implemented",
+      "evidence": "One research process, two admitted research requests, bounded HTTP threads, deadlines and socket inactivity timeout."
+    },
+    {
+      "id": "F05",
+      "status": "improved; mathematical cost remains",
+      "evidence": "Exact counted ranks avoid repeated bootstrap sorting; pairwise mutual information still scales quadratically."
+    },
+    {
+      "id": "F06",
+      "status": "implemented",
+      "evidence": "Atomic uncompressed IPC caches replace live Parquet round-trips; offline legacy fallback remains."
+    },
+    {
+      "id": "F07",
+      "status": "improved; correctness work remains",
+      "evidence": "Fast IPC refresh and independent content versions; full changed histories are still checked for corrections."
+    },
+    {
+      "id": "F08",
+      "status": "implemented",
+      "evidence": "Keyed raw/result/producer flights avoid duplicate initial loads and unrelated spec queues."
+    },
+    {
+      "id": "F09",
+      "status": "implemented",
+      "evidence": "Byte LRUs, bounded key lifetimes, gradual QC eviction; resumable disk pools have a 2 GiB LRU and use memory maps."
+    },
+    {
+      "id": "F10",
+      "status": "improved; dependency cost remains",
+      "evidence": "No import-time QC compilation in HTTP process; Numba caches compiled kernels. Pinned Limen still dominates imports."
+    },
+    {
+      "id": "F11",
+      "status": "upstream ticket",
+      "evidence": "Indicator internals are tracked independently in Vaquum/Limen#930."
+    },
+    {
+      "id": "F12",
+      "status": "preserved for numerical correctness",
+      "evidence": "Date selection stays after complete-history indicators and target calculation. Lazy JSON and producer reuse reduce its cost."
+    },
+    {
+      "id": "F13",
+      "status": "no change warranted",
+      "evidence": "Targets and grading remain minor measured costs."
+    },
+    {
+      "id": "F14",
+      "status": "inherent enumeration cost",
+      "evidence": "Subset enumeration remains combinatorial; reusable primitives keep individual assembly cheap."
+    },
+    {
+      "id": "F15",
+      "status": "bounded exact computation retained",
+      "evidence": "Context ranks and exact circular-shift preparation still recompute per search. Their work is isolated and allocations are batched."
+    },
+    {
+      "id": "F16",
+      "status": "improved; production capacity unmeasured",
+      "evidence": "Exact regression tests, bounded validation and retained matched timings added; short HTTP batches do not establish production p99 or saturation capacity."
+    }
+  ],
+  "method": {
+    "hardware": "Apple M1 Max, 10 logical CPUs, 64 GiB",
+    "python": "3.13.2",
+    "threads": "Polars=4, Numba=4, BLAS=1",
+    "scope": "Identical full cached snapshots, 20,784 hourly and 83,136 fifteen-minute bars; no history truncation. 30 QC factories produce 31 features and 465 pairs.",
+    "discovery": "83k search kernels use one immutable recorded 259-column pool, built by the after engine; both pool and discovery digests match. Catalog build is separate because combined baseline runs exceeded 49 seconds.",
+    "samples": "Cold operations and 83k discovery are single samples; repeated operations use medians. Failed/tradeoff trials are retained separately. Measurements span implementation commits recorded in each file.",
+    "memory": "High-water RSS of the complete measurement process including imports, full input decoding, fixtures and transients. Not incremental allocation or total service RSS across processes.",
+    "load": "Shared-host contention was substantial and variable, reaching load averages above 50 on ten CPUs. CPU samples and host load are recorded in later measurements. No production Linux timing claim.",
+    "mixed_http": "Latest data p95 during QC regressed from 19.8479587 to 22.71405275 ms. Earlier run improved; no stable gain is claimed. Worker isolation and overload availability are regression-tested."
+  },
+  "remaining": [
+    "Limen indicator Python loops and eager dependency imports",
+    "Cold quadratic pairwise statistics",
+    "Full-context ranks and exact circular-shift work",
+    "Python row materialization for JSON",
+    "Production saturation, WAN and p99 measurements"
+  ],
+  "large_catalog": {
+    "file": "after-83k-service-pool.json",
+    "description": "All 259 outputs match the common pool exactly. Three partial steps precede completion; subsequent access reopens memory maps, with the private RAM pool budget set to 1 MiB."
+  },
+  "all_matched_measurements": [
+    {
+      "before_file": "before-20k-discover.json",
+      "after_file": "after-20k-discover.json",
+      "measurement": "pool_build",
+      "before_ms": 4438.219416,
+      "after_ms": 4734.036334,
+      "after_over_before": 1.0666521616604996,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-discover.json",
+      "after_file": "after-20k-discover.json",
+      "measurement": "discover_full",
+      "before_ms": 1954.07475,
+      "after_ms": 1447.182042,
+      "after_over_before": 0.7405970738836883,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "measurement": "build_features",
+      "before_ms": 116.559792,
+      "after_ms": 159.843208,
+      "after_over_before": 1.3713408822829747,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "measurement": "target_next_return",
+      "before_ms": 0.246292,
+      "after_ms": 0.133375,
+      "after_over_before": 0.5415320026635051,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "measurement": "join_target",
+      "before_ms": 1.266709,
+      "after_ms": 3.155375,
+      "after_over_before": 2.491002274397671,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "measurement": "serialize_json",
+      "before_ms": 75.10475,
+      "after_ms": 35.519917,
+      "after_over_before": 0.47293835609598595,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "measurement": "ensure_cold",
+      "before_ms": 208.432209,
+      "after_ms": 166.910292,
+      "after_over_before": 0.8007893444146149,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "measurement": "ensure_memory_hit",
+      "before_ms": 0.022541,
+      "after_ms": 0.071625,
+      "after_over_before": 3.1775431436049866,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-features.json",
+      "after_file": "after-20k-features.json",
+      "measurement": "ensure_plus_one_feature",
+      "before_ms": 180.599583,
+      "after_ms": 22.354666,
+      "after_over_before": 0.12378027473075617,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-http.json",
+      "after_file": "after-20k-http.json",
+      "measurement": "http_data_first",
+      "before_ms": 194.586209,
+      "after_ms": 155.728959,
+      "after_over_before": 0.8003083044800982,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-http.json",
+      "after_file": "after-20k-http.json",
+      "measurement": "http_data_warm",
+      "before_ms": 1.340333,
+      "after_ms": 1.70025,
+      "after_over_before": 1.2685280448963057,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-http.json",
+      "after_file": "after-20k-http.json",
+      "measurement": "http_identical_cold_batch_c4",
+      "before_ms": 309.439125,
+      "after_ms": 29.736167,
+      "after_over_before": 0.09609698515014867,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-http.json",
+      "after_file": "after-20k-http.json",
+      "measurement": "http_warm_batch_c1",
+      "before_ms": 15.497708,
+      "after_ms": 24.565292,
+      "after_over_before": 1.5850919374658499,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-http.json",
+      "after_file": "after-20k-http.json",
+      "measurement": "http_warm_batch_c4",
+      "before_ms": 10.789667,
+      "after_ms": 16.355667,
+      "after_over_before": 1.515863927959964,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-http.json",
+      "after_file": "after-20k-http.json",
+      "measurement": "http_warm_batch_c8",
+      "before_ms": 9.733166,
+      "after_ms": 35.792,
+      "after_over_before": 3.6773234937121178,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "measurement": "qc_precompute_cold",
+      "before_ms": 5114.392,
+      "after_ms": 2398.698125,
+      "after_over_before": 0.4690094394406999,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "measurement": "qc_precompute_second_cold",
+      "before_ms": 3333.152083,
+      "after_ms": 1622.253375,
+      "after_over_before": 0.4867024769958569,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "measurement": "qc_report_warm_kernel_cache",
+      "before_ms": 4.945208,
+      "after_ms": 4.447458,
+      "after_over_before": 0.8993470042109453,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "measurement": "qc_report_for_precomputed",
+      "before_ms": 0.072,
+      "after_ms": 0.069125,
+      "after_over_before": 0.9600694444444446,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "measurement": "qc_sweep_sizes_1_2_3",
+      "before_ms": 2.312416,
+      "after_ms": 2.40575,
+      "after_over_before": 1.0403621147751962,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "measurement": "grade_map",
+      "before_ms": 0.122916,
+      "after_ms": 0.116459,
+      "after_over_before": 0.9474681896579777,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k-qc.json",
+      "after_file": "after-20k-qc.json",
+      "measurement": "report_json",
+      "before_ms": 0.056542,
+      "after_ms": 0.05675,
+      "after_over_before": 1.0036786813342293,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k30-qc.json",
+      "after_file": "after-20k30-qc.json",
+      "measurement": "qc_precompute_cold",
+      "before_ms": 19072.091625,
+      "after_ms": 14508.3235,
+      "after_over_before": 0.7607096161903008,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-20k30-qc.json",
+      "after_file": "after-20k30-qc.json",
+      "measurement": "qc_report_warm_kernel_cache",
+      "before_ms": 14.588166,
+      "after_ms": 11.923375,
+      "after_over_before": 0.8173320073270348,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k30-qc.json",
+      "after_file": "after-20k30-qc.json",
+      "measurement": "qc_report_for_precomputed",
+      "before_ms": 0.448167,
+      "after_ms": 0.32025,
+      "after_over_before": 0.7145773785218457,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k30-qc.json",
+      "after_file": "after-20k30-qc.json",
+      "measurement": "qc_sweep_sizes_1_2_3",
+      "before_ms": 168.211791,
+      "after_ms": 158.337,
+      "after_over_before": 0.9412954886141126,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k30-qc.json",
+      "after_file": "after-20k30-qc.json",
+      "measurement": "grade_map",
+      "before_ms": 0.539959,
+      "after_ms": 0.418458,
+      "after_over_before": 0.7749810633770342,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-20k30-qc.json",
+      "after_file": "after-20k30-qc.json",
+      "measurement": "report_json",
+      "before_ms": 0.262916,
+      "after_ms": 0.197458,
+      "after_over_before": 0.7510307474630681,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "arrow_read_normalize_select",
+      "before_ms": 4.566583,
+      "after_ms": 3.834125,
+      "after_over_before": 0.8396047985988648,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "get_data_cold_cache",
+      "before_ms": 43.600458,
+      "after_ms": 19.44925,
+      "after_over_before": 0.44607902972028407,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "get_data_memory_hit",
+      "before_ms": 21.613292,
+      "after_ms": 0.278167,
+      "after_over_before": 0.012870181923235016,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "get_data_disk_cache_hit",
+      "before_ms": 19.219125,
+      "after_ms": 0.63875,
+      "after_over_before": 0.03323512386750178,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "get_data_tail_100_cold",
+      "before_ms": 19.024333,
+      "after_ms": 8.764042,
+      "after_over_before": 0.46067538872453506,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "raw_for_first",
+      "before_ms": 20.474417,
+      "after_ms": 4.405625,
+      "after_over_before": 0.2151770670686252,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "raw_for_memory_hit",
+      "before_ms": 0.01425,
+      "after_ms": 0.123917,
+      "after_over_before": 8.695929824561404,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "raw_for_unchanged_rewrite",
+      "before_ms": 49.810333,
+      "after_ms": 16.594667,
+      "after_over_before": 0.33315711822283944,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "raw_for_changed_closed_bar",
+      "before_ms": 64.164417,
+      "after_ms": 10.8585,
+      "after_over_before": 0.1692293097590211,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-data.json",
+      "after_file": "after-83k-data.json",
+      "measurement": "raw_for_concurrent_first_c4",
+      "before_ms": 50.917375,
+      "after_ms": 1.118042,
+      "after_over_before": 0.021957966214872626,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-discover-search.json",
+      "after_file": "after-83k-discover-search.json",
+      "measurement": "discover_full",
+      "before_ms": 13393.174333,
+      "after_ms": 9685.160875,
+      "after_over_before": 0.7231415521215406,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "measurement": "build_features",
+      "before_ms": 548.530958,
+      "after_ms": 1167.460875,
+      "after_over_before": 2.1283409039604284,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "measurement": "target_next_return",
+      "before_ms": 0.383125,
+      "after_ms": 0.487667,
+      "after_over_before": 1.2728665579119087,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "measurement": "join_target",
+      "before_ms": 8.397708,
+      "after_ms": 18.055,
+      "after_over_before": 2.1499914024159925,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "measurement": "serialize_json",
+      "before_ms": 307.215583,
+      "after_ms": 173.331458,
+      "after_over_before": 0.5642013868808211,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "measurement": "ensure_cold",
+      "before_ms": 894.853459,
+      "after_ms": 1765.54525,
+      "after_over_before": 1.972999302000798,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "measurement": "ensure_memory_hit",
+      "before_ms": 0.02375,
+      "after_ms": 0.031417,
+      "after_over_before": 1.322821052631579,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-features.json",
+      "after_file": "after-83k-features.json",
+      "measurement": "ensure_plus_one_feature",
+      "before_ms": 895.369708,
+      "after_ms": 387.133958,
+      "after_over_before": 0.4323733029395719,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "measurement": "qc_precompute_cold",
+      "before_ms": 4270.717292,
+      "after_ms": 2095.494333,
+      "after_over_before": 0.4906656633360689,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "measurement": "qc_precompute_second_cold",
+      "before_ms": 4118.420167,
+      "after_ms": 1921.398083,
+      "after_over_before": 0.4665376540246531,
+      "before_samples": 1,
+      "after_samples": 1
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "measurement": "qc_report_warm_kernel_cache",
+      "before_ms": 11.701417,
+      "after_ms": 13.000208,
+      "after_over_before": 1.1109943351305231,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "measurement": "qc_report_for_precomputed",
+      "before_ms": 0.070375,
+      "after_ms": 0.071792,
+      "after_over_before": 1.0201349911190054,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "measurement": "qc_sweep_sizes_1_2_3",
+      "before_ms": 2.287166,
+      "after_ms": 2.800333,
+      "after_over_before": 1.2243680607354255,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "measurement": "grade_map",
+      "before_ms": 0.1185,
+      "after_ms": 0.121625,
+      "after_over_before": 1.0263713080168777,
+      "before_samples": 3,
+      "after_samples": 3
+    },
+    {
+      "before_file": "before-83k-qc.json",
+      "after_file": "after-83k-qc.json",
+      "measurement": "report_json",
+      "before_ms": 0.057709,
+      "after_ms": 0.065417,
+      "after_over_before": 1.1335666880382609,
+      "before_samples": 3,
+      "after_samples": 3
+    }
+  ]
+}

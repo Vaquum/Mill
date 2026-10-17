@@ -1,19 +1,20 @@
 # Mill engine performance
 
-**Cache misses dominate.** Built-in views compute quickly; JSON, repeated history work, discovery allocations and statistical QC prevent consistently low latency.
+**Reuse and bounded research reduce cold work.** [Original audit](audit.json), [current engine map](engine.mmd), [comparison evidence](optimization.json), [raw measurements](results/optimization).
 
-| Path | 20,784 bars | 83,136 bars |
+| Measured path | Before | After |
 | --- | ---: | ---: |
-| Built-in view compute / JSON | 0.10–13.71 / 22.28–67.67 ms | Not measured |
-| Eight indicators compute / JSON | 100.05 / 57.94 ms | 663.13 / 253.63 ms |
-| Exact result cache hit, in process | 19 µs | 18 µs |
-| Catalog build, 259 columns | 4.48 s | 18.60 s |
-| Discovery, prebuilt catalog | 2.09 s | 12.41 s |
-| Discovery peak process RSS | 1.12 GiB | 3.29 GiB |
-| Cold QC, 1 / 8 / 30 indicators | 1.32 / 3.15 / 19.14 s | Not measured |
+| Add one feature, 83,136 bars | 895 ms | 387 ms |
+| JSON encode, 83,136 bars | 307 ms | 173 ms |
+| GetData disk hit, 83,136 bars | 19.22 ms | 0.64 ms |
+| Closed-history refresh, unchanged source values | 49.81 ms | 16.59 ms |
+| Cold QC, 8 / 30 factories, 20,784 bars | 5.11 / 19.07 s | 2.40 / 14.51 s |
+| Discovery, prebuilt 259-column pool, 83,136 bars | 13.39 s | 9.69 s |
+| Discovery process peak RSS, same input pool | 2.88 GiB | 1.03 GiB |
+| Data p95 during QC, latest short 20k run | 19.85 ms | 22.71 ms |
 
-[Engine map](engine.mmd), [16 findings and optimization sequence](audit.json), [raw samples](results/2026-10-17), [import attribution](import_costs.json). Measurements are local snapshots on M1 Max, Python 3.13, pinned Polars/Limen; production uses Linux/Python 3.12. Medians describe repeated timings; cold measurements are single samples. RSS includes imports, full input decoding, fixtures and transient work; it is neither incremental allocation nor steady-state memory. No production code changed. Prioritize lazy JSON, factory-level reuse, bounded discovery memory/workers, and a live Arrow path that avoids Parquet round-trips. Preserve complete history, closed-bar freshness, feature values, statistical decisions and existing API responses. Proposed acceptance gates are in the audit; speedups are not yet demonstrated.
+Feature, JSON, QC, pool and discovery digests match. Mixed HTTP QC also matches. Local M1 Max/Python 3.13 snapshots; Polars/Numba use four threads and BLAS one. Shared-host load varied substantially; these are measured samples, not production latency bounds. Cold operations and 83k search have one sample; repeated timings use medians. RSS covers the complete worker, imports, input, fixtures and transient work. Catalog construction remains dominated by [upstream indicators](https://github.com/Vaquum/Limen/issues/930); exact pairwise QC, ranking/null work and JSON boxing remain costs. No stable mixed-latency improvement is established.
 
-Activate venv `mill`; run `python profiling/engine_sweep.py --case features --parquet /absolute/source.parquet --output /tmp/features.json --k 8 --reps 5`. Cases: startup, data, features, factories, views, qc, discover, http, memory. Add `--bar 15m_time_bars` for 15m input; `--catalog` for full discovery. Each invocation has a 49-second worker alarm and 50-second supervisor limit; fixtures are temporary. `--rows` limits compute after complete source decoding and is rejected for memory measurements. Run cases sequentially. Ordinary requests do not have these profiler deadlines.
+RAM budgets use `MILL_{RAW,SERVED_RAW,PRODUCERS,RESULTS,QC,KERNELS,POOLS}_MIB` (defaults 64/64/256/128/16/32/256). They bound accounted cache data, not total RSS; zero disables a RAM cache. HTTP research uses memory-mapped pools and a 2,048 MiB disk LRU (`MILL_POOL_DISK_MIB`). Catalogs checkpoint between roughly five-second steps and survive worker restarts. Preparation/overload/deadlines return 503 with Retry-After. One research job runs, one queues; `MILL_RESEARCH_THREADS` accepts 1–8 (default four), execution/queue deadline is 45 s; HTTP admits 16 requests, at most two research requests, with a 10 s socket inactivity timeout. Disk eviction can evict catalogs; increase its budget to retain more histories. Complete history and statistical decisions are preserved.
 
-Existing QC tools remain available: `qc_profile.py` attributes stages; `qc_validate.py --dump /tmp/before.json` then `--check /tmp/before.json` checks exact QC outputs across revisions; `qc_memo_demo.py` measures reuse; `qc_sweep_profile.py` measures subset aggregation. The CLI safety boundary and recorded-sample consistency run in pytest; performance timings stay manual.
+Activate venv `mill`. Run `python profiling/engine_sweep.py --case features --parquet /absolute/source.parquet --output /tmp/features.json --k 8 --reps 3`; cases include data, qc, discover, pool, http and memory. Each invocation has a 49 s worker and 50 s supervisor limit. For large discovery, use `--discover-phase pool --pool-artifact /tmp/pool`, then `--discover-phase search` with the same artifact and inputs. `--portable-pool` explicitly compares different engine kernels on one recorded immutable pool. Failed trials remain under `results/optimization/trials`. The original audit and samples remain historical evidence.
