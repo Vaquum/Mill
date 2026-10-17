@@ -53,7 +53,8 @@ class Worker:
             acquired = self._lock.acquire(timeout=max(0, deadline - time.monotonic()))
             if not acquired:
                 raise ResearchTimeout("research queue deadline exceeded")
-            with tempfile.TemporaryDirectory(prefix="mill-research-") as directory:
+            with tempfile.TemporaryDirectory(prefix="mill-research-",
+                                              dir=os.environ.get("MILL_RESEARCH_TMPDIR")) as directory:
                 root = Path(directory)
                 if frame is not None:
                     frame.write_ipc(root / "frame.arrow", compression="uncompressed")

@@ -158,6 +158,7 @@ def worker(args):
     # Set before Mill imports; all cache/store/config mutations stay in this directory.
     scratch = nullcontext(str(args.scratch)) if args.scratch else tempfile.TemporaryDirectory(prefix="mill_engine_sweep_")
     with scratch as directory:
+        os.environ["MILL_RESEARCH_TMPDIR"] = directory
         for key, name in (("MILL_ARROW_DIR", "arrow"), ("MILL_CACHE_DIR", "cache"), ("MILL_CONFIG_DIR", "config")):
             os.environ[key] = str(Path(directory) / name)
         began = time.perf_counter_ns()
@@ -356,7 +357,8 @@ def worker(args):
             from urllib.parse import urlencode
             from urllib.request import Request, urlopen
             serve._APP_USERNAME, serve._APP_PASSWORD = "profile", "local"
-            server = ThreadingHTTPServer(("127.0.0.1", 0), serve._Handler)
+            server_class = getattr(serve, "BoundedHTTPServer", ThreadingHTTPServer)
+            server = server_class(("127.0.0.1", 0), serve._Handler)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             prefix = f"http://127.0.0.1:{server.server_port}"
@@ -381,7 +383,34 @@ def worker(args):
                         results = measure(f"http_warm_batch_c{concurrency}",
                             lambda: list(executor.map(request, [route] * 16)), reps=1)
                     record.doc[f"http_c{concurrency}"] = results
+                if hasattr(serve, "_research_report"):
+                    serve._research_report(raw.select("datetime").head(4), None)
+                    owner, method = serve, "_research_report"
+                else:
+                    owner, method = qc, "report"
+                entered = threading.Event()
+                real = getattr(owner, method)
+                def signaled(*args, **kwargs):
+                    entered.set()
+                    return real(*args, **kwargs)
+                qc_route = route.replace("/data?", "/qc?")
+                samples = []
+                with patch.object(owner, method, signaled), ThreadPoolExecutor(1) as executor:
+                    future = executor.submit(request, qc_route)
+                    if not entered.wait(10):
+                        raise RuntimeError("QC never entered its report stage")
+                    until = time.monotonic() + 25
+                    while (not future.done() or len(samples) < 16) and time.monotonic() < until:
+                        samples.append(request(route))
+                        time.sleep(0.02)
+                    qc_result = future.result(timeout=15)
+                record.doc["http_during_qc"] = {"data": samples, "qc": qc_result,
+                    "p50_ms": float(np.percentile([s["ms"] for s in samples], 50)),
+                    "p95_ms": float(np.percentile([s["ms"] for s in samples], 95)),
+                    "max_ms": max(s["ms"] for s in samples)}
             finally:
+                if hasattr(serve, "_RESEARCH"):
+                    serve._RESEARCH.close()
                 server.shutdown()
                 server.server_close()
                 thread.join(timeout=2)
