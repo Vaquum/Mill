@@ -86,6 +86,8 @@ class Worker:
                     self.close()
                     raise
                 if "error" in result:
+                    if result["error"] == "PoolPending":
+                        raise ResearchBusy(result["detail"])
                     if result["error"] in ("ValueError", "TypeError", "KeyError"):
                         raise ValueError(result["detail"])
                     raise RuntimeError(result["detail"])
@@ -105,6 +107,7 @@ def _execute(request):
         from . import qc
         return qc.report(pl.read_ipc(request["frame"], memory_map=True), request["target"])
     from . import serve
+    serve._PERSIST_POOLS = True
     global _WORKER_ENV
     environment = request["environment"]
     if environment != _WORKER_ENV:
@@ -120,8 +123,13 @@ def _execute(request):
         _WORKER_ENV = environment
     serve._VIEW_SPECS = request["views"]
     if request["kind"] == "warm":
-        serve._pool_for(request["bar"], {"kind": "catalog"})
-        return None
+        from .pool_store import PoolPending, pool_for
+        raw, _ = serve._raw_for(request["bar"])
+        try:
+            pool_for(raw, request["bar"], None, serve._RAW_DIGESTS[request["bar"]], allow_stale=False)
+            return {"complete": True}
+        except PoolPending:
+            return {"complete": False}
     if request["kind"] == "discover":
         return serve._discover(request["body"])
     raise ValueError("unknown research operation")
@@ -136,10 +144,12 @@ def main():
             signal.alarm(50)
             try:
                 result = {"value": _execute(json.loads(path.read_text()))}
+                payload = json.dumps(result, allow_nan=False)
             except Exception as exc:
                 result = {"error": type(exc).__name__, "detail": str(exc)}
+                payload = json.dumps(result)
             signal.alarm(0)
-            path.with_name("result.json").write_text(json.dumps(result, allow_nan=False))
+            path.with_name("result.json").write_text(payload)
             output.write("done\n")
             output.flush()
 

@@ -4,9 +4,15 @@ import threading
 
 class BoundedHTTPServer(ThreadingHTTPServer):
     """Bound live request threads; overload gets an explicit retryable response."""
-    def __init__(self, address, handler, max_requests=16):
+    def __init__(self, address, handler, max_requests=16, read_timeout=10):
         super().__init__(address, handler)
         self._slots = threading.BoundedSemaphore(max_requests)
+        self._read_timeout = read_timeout
+
+    def get_request(self):
+        request, address = super().get_request()
+        request.settimeout(self._read_timeout)
+        return request, address
 
     def process_request(self, request, client_address):
         if not self._slots.acquire(blocking=False):

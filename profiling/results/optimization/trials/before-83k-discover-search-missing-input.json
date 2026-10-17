@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "case": "discover",
+  "status": "error",
+  "worker_pid": 4594,
+  "peak_rss_scope": "whole worker, including imports, complete source decoding and fixture setup",
+  "measurements": [],
+  "peak_rss_bytes": 24936448,
+  "error": "FileNotFoundError: [Errno 2] No such file or directory: '/tmp/mill-pool-before-83k/metadata.json'"
+}

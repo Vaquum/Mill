@@ -36,6 +36,7 @@ def arguments():
     parser.add_argument("--catalog", action="store_true", help="use all eligible factories for discovery")
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
+    parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -324,8 +325,13 @@ def worker(args):
                         "tree": record.doc["environment"]["source_tree_sha256"], "catalog": args.catalog}
             if args.discover_phase == "search":
                 metadata = json.loads((args.pool_artifact / "metadata.json").read_text())
-                if metadata["identity"] != identity:
+                built = metadata["identity"]
+                match = (built == identity or (args.portable_pool and
+                    {k: v for k, v in built.items() if k != "tree"} ==
+                    {k: v for k, v in identity.items() if k != "tree"}))
+                if not match:
                     raise ValueError("pool artifact does not match this source, parameters and engine")
+                record.doc["pool_builder_source_tree_sha256"] = built["tree"]
                 fields = metadata["fields"]
                 pool = discover.Pool(**{k: tuple(v) for k, v in fields.items()},
                     ms=np.load(args.pool_artifact / "ms.npy", allow_pickle=False, mmap_mode="r"),
@@ -378,7 +384,10 @@ def worker(args):
                 began = time.perf_counter_ns()
                 with urlopen(Request(prefix + route, headers=auth), timeout=15) as response:
                     payload = response.read()
-                return {"ms": (time.perf_counter_ns() - began) / 1e6, "bytes": len(payload)}
+                out = {"ms": (time.perf_counter_ns() - began) / 1e6, "bytes": len(payload)}
+                if route.startswith("/qc?"):
+                    out["report_digest"] = content_digest(json.loads(payload))
+                return out
             try:
                 measure("http_data_first", lambda: request(route), reps=1)
                 measure("http_data_warm", lambda: request(route))

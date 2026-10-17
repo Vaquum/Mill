@@ -48,3 +48,22 @@ def test_worker_admits_only_one_active_and_one_waiting_request():
         worker._slots.release()
         worker._slots.release()
         worker.close()
+
+
+def test_serialization_failure_is_reported_without_killing_worker():
+    worker = Worker(timeout=5)
+    script = """
+from mill import research
+research._execute = lambda req: {'bad': float('nan')} if req['kind'] == 'bad' else {'ok': True}
+research.main()
+"""
+    worker._process = subprocess.Popen([sys.executable, "-c", script], stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE)
+    try:
+        pid = worker._process.pid
+        with pytest.raises(ValueError, match="Out of range float"):
+            worker.run("bad")
+        assert worker.run("good") == {"ok": True}
+        assert worker._process.pid == pid and worker._process.poll() is None
+    finally:
+        worker.close()

@@ -29,7 +29,7 @@ from .research import Worker, ResearchBusy, ResearchTimeout
 from .http_server import BoundedHTTPServer
 from .bars import DOLLAR_BAR_USD, TIME_BAR_SECONDS, arrow_series
 from .cache_store import write_json_atomic
-from .get_data import source_identity
+from .get_data import bar_identity
 from .memo import ByteLRU, Flights
 from .settings import (
     APP_NAME,
@@ -108,12 +108,12 @@ _QC_LOCKS = weakref.WeakValueDictionary()
 _RAW_CACHE = ByteLRU(memory_budget("served_raw", 64), lambda item: item[0].estimated_size())
 _RAW_IDENTITIES = {}
 _RAW_VERSIONS = {}
+_RAW_DIGESTS = {}
 _RAW_FLIGHTS = Flights()
 _BAR_LOCKS = weakref.WeakValueDictionary()
 _REGISTRY_LOCK = threading.Lock()
-# Find features pools: a catalog pool holds every default-parameter column of a bar series
-# (about 120 MB on 1h, 490 MB on 15m). Each time bar keeps its one catalog pool, and the most
-# recent few view pools are kept beside them; each builds once.
+# Private in-process pool helpers use a byte LRU. HTTP research persists pools
+# as memory maps and checkpoints factories between bounded worker jobs.
 _POOLS = ByteLRU(memory_budget("pools", 256),
                  lambda pool: pool.values.nbytes + pool.ms.nbytes)
 _POOL_LOCKS = weakref.WeakValueDictionary()
@@ -138,6 +138,7 @@ _APP_PASSWORD = ""
 _API_SECRET = ""
 _RESEARCH = Worker()
 _RESEARCH_ADMISSION = threading.BoundedSemaphore(2)
+_PERSIST_POOLS = False
 
 
 def _research_report(frame, target):
@@ -157,11 +158,18 @@ def _research_discover(body):
 
 
 def _warm_research():
-    for bar in sorted(TIME_BAR_SECONDS, key=TIME_BAR_SECONDS.get, reverse=True):
-        try:
-            _RESEARCH.run("warm", bar=bar, **_research_context())
-        except Exception as exc:
-            print(f"catalog warmup {bar}: {exc}", flush=True)
+    remaining = list(sorted(TIME_BAR_SECONDS, key=TIME_BAR_SECONDS.get, reverse=True))
+    while remaining:
+        for bar in tuple(remaining):
+            try:
+                if _RESEARCH.run("warm", bar=bar, **_research_context())["complete"]:
+                    remaining.remove(bar)
+            except ResearchBusy:
+                pass
+            except Exception as exc:
+                print(f"catalog warmup {bar}: {exc}", flush=True)
+                remaining.remove(bar)
+            time.sleep(0.05)
 
 
 def _require_auth_env() -> None:
@@ -284,23 +292,32 @@ def _raw_for(bar: str) -> tuple[pl.DataFrame, int]:
     The store rewrites the file while a bar is open, so the version moves only when the closed bars change.
     """
     with _RAW_FLIGHTS.hold(bar):
-        path = arrow_latest_path(arrow_series(bar))
-        identity = (str(path.resolve()), source_identity(path))
+        identity = bar_identity(bar)
         written = _source_version(bar)
         hit = _RAW_CACHE.get(bar)
         if hit is not None and _RAW_IDENTITIES.get(bar) == identity:
             return hit[0], hit[1]
         raw = klines(bar)
-        if hit is not None and raw.equals(hit[0]):
-            version = hit[1]
+        previous_identity = _RAW_IDENTITIES.get(bar)
+        digest = (_RAW_DIGESTS[bar] if previous_identity == identity
+                  else _frame_digest(raw))
+        if previous_identity is not None and previous_identity[0] == identity[0] and _RAW_DIGESTS.get(bar) == digest:
+            version = _RAW_VERSIONS[bar]
         else:
             previous = _RAW_VERSIONS.get(bar, -1)
             version = max(written, previous + 1)
         _RAW_CACHE[bar] = (raw, version, written)
         _RAW_IDENTITIES[bar] = identity
         _RAW_VERSIONS[bar] = version
+        _RAW_DIGESTS[bar] = digest
         _retire(bar, version)
         return raw, version
+
+
+def _frame_digest(raw):
+    digest = hashlib.sha256(str(raw.schema).encode())
+    digest.update(raw.hash_rows(seed=0).to_numpy().tobytes())
+    return digest.hexdigest()
 
 
 def _producer_key(bar: str, version: int):
@@ -543,6 +560,9 @@ def _pool_for(bar: str, pool: dict[str, Any]) -> tuple[discover.Pool, bool, floa
         key = (bar, version, f"view:{name}:{_spec_hash(spec)}")
     else:
         raise ValueError("pool kind must be 'catalog' or 'view'")
+    if _PERSIST_POOLS:
+        from .pool_store import pool_for
+        return pool_for(raw, bar, spec, _RAW_DIGESTS[bar])
     hit = _POOLS.get(key)
     if hit is not None:
         return hit, True, 0.0
