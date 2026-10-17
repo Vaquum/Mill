@@ -32,7 +32,15 @@ def worker(args):
     observations = []
     def capture(value):
         if isinstance(value, dict) and {"candidates", "context", "target", "pool"} <= value.keys():
-            observations.append(witness(value))
+            original = value
+            if args.pool_cache:
+                assert args.kind == "catalog" and value["pool"]["cached"] is True
+                value = copy.deepcopy(value)
+                value["pool"]["cached"] = False
+            proof = witness(value)
+            if args.pool_cache:
+                proof.update(replayed_digest=content_digest(original), replayed_cached=True, recorded_cached=False)
+            observations.append(proof)
         return content_digest(value)
     engine_sweep.content_digest = capture
     if args.kind == "view":
@@ -43,6 +51,8 @@ def worker(args):
         driver, phases = catalog_service, ("cold",)
         extra = ["--bar", "1h_time_bars"]
     record = args.output.with_name(args.output.name+".run.json")
+    if args.pool_cache:
+        (args.scratch/"cache").symlink_to(args.pool_cache.resolve(), target_is_directory=True)
     sys.argv = [driver.__file__, *extra, "--parquet", str(args.parquet), "--output", str(record),
                 "--worker", "--scratch", str(args.scratch)]
     if args.kind == "view":
@@ -53,6 +63,7 @@ def worker(args):
     args.output.write_text(json.dumps({"run": json.loads(record.read_text()),
         "version_field": "candidates/*/rule/manifest/metadata/limen_version",
         "before_version": "3.30.0", "after_version": "5.29.2",
+        "setup_reuse": "prepared immutable pool; reconstruct the recorded cold cache flag" if args.pool_cache else None,
         "observations": dict(zip(phases, observations))}, indent=2)+"\n")
 
 
@@ -62,6 +73,7 @@ def main():
     parser.add_argument("--kind", choices=("view", "catalog"), required=True)
     parser.add_argument("--parquet", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--pool-cache", type=Path)
     parser.add_argument("--worker", action="store_true")
     parser.add_argument("--scratch", type=Path)
     args = parser.parse_args()
