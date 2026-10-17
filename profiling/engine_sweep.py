@@ -17,7 +17,7 @@ import tempfile
 import time
 
 
-CASES = ("startup", "data", "features", "factories", "views", "qc", "discover", "pool", "http", "memory", "workload")
+CASES = ("startup", "data", "features", "factories", "views", "qc", "discover", "pool", "http", "memory", "workload", "research-discover")
 FACTORIES = ("rsi", "mom", "roc", "rocp", "cci", "cmo", "willr", "atr",
              "natr", "trix", "apo", "ppo", "bop", "mfi", "kama", "tema",
              "dema", "wma", "sma", "ema", "midpoint", "linearreg", "tsf",
@@ -37,9 +37,10 @@ def arguments():
     parser.add_argument("--discover-phase", choices=("combined", "pool", "search"), default="combined")
     parser.add_argument("--pool-artifact", type=Path, help="private directory for a split discovery measurement")
     parser.add_argument("--portable-pool", action="store_true", help="compare kernels on one pool built by another recorded engine revision")
-    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null"), default="none")
+    parser.add_argument("--ablate", choices=("none", "native", "pairs", "edges", "null", "bootstrap", "reuse"), default="none")
     parser.add_argument("--reference-source", type=Path, help="frozen reference checkout for the null ablation")
     parser.add_argument("--related-searches", action="store_true", help="also measure repeated, display-only and changed-window searches")
+    parser.add_argument("--warm-kernels", action="store_true", help="measure compiled-kernel setup separately before cold QC")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scratch", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -53,8 +54,10 @@ def arguments():
         parser.error("memory cases require full input; --rows limits compute, not source decoding")
     if args.discover_phase != "combined" and (args.case != "discover" or args.pool_artifact is None):
         parser.error("split discovery requires --case discover and --pool-artifact")
-    if args.ablate == "null" and not args.reference_source:
-        parser.error("null ablation requires --reference-source")
+    if args.ablate in ("null", "bootstrap") and not args.reference_source:
+        parser.error("null/bootstrap ablation requires --reference-source")
+    if args.ablate == "bootstrap" and not args.warm_kernels:
+        parser.error("bootstrap ablation requires --warm-kernels to compare execution separately from compilation")
     return args
 
 
@@ -210,14 +213,23 @@ def worker(args):
                 return {col: qc._edge_metrics(arrays[col], target, qc._joint_block(blocks, col, label),
                                               qc._seed_for(col)) for col in cols}
             qc._edge_map = original_edges
-        elif args.ablate == "null":
+        elif args.ablate in ("null", "bootstrap"):
             import ast
-            source = args.reference_source / "src/mill/discover.py"
+            module, name = (discover, "shift_null") if args.ablate == "null" else (qc, "_bootstrap_spearman_estimates")
+            source = args.reference_source / ("src/mill/discover.py" if args.ablate == "null" else "src/mill/qc.py")
             tree = ast.parse(source.read_text())
-            node = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "shift_null")
-            namespace = {"np": np, "_FFT_CHUNK": discover._FFT_CHUNK}
+            node = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name)
+            if args.ablate == "bootstrap":
+                # Compile the archived exact kernel without changing either
+                # checkout's disk JIT cache; setup is measured explicitly.
+                for decorator in node.decorator_list:
+                    for keyword in getattr(decorator, "keywords", []):
+                        if keyword.arg == "cache":
+                            keyword.value = ast.Constant(False)
+                ast.fix_missing_locations(node)
+            namespace = dict(module.__dict__)
             exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), "exec"), namespace)
-            discover.shift_null = namespace["shift_null"]
+            setattr(module, name, namespace[name])
             record.doc["ablation_reference_sha256"] = source_digest(source)
         record.doc["import_ms"] = (time.perf_counter_ns() - began) / 1e6
         record.doc["environment"] = environment()
@@ -356,6 +368,8 @@ def worker(args):
                         sections[name] = sections.get(name, 0) + (time.perf_counter_ns() - began) / 1e6
                 return run
             from contextlib import ExitStack
+            if args.warm_kernels:
+                measure("compiled_kernel_setup", qc._warmup_bootstrap, reps=1)
             qc.clear_kernel_cache()
             record.doc["bootstrap_signatures_before"] = [str(s) for s in qc._bootstrap_spearman_estimates.signatures]
             with ExitStack() as stack:
@@ -432,6 +446,8 @@ def worker(args):
             windows = [(int(ms[i]), int(ms[min(i + 2, len(ms)-1)]))
                        for i in range(first, len(ms) - 2, max(3, len(ms) // 40))]
             def search(**overrides):
+                if args.ablate == "reuse" and hasattr(discover, "discovery_reuse"):
+                    discover.discovery_reuse.clear()
                 options = dict(step_ms=step, windows=windows, mode="inside", lead_bars=1,
                     context=(int(ms[0]), int(ms[-1]) + step), display=(int(ms[0]), int(ms[-1]) + step),
                     top=3, max_points=256, bar_source={"method": "limen.data.HistoricalData.get_arrow_file",
@@ -457,6 +473,42 @@ def worker(args):
                 "timing_last_ms": answer["timing_ms"], "events": answer["target"]["events"],
                 "intervals": answer["intervals"], "candidates": len(answer["candidates"])}
             record.doc["parity_discovery"] = content_digest({k: v for k, v in answer.items() if k != "timing_ms"})
+        elif args.case == "research-discover":
+            # The same process/IPC/JSON boundary used by /discover. No HTTP
+            # socket/authentication time is included in these measurements.
+            from mill.research import ResearchBusy
+            serve._VIEW_SPECS["profile"] = spec
+            ms, step = raw["datetime"].dt.epoch("ms").to_numpy(), time_bar_seconds(bar)*1000
+            windows = [{"start": int(ms[i]), "end": int(ms[min(i+2, len(ms)-1)])}
+                       for i in range(min(100, len(ms)//10), len(ms)-2, max(3, len(ms)//40))]
+            body = {"bar": bar, "pool": {"kind": "view", "name": "profile"}, "windows": windows,
+                    "context": {"start": int(ms[0]), "end": int(ms[-1])+step}, "top": 3, "max_points": 256}
+            retries = [0]
+            def request(overrides=None):
+                deadline = time.monotonic()+45
+                while True:
+                    try:
+                        return serve._research_discover(body | (overrides or {}))
+                    except ResearchBusy:
+                        retries[0] += 1
+                        if time.monotonic() >= deadline:
+                            raise
+            try:
+                results = {"cold": measure("research_discover_cold", request, reps=1),
+                    "repeat": measure("research_discover_repeat", request),
+                    "display": measure("research_discover_display", lambda: request({"top": 1, "max_points": 128,
+                        "display": {"start": int(ms[len(ms)//2]), "end": int(ms[-1])+step}})),
+                    "windows": measure("research_discover_windows", lambda: request({"windows": [
+                        {"start": w["start"]+step, "end": w["end"]+step} for w in windows]}))}
+                def semantic(result):
+                    return {k: (dict(v, built_ms=0.) if k == "pool" else v)
+                            for k, v in result.items() if k != "timing_ms"}
+                record.doc["parity_research"] = {name: content_digest(semantic(result)) for name, result in results.items()}
+                record.doc["preparation_retries"] = retries[0]
+            finally:
+                serve._RESEARCH.close()
+                peak = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+                record.doc["research_child_peak_rss_bytes"] = int(peak if sys.platform == "darwin" else peak*1024)
         elif args.case == "http":
             import base64
             from concurrent.futures import ThreadPoolExecutor
