@@ -22,14 +22,18 @@ def verify(root=None):
     document = json.loads((root / "profiling/factorization.json").read_text())
     assert document["reference_commit"] == REFERENCE
     assert document["optimized_source_sha256"] == tree(root), "benchmarks must cover the published engine"
-    harness = hashlib.sha256((root / "profiling/engine_sweep.py").read_bytes()).hexdigest()
+    drivers = {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+               for name in ("profiling/engine_sweep.py", "profiling/catalog_service.py")}
     repetitions = Counter()
 
     def read(path, side, ablation="none"):
         sample = json.loads((root / path).read_text())
         assert sample["status"] == "complete", path
         assert sample["ablation"] == ablation, path
-        assert sample["profiler_sha256"] == harness, path
+        driver = sample.get("profiler_path", "profiling/engine_sweep.py")
+        assert driver in drivers and sample["profiler_sha256"] == drivers[driver], path
+        if driver == "profiling/catalog_service.py":
+            assert sample["common_profiler_sha256"] == drivers["profiling/engine_sweep.py"], path
         fingerprint = document["reference_source_sha256"] if side == "before" else document["optimized_source_sha256"]
         assert sample["environment"]["source_tree_sha256"] == fingerprint, path
         assert sample["input"]["rows"] == sample["input"]["source_rows"], "full source history is required"
@@ -39,6 +43,7 @@ def verify(root=None):
         return sample
 
     def matched(left, right, parity):
+        assert left["profiler_sha256"] == right["profiler_sha256"]
         assert left["source"] == right["source"]
         assert left["input"] == right["input"]
         for name in ("versions", "limen_origin", "thread_environment", "polars_threads", "numba_threads", "numba_layer"):
