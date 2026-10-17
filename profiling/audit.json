@@ -217,9 +217,10 @@
       ],
       "evidence": [
         "import_costs.json: mill.serve cumulative 4.150 s; limen 1.979 s; mill.qc 1.950 s (overlapping import tree)",
-        "raw cases: import wall times 3.4–8.8 s; host/runtime variability is visible"
+        "raw cases: import wall times 3.4–8.8 s; host/runtime variability is visible",
+        "qc-20k-8-signatures.json: startup warms C-layout index arrays, first real QC adds an A-layout specialization; first cold run 3283.968 ms, second uncached run 2306.834 ms"
       ],
-      "consequence": "Importing the HTTP layer eagerly imports research/ML dependencies and compiles the bootstrap kernel. njit has no disk-cache option here. The tiny warmup can differ from real index-array layouts; an additional first-QC compile is a hypothesis until signature measurements confirm it.",
+      "consequence": "Importing the HTTP layer eagerly imports research/ML dependencies and compiles the bootstrap kernel. njit has no disk-cache option here. The warmup compiles a C-layout index matrix, while a real bootstrap also compiles the strided A-layout specialization. The first real QC therefore pays additional compilation; the observed first/second cold difference includes runtime variability.",
       "proposed_action": "Lazy-load research dependencies and warm required compiled signatures in a controlled worker. Evaluate Numba disk caching with deployment-safe cache paths and version keys. Keep readiness separate from liveness and optional catalog warming.",
       "acceptance": "Measure fresh-process import and first-real-request latency separately on production Python/Linux. Verify the first real bootstrap does not unexpectedly compile another signature and that cold-cache/readiness behavior is explicit."
     },
