@@ -17,7 +17,7 @@ own bars, as the store holds them through the latest bar.
 from __future__ import annotations
 
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from importlib.metadata import version
@@ -57,17 +57,17 @@ class Pool:
     skipped: tuple[str, ...]
 
 
-def catalog_pool(raw: pl.DataFrame) -> Pool:
+def catalog_pool(raw: pl.DataFrame, pause: Callable[[], None] | None = None) -> Pool:
     """Every registry producer whose parameters all have defaults, at those defaults."""
     entries = []
     for factory, entry in feature_registry.REGISTRY.items():
         params = {p["name"]: p["default"] for p in entry["params"]}
         if all(value is not None for value in params.values()):
             entries.append((factory, entry["source"], params, entry["producer"], {}))
-    return _build(raw, entries)
+    return _build(raw, entries, pause)
 
 
-def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]]) -> Pool:
+def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]], pause: Callable[[], None] | None = None) -> Pool:
     """The columns of a Mill view's spec, each with the parameters the view gives it."""
     entries = []
     for item in spec:
@@ -75,16 +75,19 @@ def spec_pool(raw: pl.DataFrame, spec: Sequence[dict[str, Any]]) -> Pool:
         entry = feature_registry.REGISTRY[factory]
         params = {p["name"]: p["default"] for p in entry["params"]} | given
         entries.append((factory, entry["source"], params, entry["producer"], given))
-    return _build(raw, entries)
+    return _build(raw, entries, pause)
 
 
-def _build(raw: pl.DataFrame, entries: list) -> Pool:
+def _build(raw: pl.DataFrame, entries: list, pause: Callable[[], None] | None = None) -> Pool:
+    """Each entry's columns; pause, when given, runs before each producer, so a caller can hold the build there."""
     names: list[str] = []
     natives: list[str] = []
     meta: list[tuple[str, str, dict[str, Any]]] = []
     arrays: list[np.ndarray] = []
     skipped: list[str] = []
     for factory, source, params, producer, given in entries:
+        if pause is not None:
+            pause()
         try:
             part = producer(raw, **given)
         except Exception:

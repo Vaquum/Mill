@@ -111,7 +111,7 @@ def test_a_rewrite_of_the_open_bar_alone_keeps_what_was_computed(
     assert serve._ensure("1h_time_bars", "none", [])[1] is frame
 
 
-def _pool(raw) -> discover.Pool:
+def _pool(raw, pause=None) -> discover.Pool:
     """A pool without columns over the bars, for the server's bookkeeping alone."""
     return discover.Pool(names=(), natives=(), factories=(), sources=(), params=(),
                          ms=raw["datetime"].dt.epoch("ms").to_numpy(), values=np.empty((raw.height, 0)), skipped=())
@@ -122,7 +122,7 @@ def test_the_last_pool_answers_while_the_next_one_builds(
 ) -> None:
     built, release = [], threading.Event()
 
-    def catalog_pool(raw):
+    def catalog_pool(raw, pause=None):
         if built:
             assert release.wait(5), "the test never released the second build"
         built.append(raw.height)
@@ -156,7 +156,7 @@ def test_warming_builds_each_time_bars_pool_fewest_bars_first(
 ) -> None:
     built = []
 
-    def catalog_pool(raw):
+    def catalog_pool(raw, pause=None):
         built.append(raw.height)
         return _pool(raw)
 
@@ -173,7 +173,7 @@ def test_view_pools_never_evict_a_time_bars_catalog_pool(
     arrow_store: ArrowStore, fresh_caches: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(discover, "catalog_pool", _pool)
-    monkeypatch.setattr(discover, "spec_pool", lambda raw, spec: _pool(raw))
+    monkeypatch.setattr(discover, "spec_pool", lambda raw, spec, pause=None: _pool(raw))
     monkeypatch.setattr(serve, "_VIEW_SPECS", {f"v{i}": [{"factory": "close", "params": {}}] for i in range(5)})
     arrow_store.write("time_1h", _TS)
     serve._pool_for("1h_time_bars", {"kind": "catalog"})
@@ -181,6 +181,71 @@ def test_view_pools_never_evict_a_time_bars_catalog_pool(
         serve._pool_for("1h_time_bars", {"kind": "view", "name": f"v{i}"})
     # The catalog pool stays; the three most recent views are kept beside it.
     assert [key[2].rsplit(":", 1)[0] for key in serve._POOLS] == ["catalog", "view:v2", "view:v3", "view:v4"]
+
+
+_SPEC = [{"factory": "close", "params": {}}, {"factory": "volume", "params": {}}]
+
+
+def _refreshing(key: tuple, raw, spec: list = _SPEC) -> tuple[threading.Thread, threading.Event]:
+    """A refresh of key in its own thread, its lock held for it as _pool_for holds it."""
+    lock, done = threading.Lock(), threading.Event()
+    lock.acquire()
+    worker = threading.Thread(target=lambda: (serve._refresh_pool(key, lock, raw, spec), done.set()))
+    worker.start()
+    return worker, done
+
+
+def test_a_refresh_waits_between_factories_while_a_search_runs(arrow_store: ArrowStore, fresh_caches: None) -> None:
+    arrow_store.write("time_1h", _TS)
+    raw, version = serve._raw_for("1h_time_bars")
+    key = ("1h_time_bars", version, "view:ochlv:x")
+    with serve._search():
+        worker, done = _refreshing(key, raw)
+        assert not done.wait(0.3), "a refresh must wait while a search runs"
+    worker.join(5)
+    assert done.is_set() and serve._POOLS[key].names == ("close", "volume")
+
+
+def test_a_refresh_waits_only_for_the_searches_running_when_it_paused(
+    arrow_store: ArrowStore, fresh_caches: None
+) -> None:
+    arrow_store.write("time_1h", _TS)
+    raw, version = serve._raw_for("1h_time_bars")
+    first = serve._search()
+    first.__enter__()
+    # One factory, so one pause: the refresh waits there for the first search alone.
+    worker, done = _refreshing(("1h_time_bars", version, "view:close:x"), raw, _SPEC[:1])
+    assert not done.wait(0.2)
+    # A later search starts while the refresh waits; the first one ends.
+    with serve._search():
+        first.__exit__(None, None, None)
+        assert done.wait(5), "a search that began later must not hold the refresh"
+    worker.join(5)
+
+
+def test_a_first_build_does_not_wait_for_searches(
+    arrow_store: ArrowStore, fresh_caches: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(serve, "_VIEW_SPECS", {"ochlv": _SPEC})
+    arrow_store.write("time_1h", _TS)
+    done = threading.Event()
+    with serve._search():
+        worker = threading.Thread(target=lambda: (serve._pool_for("1h_time_bars", {"kind": "view", "name": "ochlv"}), done.set()))
+        worker.start()
+        assert done.wait(5), "a request waiting for a pool's first build must not wait for other searches"
+    worker.join(5)
+
+
+def test_a_search_is_counted_while_it_runs(
+    arrow_store: ArrowStore, fresh_caches: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen = []
+    monkeypatch.setattr(discover, "discover", lambda pool, **kw: seen.append(len(serve._SEARCHING)) or {})
+    monkeypatch.setattr(serve, "_VIEW_SPECS", {"c": [{"factory": "close", "params": {}}]})
+    arrow_store.write("time_1h", _TS)
+    serve._discover({"pool": {"kind": "view", "name": "c"},
+                     "windows": [{"start": "2026-10-15T02:00:00Z", "end": "2026-10-15T04:00:00Z"}]})
+    assert seen == [1] and serve._SEARCHING == set()
 
 
 def test_retiring_waits_for_the_registry_lock(fresh_caches: None) -> None:
