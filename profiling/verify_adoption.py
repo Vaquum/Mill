@@ -48,6 +48,11 @@ def verify(root, fingerprint):
         assert run["status"] == "complete" and run["environment"]["source_tree_sha256"] == fingerprint
         driver = run.get("profiler_path", "profiling/engine_sweep.py")
         assert run["profiler_sha256"] == drivers[driver]
+        if proof["setup_reuse"]:
+            assert proof["setup_reuse"] == "prepared immutable pool; reconstruct the recorded cold cache flag"
+            observed = proof["observations"]["cold"]
+            assert observed["replayed_cached"] is True and observed["recorded_cached"] is False
+            assert run["pool"]["cached"] is True and run["parity_research"] == observed["replayed_digest"]
     counts = Counter()
     groups = {}
     required_parity = {"workload-83k": ["parity_workload"],
@@ -84,6 +89,8 @@ def verify(root, fingerprint):
             if pair["group"] in witnesses:
                 proof = witnesses[pair["group"]]
                 assert proof["run"]["source"] == after["source"] and proof["run"]["input"] == after["input"]
+                if proof["setup_reuse"]:
+                    assert before["pool"]["cached"] is False and after["pool"]["cached"] is False
                 for side, sample in (("before", before), ("after", after)):
                     expected = {phase: value[side] for phase,value in proof["observations"].items()}
                     if pair["group"] == "catalog-service-20k":
