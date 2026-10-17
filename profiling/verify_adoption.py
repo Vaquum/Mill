@@ -38,6 +38,16 @@ def verify(root, fingerprint):
         assert left == functional["current"]["cases"][name]
     drivers = {path: sha(root/path) for path in
         ("profiling/engine_sweep.py", "profiling/catalog_service.py")}
+    assert document["version_witness_driver_sha256"] == sha(root/"profiling/check_adoption_outputs.py")
+    witnesses = {name: json.loads((root/path).read_text()) for name,path in document["version_witnesses"].items()}
+    assert set(witnesses) == {"research-discover-83k", "catalog-service-20k"}
+    for proof in witnesses.values():
+        assert proof["before_version"] == "3.30.0" and proof["after_version"] == "5.29.2"
+        assert proof["version_field"] == "candidates/*/rule/manifest/metadata/limen_version"
+        run = proof["run"]
+        assert run["status"] == "complete" and run["environment"]["source_tree_sha256"] == fingerprint
+        driver = run.get("profiler_path", "profiling/engine_sweep.py")
+        assert run["profiler_sha256"] == drivers[driver]
     counts = Counter()
     groups = {}
     required_parity = {"workload-83k": ["parity_workload"],
@@ -70,7 +80,17 @@ def verify(root, fingerprint):
         assert before["case"] == name
         assert before["input"]["rows"] == (20784 if size == "20k" else 83136)
         for name in pair["parity"]:
-            assert name in before and before[name] == after[name], name
+            assert name in before and name in after
+            if pair["group"] in witnesses:
+                proof = witnesses[pair["group"]]
+                assert proof["run"]["source"] == after["source"] and proof["run"]["input"] == after["input"]
+                for side, sample in (("before", before), ("after", after)):
+                    expected = {phase: value[side] for phase,value in proof["observations"].items()}
+                    if pair["group"] == "catalog-service-20k":
+                        expected = expected["cold"]
+                    assert sample[name] == expected, (name, side)
+            else:
+                assert before[name] == after[name], name
         for name in ("thread_environment", "polars_threads", "numba_threads", "numba_layer"):
             assert before["environment"][name] == after["environment"][name]
         for name, value in before["environment"]["versions"].items():

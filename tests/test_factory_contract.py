@@ -1,5 +1,6 @@
 """The dependency can improve kernels without expanding Mill's public API."""
 import hashlib
+import copy
 import json
 from pathlib import Path
 import tomllib
@@ -52,3 +53,20 @@ def test_loaded_contract_changes_invalidate_persisted_pools(monkeypatch):
         params=({"name": "revision_probe", "type": "int", "default": 1},))
     monkeypatch.setitem(feature_registry.REGISTRY, "close", replacement)
     assert pool_store._revision() != before
+
+
+def test_service_witness_keeps_numerical_bits_and_unrelated_metadata(monkeypatch):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1]/"profiling"))
+    from check_adoption_outputs import content_digest, witness
+    value = {"candidates": [{"rule": {"manifest": {
+        "metadata": {"limen_version": "5.29.2"}, "threshold": 1.}}}],
+        "limen_version": "unrelated field", "signed_zero": -0.}
+    reference = copy.deepcopy(value)
+    reference["candidates"][0]["rule"]["manifest"]["metadata"]["limen_version"] = "3.30.0"
+    proof = witness(value)
+    assert proof["before"] == content_digest(reference)
+    assert proof["after"] == content_digest(value)
+    assert proof["paths"] == ["candidates/0/rule/manifest/metadata/limen_version"]
+    reference["candidates"][0]["rule"]["manifest"]["threshold"] = float.fromhex("0x1.0000000000001p+0")
+    assert proof["before"] != content_digest(reference)
+    assert value["candidates"][0]["rule"]["manifest"]["metadata"]["limen_version"] == "5.29.2"
