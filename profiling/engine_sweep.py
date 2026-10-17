@@ -53,6 +53,19 @@ def peak_bytes():
     return int(peak if sys.platform == "darwin" else peak * 1024)
 
 
+def write_result(path, doc):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, name = tempfile.mkstemp(prefix=".mill-sweep-", suffix=".json", dir=path.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "w") as stream:
+            json.dump(doc, stream, indent=2, allow_nan=False)
+            stream.write("\n")
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 class Recorder:
     def __init__(self, args):
         self.args = args
@@ -62,10 +75,7 @@ class Recorder:
 
     def save(self):
         self.doc["peak_rss_bytes"] = peak_bytes()
-        self.args.output.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.args.output.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.doc, indent=2, allow_nan=False) + "\n")
-        tmp.replace(self.args.output)
+        write_result(self.args.output, self.doc)
 
     def measure(self, name, fn, reps=None, **metadata):
         self.doc["active_measurement"] = name
@@ -322,14 +332,14 @@ def main():
             if args.output.exists():
                 doc = json.loads(args.output.read_text())
                 doc.update(status="error", error=type(exc).__name__ + ": " + str(exc))
-                args.output.write_text(json.dumps(doc, indent=2) + "\n")
+                write_result(args.output, doc)
             raise
         return 0
     def finish(status):
         if args.output.exists():
             doc = json.loads(args.output.read_text())
             doc["status"] = status
-            args.output.write_text(json.dumps(doc, indent=2) + "\n")
+            write_result(args.output, doc)
 
     def interrupted(signum, frame):
         raise InterruptedError(f"supervisor received signal {signum}")

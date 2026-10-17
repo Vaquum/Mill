@@ -51,6 +51,16 @@ def test_input_is_never_the_output(parquet, tmp_path):
     assert result.returncode == 2 and parquet.read_bytes() == before
 
 
+def test_input_is_never_an_output_staging_file(parquet, tmp_path):
+    source = parquet.rename(tmp_path / "bars.tmp")
+    output = tmp_path / "bars.json"
+    before = hashlib.sha256(source.read_bytes()).digest()
+    subprocess.run(command(source, output), cwd=tmp_path, check=True, timeout=45)
+    assert json.loads(output.read_text())["status"] == "complete"
+    assert source.exists() and hashlib.sha256(source.read_bytes()).digest() == before
+    assert not list(tmp_path.glob(".mill-sweep-*.json"))
+
+
 def test_worker_failure_is_recorded(parquet, tmp_path):
     output = tmp_path / "error.json"
     result = subprocess.run(command(parquet, output, "discover", "--rows", "3"),
