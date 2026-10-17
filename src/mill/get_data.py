@@ -77,7 +77,7 @@ def _limit_rows(data: pl.DataFrame, limit: int | None) -> pl.DataFrame:
 def _closed(data: pl.DataFrame, seconds: int, written_ns: int) -> pl.DataFrame:
     """The bars that had closed when the store wrote its file: it also writes the open bar, and rewrites it as trades arrive."""
     times = data["datetime"].dt.epoch("ms")
-    if times.is_sorted():
+    if not times.null_count() and times.is_sorted():
         stop = times.search_sorted(written_ns // 1_000_000 - seconds * 1000, side="right")
         return data.slice(0, int(stop))
     return data.filter(pl.col("datetime").dt.epoch("ms") + seconds * 1000 <= written_ns // 1_000_000)

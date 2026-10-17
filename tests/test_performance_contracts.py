@@ -9,7 +9,7 @@ import polars as pl
 import pytest
 
 from mill import discover, qc, serve, table
-from mill.get_data import GetData, _DATA
+from mill.get_data import GetData, _DATA, _closed
 from mill.memo import ByteLRU, Flights
 from conftest import ns
 
@@ -59,6 +59,12 @@ def test_getdata_returns_independent_dataframe_wrappers(arrow_store):
     first = GetData().get_time_bars("1h_time_bars")
     first.drop_in_place("close")
     assert "close" in GetData().get_time_bars("1h_time_bars").columns
+
+
+def test_closed_bar_slice_excludes_null_timestamps():
+    frame = pl.DataFrame({"datetime": pl.Series([None, ns(2024, 1, 1), ns(2024, 1, 2)],
+                dtype=pl.Int64).cast(pl.Datetime("ns", "UTC")), "close": [1.0, 2.0, 3.0]})
+    assert _closed(frame, 3600, ns(2024, 1, 3))["close"].to_list() == [2.0, 3.0]
 
 
 def test_incremental_specs_reuse_producers_but_isolate_source_versions(monkeypatch):
