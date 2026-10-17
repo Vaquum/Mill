@@ -157,7 +157,9 @@ def worker(args):
         for key, name in (("MILL_ARROW_DIR", "arrow"), ("MILL_CACHE_DIR", "cache"), ("MILL_CONFIG_DIR", "config")):
             os.environ[key] = str(Path(directory) / name)
         began = time.perf_counter_ns()
-        from mill import serve, qc, discover, targets, feature_registry
+        from mill import serve
+        record.doc["serve_import_ms"] = (time.perf_counter_ns() - began) / 1e6
+        from mill import qc, discover, targets, feature_registry
         import numpy as np
         import polars as pl
         from mill.get_data import GetData
