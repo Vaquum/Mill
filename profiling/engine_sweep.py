@@ -328,7 +328,7 @@ def worker(args):
                 while True:
                     began = time.perf_counter_ns()
                     try:
-                        return pool_store.pool_for(raw, bar, None, digest, allow_stale=False)[0]
+                        return pool_store.pool_for(raw, bar, None, digest)[0]
                     except pool_store.PoolPending:
                         partial.append((time.perf_counter_ns() - began) / 1e6)
             pool = measure("service_catalog_prepare", prepare, reps=1)

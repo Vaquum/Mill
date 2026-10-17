@@ -117,15 +117,13 @@ def _assemble(directory, raw, entries):
         path.unlink(missing_ok=True)
 
 
-def pool_for(raw, bar, spec, digest, *, allow_stale=True, quantum=5):
+def pool_for(raw, bar, spec, digest, *, quantum=5):
     root = cache_root() / "pools"
     root.mkdir(parents=True, exist_ok=True)
     family = _hash([_revision(), bar, spec])
     directory = root / f"{family}-{digest}"
     if (directory / "ready.json").exists():
         return _load(directory), True, 0.0
-    older = sorted((p for p in root.glob(f"{family}-*") if (p / "ready.json").exists()),
-                   key=lambda p: p.stat().st_mtime_ns, reverse=True)
     directory.mkdir(exist_ok=True)
     began = time.perf_counter()
     entries = _entries(spec)
@@ -142,8 +140,6 @@ def pool_for(raw, bar, spec, digest, *, allow_stale=True, quantum=5):
                     part.write_ipc(temporary, compression="uncompressed")
             _trim(root, directory)
             if time.perf_counter() - began >= quantum and i + 1 < len(entries):
-                if allow_stale and older and older[0].exists():
-                    return _load(older[0]), True, (time.perf_counter() - began) * 1000
                 raise PoolPending("catalog construction is progressing; retry shortly")
     _assemble(directory, raw, entries)
     _trim(root, directory)

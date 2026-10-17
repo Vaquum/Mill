@@ -17,7 +17,7 @@ from .bars import (
     time_bar_seconds,
     time_bar_series,
 )
-from .cache_store import cache_path, file_identity as source_identity, read_fresh, write_cache
+from .cache_store import cache_path, cache_refresh, file_identity as source_identity, read_fresh, write_cache
 from .frames import normalize_datetime, read_parquet, write_parquet
 from .settings import arrow_latest_path, memory_budget
 from .memo import ByteLRU, Flights
@@ -187,7 +187,7 @@ class GetData:
         hit = _DATA.get(key)
         if hit is not None and (hit[0] == identity if identity is not None else hit[2] == disk_identity(path)):
             return self._store(hit[1].clone())
-        with _DATA_FLIGHTS.hold(key):
+        with _DATA_FLIGHTS.hold(key), cache_refresh(path):
             identity = source_identity(source)
             hit = _DATA.get(key)
             if hit is not None and (hit[0] == identity if identity is not None else hit[2] == disk_identity(path)):

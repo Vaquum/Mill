@@ -158,18 +158,23 @@ def _research_discover(body):
 
 
 def _warm_research():
-    remaining = list(sorted(TIME_BAR_SECONDS, key=TIME_BAR_SECONDS.get, reverse=True))
-    while remaining:
-        for bar in tuple(remaining):
+    completed = {}
+    bars = sorted(TIME_BAR_SECONDS, key=TIME_BAR_SECONDS.get, reverse=True)
+    while True:
+        for bar in bars:
+            identity = bar_identity(bar)
+            if completed.get(bar) == identity:
+                continue
             try:
                 if _RESEARCH.run("warm", bar=bar, **_research_context())["complete"]:
-                    remaining.remove(bar)
-            except ResearchBusy:
+                    completed[bar] = identity
+            except (ResearchBusy, ResearchTimeout):
                 pass
             except Exception as exc:
                 print(f"catalog warmup {bar}: {exc}", flush=True)
-                remaining.remove(bar)
+                completed[bar] = identity
             time.sleep(0.05)
+        time.sleep(5)
 
 
 def _require_auth_env() -> None:

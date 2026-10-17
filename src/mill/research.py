@@ -144,7 +144,7 @@ def _execute(request):
         from .pool_store import PoolPending, pool_for
         raw, _ = serve._raw_for(request["bar"])
         try:
-            pool_for(raw, request["bar"], None, serve._RAW_DIGESTS[request["bar"]], allow_stale=False)
+            pool_for(raw, request["bar"], None, serve._RAW_DIGESTS[request["bar"]])
             return {"complete": True}
         except PoolPending:
             return {"complete": False}

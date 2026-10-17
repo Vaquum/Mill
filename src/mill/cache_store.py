@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import fcntl
 import json
 import os
 import tempfile
+import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +21,26 @@ def cache_path(label: str, criteria: dict[str, object]) -> Path:
         json.dumps(criteria, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()[:16]
     return cache_root() / f"{label}_{digest}.parquet"
+
+
+@contextmanager
+def cache_refresh(path: Path):
+    """Serialize the entire read/publish transaction across engine processes."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.with_suffix(".lock").open("a") as lock:
+        deadline = time.monotonic() + 10
+        while True:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("timed out waiting for a data cache refresh")
+                time.sleep(0.005)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
 
 
 def read_fresh(path: Path, source: Path) -> pl.DataFrame | None:
