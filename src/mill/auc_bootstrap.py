@@ -6,6 +6,8 @@ from numba import njit
 @njit(cache=True, nogil=True)
 def draws(codes, positive_slots, positive_groups, starts, block, n_groups):
     n = codes.size
+    if n > 2**23:
+        raise ValueError("exact count kernel requires n <= 2**23")
     result = np.empty(starts.shape[0], dtype=np.float64)
     delta = np.empty(n+1, dtype=np.int32)
     total = np.empty(n_groups, dtype=np.int32)
