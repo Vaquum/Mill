@@ -204,7 +204,7 @@ def worker(args):
             measure("qc_report_for_precomputed", lambda: qc.report_for(prim))
             measure("qc_sweep_sizes_1_2_3", lambda: sum(1 for _ in qc.sweep(prim, (1, 2, 3))))
             report = qc.report_for(prim)
-            measure("grade_map", lambda: serve.grading.grade_map(report, "next_return"))
+            measure("grade_map", lambda: serve.grading.grade_map(report, n_rows=frame.height, target="next_return"))
             measure("report_json", lambda: json.dumps(report, allow_nan=False).encode())
             record.doc["kernel_cache_entries"] = len(qc._KERNEL_CACHE)
             record.doc["pair_count"] = len(prim.pairs)
@@ -265,13 +265,17 @@ def main():
     process = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:], "--worker"], start_new_session=True)
     try:
         code = process.wait(timeout=50)
-    except BaseException:
+    except subprocess.TimeoutExpired:
         os.killpg(process.pid, signal.SIGKILL)
         process.wait()
         if args.output.exists():
             doc = json.loads(args.output.read_text())
-            doc["status"] = "interrupted"
+            doc["status"] = "timeout_50s"
             args.output.write_text(json.dumps(doc, indent=2) + "\n")
+        return 124
+    except BaseException:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
         raise
     return code
 
